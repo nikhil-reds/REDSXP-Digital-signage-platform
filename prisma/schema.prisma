@@ -1,8 +1,6 @@
 // This is your Prisma schema file,
 // learn more about it in the docs: https://pris.ly/d/prisma-schema
 
-// Get a free hosted Postgres database in seconds: `npx create-db`
-
 generator client {
   provider = "prisma-client"
   output   = "../app/generated/prisma"
@@ -10,4 +8,389 @@ generator client {
 
 datasource db {
   provider = "postgresql"
+}
+
+// ═══════════════════════════════════════
+// 1. TENANCY & ROLE SYSTEM
+// ═══════════════════════════════════════
+
+model Tenant {
+  id             String         @id @default(uuid())
+  name           String
+  slug           String         @unique
+  customDomain   String?        @map("custom_domain")
+  brandLogoUrl   String?        @map("brand_logo_url")
+  primaryColor   String         @default("#1A4E8C") @map("primary_color")
+  status         TenantStatus   @default(ACTIVE)
+  createdAt      DateTime       @default(now()) @map("created_at")
+  updatedAt      DateTime       @updatedAt @map("updated_at")
+  
+  users             User[]
+  devices           Device[]
+  media             Media[]
+  mediaCategories   MediaCategory[]
+  playlists         Playlist[]
+  playlistCategories PlaylistCategory[]
+  calendars         Calendar[]
+  auditLogs         AuditLog[]
+  tags              Tag[]
+  subscriptions     Subscription[]
+  payments          Payment[]
+  invoices          Invoice[]
+
+  @@map("tenants")
+}
+
+model User {
+  id           String     @id @default(uuid())
+  tenantId     String     @map("tenant_id")
+  email        String     @unique
+  passwordHash String     @map("password_hash")
+  firstName    String?    @map("first_name")
+  lastName     String?    @map("last_name")
+  status       UserStatus @default(ACTIVE)
+  createdAt    DateTime   @default(now()) @map("created_at")
+  updatedAt    DateTime   @updatedAt @map("updated_at")
+  
+  roleId       String     @map("role_id")
+  role         Role       @relation(fields: [roleId], references: [id])
+  tenant       Tenant     @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  auditLogs    AuditLog[]
+
+  @@map("users")
+}
+
+model Role {
+  id          String       @id @default(uuid())
+  name        String       @unique
+  description String?
+  createdAt   DateTime     @default(now()) @map("created_at")
+  updatedAt   DateTime     @updatedAt @map("updated_at")
+  
+  users       User[]
+  permissions Permission[] @relation("RolePermissions")
+
+  @@map("roles")
+}
+
+model Permission {
+  id          String   @id @default(uuid())
+  name        String   @unique
+  description String?
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+  
+  roles       Role[]   @relation("RolePermissions")
+
+  @@map("permissions")
+}
+
+// ═══════════════════════════════════════
+// 2. CONTENT & DEVICE PLATFORM
+// ═══════════════════════════════════════
+
+model Media {
+  id           String          @id @default(uuid())
+  tenantId     String          @map("tenant_id")
+  name         String
+  filename     String
+  s3Key        String          @map("s3_key")
+  cdnUrl       String          @map("cdn_url")
+  sizeBytes    BigInt          @map("size_bytes")
+  durationSec  Int?            @map("duration_sec")
+  width        Int?
+  height       Int?
+  status       MediaStatus     @default(PROCESSING)
+  createdAt    DateTime        @default(now()) @map("created_at")
+  updatedAt    DateTime        @updatedAt @map("updated_at")
+
+  mediaTypeId  String          @map("media_type_id")
+  mediaType    MediaType       @relation(fields: [mediaTypeId], references: [id])
+  tenant       Tenant          @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  categories   MediaCategory[] @relation("MediaToCategory")
+  tags         Tag[]           @relation("MediaToTag")
+  playlistItems PlaylistItem[]
+
+  @@map("media")
+}
+
+model MediaType {
+  id          String   @id @default(uuid())
+  name        String   @unique // e.g. "video", "image", "html"
+  description String?
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+  
+  media       Media[]
+
+  @@map("media_types")
+}
+
+model MediaCategory {
+  id          String   @id @default(uuid())
+  tenantId    String   @map("tenant_id")
+  name        String
+  description String?
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+  
+  tenant      Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  media       Media[]  @relation("MediaToCategory")
+
+  @@unique([tenantId, name])
+  @@map("media_categories")
+}
+
+model Playlist {
+  id           String             @id @default(uuid())
+  tenantId     String             @map("tenant_id")
+  name         String
+  description  String?
+  createdAt    DateTime           @default(now()) @map("created_at")
+  updatedAt    DateTime           @updatedAt @map("updated_at")
+  
+  tenant       Tenant             @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  categories   PlaylistCategory[] @relation("PlaylistToCategory")
+  tags         Tag[]              @relation("PlaylistToTag")
+  playlistItems PlaylistItem[]
+  devices      Device[]
+  calendars    Calendar[]
+
+  @@map("playlists")
+}
+
+model PlaylistCategory {
+  id          String     @id @default(uuid())
+  tenantId    String     @map("tenant_id")
+  name        String
+  description String?
+  createdAt   DateTime   @default(now()) @map("created_at")
+  updatedAt   DateTime   @updatedAt @map("updated_at")
+  
+  tenant      Tenant     @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  playlists   Playlist[] @relation("PlaylistToCategory")
+
+  @@unique([tenantId, name])
+  @@map("playlist_categories")
+}
+
+model PlaylistItem {
+  id          String   @id @default(uuid())
+  playlistId  String   @map("playlist_id")
+  mediaId     String   @map("media_id")
+  position    Int
+  durationSec Int      @map("duration_sec")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+  
+  playlist    Playlist @relation(fields: [playlistId], references: [id], onDelete: Cascade)
+  media       Media    @relation(fields: [mediaId], references: [id], onDelete: Cascade)
+
+  @@map("playlist_items")
+}
+
+model Calendar {
+  id          String         @id @default(uuid())
+  tenantId    String         @map("tenant_id")
+  playlistId  String         @map("playlist_id")
+  name        String
+  description String?
+  startTime   DateTime       @map("start_time")
+  endTime     DateTime       @map("end_time")
+  daysOfWeek  Int[]          @map("days_of_week") // e.g. [1,2,3,4,5] (Monday=1, Sunday=7)
+  priority    Int            @default(0)
+  status      CalendarStatus @default(ACTIVE)
+  createdAt   DateTime       @default(now()) @map("created_at")
+  updatedAt   DateTime       @updatedAt @map("updated_at")
+  
+  tenant      Tenant         @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  playlist    Playlist       @relation(fields: [playlistId], references: [id], onDelete: Cascade)
+  devices     Device[]       @relation("CalendarToDevice")
+
+  @@map("calendars")
+}
+
+model Device {
+  id                String       @id @default(uuid())
+  tenantId          String       @map("tenant_id")
+  serialNumber      String       @unique @map("serial_number")
+  deviceToken       String       @map("device_token")
+  model             String
+  name              String
+  location          String?
+  firmwareVersion   String?      @map("firmware_version")
+  lastSeen          DateTime?    @map("last_seen")
+  status            DeviceStatus @default(OFFLINE)
+  createdAt         DateTime     @default(now()) @map("created_at")
+  updatedAt         DateTime     @updatedAt @map("updated_at")
+
+  currentPlaylistId String?      @map("current_playlist_id")
+  playlist          Playlist?    @relation(fields: [currentPlaylistId], references: [id], onDelete: SetNull)
+  tenant            Tenant       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  tags              Tag[]        @relation("DeviceToTag")
+  calendars         Calendar[]   @relation("CalendarToDevice")
+
+  @@map("devices")
+}
+
+// ═══════════════════════════════════════
+// 3. UTILITIES & TELEMETRY
+// ═══════════════════════════════════════
+
+model AuditLog {
+  id          String   @id @default(uuid())
+  tenantId    String   @map("tenant_id")
+  userId      String?  @map("user_id")
+  action      String
+  description String?
+  ipAddress   String?  @map("ip_address")
+  userAgent   String?  @map("user_agent")
+  createdAt   DateTime @default(now()) @map("created_at")
+  
+  tenant      Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  user        User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@map("audit_logs")
+}
+
+model Tag {
+  id        String     @id @default(uuid())
+  tenantId  String     @map("tenant_id")
+  name      String
+  createdAt DateTime   @default(now()) @map("created_at")
+  updatedAt DateTime   @updatedAt @map("updated_at")
+  
+  tenant    Tenant     @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  media     Media[]    @relation("MediaToTag")
+  playlists Playlist[] @relation("PlaylistToTag")
+  devices   Device[]   @relation("DeviceToTag")
+
+  @@unique([tenantId, name])
+  @@map("tags")
+}
+
+// ═══════════════════════════════════════
+// 4. BILLING & SUBSCRIPTIONS
+// ═══════════════════════════════════════
+
+model Plan {
+  id            String         @id @default(uuid())
+  name          String         @unique // e.g. "Starter", "Growth", "Business", "Enterprise"
+  description   String?
+  priceMonthly  Int            @map("price_monthly")
+  priceYearly   Int            @map("price_yearly")
+  currency      String         @default("INR")
+  maxDevices    Int            @map("max_devices")
+  maxStorageGb  Int            @map("max_storage_gb")
+  maxUsers      Int            @map("max_users")
+  maxRules      Int            @map("max_rules")
+  createdAt     DateTime       @default(now()) @map("created_at")
+  updatedAt     DateTime       @updatedAt @map("updated_at")
+  
+  subscriptions Subscription[]
+
+  @@map("plans")
+}
+
+model Subscription {
+  id                 String             @id @default(uuid())
+  tenantId           String             @map("tenant_id")
+  planId             String             @map("plan_id")
+  status             SubscriptionStatus @default(ACTIVE)
+  startDate          DateTime           @map("start_date")
+  endDate            DateTime?          @map("end_date")
+  razorpaySubId      String?            @unique @map("razorpay_sub_id")
+  createdAt          DateTime           @default(now()) @map("created_at")
+  updatedAt          DateTime           @updatedAt @map("updated_at")
+  
+  tenant             Tenant             @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  plan               Plan               @relation(fields: [planId], references: [id])
+  payments           Payment[]
+  invoices           Invoice[]
+
+  @@map("subscriptions")
+}
+
+model Payment {
+  id             String        @id @default(uuid())
+  tenantId       String        @map("tenant_id")
+  subscriptionId String        @map("subscription_id")
+  amount         Int
+  currency       String        @default("INR")
+  status         PaymentStatus @default(SUCCESS)
+  gatewayTxnId   String?       @map("gateway_txn_id")
+  createdAt      DateTime      @default(now()) @map("created_at")
+  
+  tenant         Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  subscription   Subscription  @relation(fields: [subscriptionId], references: [id], onDelete: Cascade)
+
+  @@map("payments")
+}
+
+model Invoice {
+  id             String        @id @default(uuid())
+  tenantId       String        @map("tenant_id")
+  subscriptionId String        @map("subscription_id")
+  invoiceNumber  String        @unique @map("invoice_number")
+  amount         Int
+  tax            Int
+  status         InvoiceStatus @default(PAID)
+  pdfUrl         String?       @map("pdf_url")
+  dueDate        DateTime?     @map("due_date")
+  createdAt      DateTime      @default(now()) @map("created_at")
+  
+  tenant         Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  subscription   Subscription  @relation(fields: [subscriptionId], references: [id], onDelete: Cascade)
+
+  @@map("invoices")
+}
+
+// ═══════════════════════════════════════
+// 5. ENUMS (STATUSES)
+// ═══════════════════════════════════════
+
+enum TenantStatus {
+  ACTIVE
+  SUSPENDED
+}
+
+enum UserStatus {
+  ACTIVE
+  INACTIVE
+  SUSPENDED
+}
+
+enum MediaStatus {
+  PROCESSING
+  READY
+  FAILED
+}
+
+enum CalendarStatus {
+  ACTIVE
+  INACTIVE
+}
+
+enum SubscriptionStatus {
+  ACTIVE
+  PAST_DUE
+  CANCELLED
+  TRIAL
+}
+
+enum PaymentStatus {
+  PENDING
+  SUCCESS
+  FAILED
+}
+
+enum InvoiceStatus {
+  UNPAID
+  PAID
+  VOID
+}
+
+enum DeviceStatus {
+  ONLINE
+  OFFLINE
 }
