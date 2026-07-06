@@ -2,11 +2,14 @@
 
 import React, { useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 
 export default function LoginForm() {
+  const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
+  const [rememberMe, setRememberMe] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 
@@ -29,13 +32,23 @@ export default function LoginForm() {
     }
 
     setIsLoading(true);
-    // Simulate API call
     try {
-      await new Promise((resolve) => setTimeout(resolve, 1500));
-      // Just mock loading and show a success hint
-      alert("Demo Mode: Login successful!");
+      const response = await fetch("/api/auth/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, password, rememberMe }),
+      });
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.message || "Unable to sign in.");
+      const nextPath = new URLSearchParams(window.location.search).get("next");
+      const safeNextPath =
+        nextPath?.startsWith("/") && !nextPath.startsWith("//")
+          ? nextPath
+          : result.data.redirectTo;
+      router.push(safeNextPath);
+      router.refresh();
     } catch (err) {
-      setError("Invalid email or password.");
+      setError(err instanceof Error ? err.message : "Unable to sign in.");
     } finally {
       setIsLoading(false);
     }
@@ -172,6 +185,8 @@ export default function LoginForm() {
           <input
             id="remember-me"
             type="checkbox"
+            checked={rememberMe}
+            onChange={(event) => setRememberMe(event.target.checked)}
             disabled={isLoading}
             className="h-4 w-4 rounded-sm border-zinc-900 text-white bg-zinc-950 focus:ring-white focus:ring-offset-0 accent-white transition-colors"
           />

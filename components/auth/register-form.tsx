@@ -2,8 +2,10 @@
 
 import React, { useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 
 export default function RegisterForm() {
+  const router = useRouter();
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
   const [workspaceName, setWorkspaceName] = useState("");
@@ -47,18 +49,30 @@ export default function RegisterForm() {
       setError("Password must be at least 8 characters long.");
       return;
     }
+    if (!hasNumber || !hasSpecial) {
+      setError("Password must include a number and special character.");
+      return;
+    }
     if (!passwordsMatch) {
       setError("Passwords do not match.");
       return;
     }
 
     setIsLoading(true);
-    // Simulate API call
     try {
-      await new Promise((resolve) => setTimeout(resolve, 1500));
-      alert("Demo Mode: Registration successful! Workspace and User created.");
+      const response = await fetch("/api/auth/register", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ firstName, lastName, workspaceName, email, password }),
+      });
+      const result = await response.json();
+      if (!response.ok) {
+        throw new Error(result.errors?.[0] || result.message || "Failed to create account.");
+      }
+      router.push(result.data.redirectTo);
+      router.refresh();
     } catch (err) {
-      setError("Failed to create account. Please try again.");
+      setError(err instanceof Error ? err.message : "Failed to create account. Please try again.");
     } finally {
       setIsLoading(false);
     }

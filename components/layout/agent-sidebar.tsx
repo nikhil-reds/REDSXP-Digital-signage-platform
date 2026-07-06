@@ -2,7 +2,7 @@
 
 import React, { useState } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import {
   LayoutDashboard,
   Monitor,
@@ -20,7 +20,6 @@ import {
   Coffee,
   ChevronLeft,
   ChevronRight,
-  User,
   Settings,
   Sparkles
 } from "lucide-react";
@@ -49,7 +48,16 @@ const navItems: NavItem[] = [
 
 export default function AgentSidebar() {
   const pathname = usePathname();
+  const router = useRouter();
   const [isCollapsed, setIsCollapsed] = useState(false);
+
+  const handleLogout = async () => {
+    const response = await fetch("/api/auth/logout", { method: "POST" });
+    if (response.ok) {
+      router.replace("/login");
+      router.refresh();
+    }
+  };
 
   return (
     <aside
@@ -180,6 +188,7 @@ export default function AgentSidebar() {
                 <Settings className="w-3.5 h-3.5" />
               </button>
               <button
+                onClick={handleLogout}
                 title="Sign out"
                 className="p-1 rounded-md text-[#657080] dark:text-[#9AA7B7] hover:text-[#FF2244] hover:bg-red-50 dark:hover:bg-red-950/20 transition-all duration-200"
               >
