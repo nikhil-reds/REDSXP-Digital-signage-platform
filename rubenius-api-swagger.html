@@ -1,0 +1,706 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Rubenius CMS API Swagger</title>
+    <link
+      rel="stylesheet"
+      href="https://unpkg.com/swagger-ui-dist@5/swagger-ui.css"
+    />
+    <style>
+      body {
+        margin: 0;
+        background: #f7faf9;
+      }
+
+      .topbar {
+        display: none;
+      }
+
+      .swagger-ui .info {
+        margin: 32px 0;
+      }
+
+      .swagger-ui .info .title {
+        color: #134e4a;
+      }
+
+      .swagger-ui .scheme-container {
+        border-radius: 8px;
+        box-shadow: none;
+        border: 1px solid #d8e5e2;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="swagger-ui"></div>
+
+    <script src="https://unpkg.com/swagger-ui-dist@5/swagger-ui-bundle.js"></script>
+    <script>
+      const api = {
+        openapi: "3.0.3",
+        info: {
+          title: "Rubenius CMS API",
+          version: "1.0.0",
+          description:
+            "Swagger documentation for the Rubenius digital signage CMS APIs, covering Auth, Admin Panel, Agent/Tenant Panel, Device Player APIs, AWS-backed media flow, telemetry, reports, webhooks, and internal workers.",
+        },
+        servers: [
+          {
+            url: "https://api.rubenius.com",
+            description: "Production",
+          },
+          {
+            url: "http://localhost:3000",
+            description: "Local development",
+          },
+        ],
+        tags: [
+          { name: "Auth", description: "Authentication and session APIs" },
+          { name: "Admin Dashboard", description: "Admin overview and health APIs" },
+          { name: "Admin Tenants", description: "Tenant management APIs" },
+          { name: "Admin Users", description: "Admin, agent, and tenant user management" },
+          { name: "Admin Billing", description: "Plans, subscriptions, invoices, and payments" },
+          { name: "Audit Logs", description: "Audit log APIs" },
+          { name: "Agent Dashboard", description: "Agent and tenant dashboard APIs" },
+          { name: "Tenant Profile", description: "Tenant profile, branding, and usage APIs" },
+          { name: "Agent Users", description: "Tenant user management APIs" },
+          { name: "Media", description: "S3 and CloudFront media management APIs" },
+          { name: "Playlists", description: "Playlist builder APIs" },
+          { name: "Schedules", description: "Scheduling and calendar APIs" },
+          { name: "Devices", description: "Device management APIs for tenant panel" },
+          { name: "Device Commands", description: "Remote device command APIs" },
+          { name: "Device Player", description: "APIs used by BrightSign/player devices" },
+          { name: "Sensor Rules", description: "Sensor rule builder APIs" },
+          { name: "Reports", description: "Analytics and report APIs" },
+          { name: "Notifications", description: "Notification APIs" },
+          { name: "Internal Jobs", description: "Internal SQS worker APIs" },
+          { name: "Webhooks", description: "External service webhook receivers" },
+          { name: "Assets", description: "Asset delivery helper APIs" },
+        ],
+        security: [{ bearerAuth: [] }],
+        paths: {},
+        components: {
+          securitySchemes: {
+            bearerAuth: {
+              type: "http",
+              scheme: "bearer",
+              bearerFormat: "JWT",
+            },
+            deviceToken: {
+              type: "apiKey",
+              in: "header",
+              name: "X-Device-Token",
+            },
+            internalToken: {
+              type: "apiKey",
+              in: "header",
+              name: "X-Internal-Token",
+            },
+          },
+          parameters: {
+            tenantId: pathParam("tenantId", "Tenant ID"),
+            userId: pathParam("userId", "User ID"),
+            planId: pathParam("planId", "Plan ID"),
+            subscriptionId: pathParam("subscriptionId", "Subscription ID"),
+            logId: pathParam("logId", "Audit log ID"),
+            mediaId: pathParam("mediaId", "Media ID"),
+            playlistId: pathParam("playlistId", "Playlist ID"),
+            itemId: pathParam("itemId", "Playlist item ID"),
+            scheduleId: pathParam("scheduleId", "Schedule ID"),
+            deviceId: pathParam("deviceId", "Device ID"),
+            groupId: pathParam("groupId", "Device group ID"),
+            commandId: pathParam("commandId", "Command ID"),
+            ruleId: pathParam("ruleId", "Sensor rule ID"),
+            notificationId: pathParam("notificationId", "Notification ID"),
+            jobId: pathParam("jobId", "Job ID"),
+            assetId: pathParam("assetId", "Asset ID"),
+          },
+          schemas: {
+            ApiResponse: {
+              type: "object",
+              properties: {
+                success: { type: "boolean", example: true },
+                message: { type: "string", example: "Request completed successfully" },
+                data: { type: "object", additionalProperties: true },
+              },
+            },
+            ErrorResponse: {
+              type: "object",
+              properties: {
+                success: { type: "boolean", example: false },
+                message: { type: "string", example: "Validation failed" },
+                errors: {
+                  type: "array",
+                  items: { type: "string" },
+                },
+              },
+            },
+            LoginRequest: {
+              type: "object",
+              required: ["email", "password"],
+              properties: {
+                email: { type: "string", format: "email", example: "admin@rubenius.com" },
+                password: { type: "string", format: "password", example: "StrongPassword123" },
+              },
+            },
+            PasswordResetRequest: {
+              type: "object",
+              required: ["email"],
+              properties: {
+                email: { type: "string", format: "email" },
+              },
+            },
+            ChangePasswordRequest: {
+              type: "object",
+              required: ["currentPassword", "newPassword"],
+              properties: {
+                currentPassword: { type: "string", format: "password" },
+                newPassword: { type: "string", format: "password" },
+              },
+            },
+            TenantRequest: {
+              type: "object",
+              required: ["name", "slug"],
+              properties: {
+                name: { type: "string", example: "Acme Retail" },
+                slug: { type: "string", example: "acme-retail" },
+                customDomain: { type: "string", example: "screens.acme.com" },
+                primaryColor: { type: "string", example: "#134e4a" },
+                status: { type: "string", enum: ["ACTIVE", "SUSPENDED"] },
+              },
+            },
+            UserRequest: {
+              type: "object",
+              required: ["email", "role"],
+              properties: {
+                email: { type: "string", format: "email" },
+                firstName: { type: "string" },
+                lastName: { type: "string" },
+                role: { type: "string", example: "Tenant Owner" },
+                status: { type: "string", enum: ["ACTIVE", "INACTIVE", "SUSPENDED"] },
+              },
+            },
+            PlanRequest: {
+              type: "object",
+              required: ["name", "priceMonthly", "maxDevices", "maxStorageGb"],
+              properties: {
+                name: { type: "string", example: "Growth" },
+                priceMonthly: { type: "integer", example: 4999 },
+                priceYearly: { type: "integer", example: 49990 },
+                currency: { type: "string", example: "INR" },
+                maxDevices: { type: "integer", example: 25 },
+                maxStorageGb: { type: "integer", example: 50 },
+                maxUsers: { type: "integer", example: 5 },
+                maxRules: { type: "integer", example: 10 },
+              },
+            },
+            MediaCreateRequest: {
+              type: "object",
+              required: ["name", "filename", "type", "sizeBytes"],
+              properties: {
+                name: { type: "string", example: "Summer Offer Video" },
+                filename: { type: "string", example: "summer-offer.mp4" },
+                type: { type: "string", enum: ["image", "video", "html"] },
+                sizeBytes: { type: "integer", example: 10485760 },
+                tags: { type: "array", items: { type: "string" } },
+                folderId: { type: "string" },
+              },
+            },
+            UploadUrlRequest: {
+              type: "object",
+              required: ["filename", "contentType", "sizeBytes"],
+              properties: {
+                filename: { type: "string", example: "menu-board.mp4" },
+                contentType: { type: "string", example: "video/mp4" },
+                sizeBytes: { type: "integer", example: 10485760 },
+              },
+            },
+            PlaylistRequest: {
+              type: "object",
+              required: ["name"],
+              properties: {
+                name: { type: "string", example: "Morning Playlist" },
+                description: { type: "string" },
+                tags: { type: "array", items: { type: "string" } },
+              },
+            },
+            PlaylistItemRequest: {
+              type: "object",
+              required: ["mediaId", "durationSec"],
+              properties: {
+                mediaId: { type: "string" },
+                durationSec: { type: "integer", example: 30 },
+                position: { type: "integer", example: 1 },
+              },
+            },
+            ReorderRequest: {
+              type: "object",
+              required: ["itemIds"],
+              properties: {
+                itemIds: {
+                  type: "array",
+                  items: { type: "string" },
+                },
+              },
+            },
+            ScheduleRequest: {
+              type: "object",
+              required: ["name", "playlistId", "startTime", "endTime"],
+              properties: {
+                name: { type: "string", example: "Weekday Morning Schedule" },
+                playlistId: { type: "string" },
+                startTime: { type: "string", format: "date-time" },
+                endTime: { type: "string", format: "date-time" },
+                daysOfWeek: {
+                  type: "array",
+                  items: { type: "integer", minimum: 1, maximum: 7 },
+                  example: [1, 2, 3, 4, 5],
+                },
+                priority: { type: "integer", example: 10 },
+                deviceIds: { type: "array", items: { type: "string" } },
+              },
+            },
+            DeviceRequest: {
+              type: "object",
+              required: ["serialNumber", "model", "name"],
+              properties: {
+                serialNumber: { type: "string", example: "BS-123456789" },
+                model: { type: "string", example: "BrightSign XD1035" },
+                name: { type: "string", example: "Store Entrance Screen" },
+                location: { type: "string", example: "Mumbai Store - Entrance" },
+                tags: { type: "array", items: { type: "string" } },
+              },
+            },
+            DeviceRegisterRequest: {
+              type: "object",
+              required: ["serialNumber", "registrationCode"],
+              properties: {
+                serialNumber: { type: "string", example: "BS-123456789" },
+                registrationCode: { type: "string", example: "ABCD-1234" },
+                model: { type: "string", example: "BrightSign XD1035" },
+                firmwareVersion: { type: "string", example: "9.0.168" },
+              },
+            },
+            HeartbeatRequest: {
+              type: "object",
+              required: ["deviceId", "status"],
+              properties: {
+                deviceId: { type: "string" },
+                status: { type: "string", enum: ["ONLINE", "WARNING"] },
+                firmwareVersion: { type: "string" },
+                currentPlaylistId: { type: "string" },
+                storageFreeBytes: { type: "integer" },
+              },
+            },
+            TelemetryRequest: {
+              type: "object",
+              required: ["deviceId", "events"],
+              properties: {
+                deviceId: { type: "string" },
+                events: {
+                  type: "array",
+                  items: {
+                    type: "object",
+                    properties: {
+                      type: { type: "string", example: "proof_of_play" },
+                      mediaId: { type: "string" },
+                      playlistId: { type: "string" },
+                      startedAt: { type: "string", format: "date-time" },
+                      durationSec: { type: "integer", example: 30 },
+                    },
+                  },
+                },
+              },
+            },
+            CommandRequest: {
+              type: "object",
+              properties: {
+                reason: { type: "string", example: "Manual admin request" },
+                payload: { type: "object", additionalProperties: true },
+              },
+            },
+            SensorRuleRequest: {
+              type: "object",
+              required: ["deviceId", "sensorType", "condition", "action"],
+              properties: {
+                deviceId: { type: "string" },
+                sensorType: { type: "string", example: "motion" },
+                condition: {
+                  type: "object",
+                  example: { detected: true },
+                  additionalProperties: true,
+                },
+                action: {
+                  type: "object",
+                  example: { switchPlaylistId: "playlist_123" },
+                  additionalProperties: true,
+                },
+                priority: { type: "integer", example: 1 },
+                enabled: { type: "boolean", example: true },
+              },
+            },
+            ReportExportRequest: {
+              type: "object",
+              required: ["reportType", "from", "to"],
+              properties: {
+                reportType: {
+                  type: "string",
+                  enum: ["proof_of_play", "device_uptime", "media_performance", "sensor_events"],
+                },
+                from: { type: "string", format: "date" },
+                to: { type: "string", format: "date" },
+                deviceIds: { type: "array", items: { type: "string" } },
+                playlistIds: { type: "array", items: { type: "string" } },
+              },
+            },
+            AssetSignedUrlRequest: {
+              type: "object",
+              required: ["assetId"],
+              properties: {
+                assetId: { type: "string" },
+                ttlSeconds: { type: "integer", example: 86400 },
+              },
+            },
+          },
+        },
+      };
+
+      function pathParam(name, description) {
+        return {
+          name,
+          in: "path",
+          required: true,
+          description,
+          schema: { type: "string" },
+        };
+      }
+
+      function ref(name) {
+        return { $ref: `#/components/schemas/${name}` };
+      }
+
+      function param(name) {
+        return { $ref: `#/components/parameters/${name}` };
+      }
+
+      function response(description = "Successful response") {
+        return {
+          description,
+          content: {
+            "application/json": {
+              schema: ref("ApiResponse"),
+            },
+          },
+        };
+      }
+
+      function errorResponses() {
+        return {
+          400: {
+            description: "Bad request",
+            content: { "application/json": { schema: ref("ErrorResponse") } },
+          },
+          401: {
+            description: "Unauthorized",
+            content: { "application/json": { schema: ref("ErrorResponse") } },
+          },
+          403: {
+            description: "Forbidden",
+            content: { "application/json": { schema: ref("ErrorResponse") } },
+          },
+          404: {
+            description: "Not found",
+            content: { "application/json": { schema: ref("ErrorResponse") } },
+          },
+        };
+      }
+
+      function operation({
+        tag,
+        method,
+        path,
+        summary,
+        description,
+        parameters = [],
+        body,
+        security,
+      }) {
+        if (!api.paths[path]) api.paths[path] = {};
+
+        const op = {
+          tags: [tag],
+          summary,
+          description,
+          parameters,
+          responses: {
+            200: response(),
+            ...errorResponses(),
+          },
+        };
+
+        if (method === "post") op.responses[201] = response("Created");
+        if (method === "delete") op.responses[204] = { description: "Deleted successfully" };
+        if (body) {
+          op.requestBody = {
+            required: true,
+            content: {
+              "application/json": {
+                schema: ref(body),
+              },
+            },
+          };
+        }
+        if (security) op.security = security;
+
+        api.paths[path][method] = op;
+      }
+
+      function crud(tag, base, idName, entityName, bodySchema) {
+        operation({
+          tag,
+          method: "get",
+          path: base,
+          summary: `List ${entityName}`,
+          description: `Returns paginated ${entityName} records.`,
+        });
+        operation({
+          tag,
+          method: "post",
+          path: base,
+          summary: `Create ${entityName}`,
+          description: `Creates a new ${entityName} record.`,
+          body: bodySchema,
+        });
+        operation({
+          tag,
+          method: "get",
+          path: `${base}/{${idName}}`,
+          summary: `Get ${entityName} details`,
+          description: `Returns details for a single ${entityName} record.`,
+          parameters: [param(idName)],
+        });
+        operation({
+          tag,
+          method: "patch",
+          path: `${base}/{${idName}}`,
+          summary: `Update ${entityName}`,
+          description: `Updates an existing ${entityName} record.`,
+          parameters: [param(idName)],
+          body: bodySchema,
+        });
+        operation({
+          tag,
+          method: "delete",
+          path: `${base}/{${idName}}`,
+          summary: `Delete or archive ${entityName}`,
+          description: `Deletes or archives an existing ${entityName} record.`,
+          parameters: [param(idName)],
+        });
+      }
+
+      // Auth
+      operation({ tag: "Auth", method: "post", path: "/api/auth/login", summary: "Login user", description: "Logs in an admin, agent, or tenant user and creates a session.", body: "LoginRequest", security: [] });
+      operation({ tag: "Auth", method: "post", path: "/api/auth/logout", summary: "Logout user", description: "Clears the current user session." });
+      operation({ tag: "Auth", method: "get", path: "/api/auth/me", summary: "Get current user", description: "Returns the current logged-in user profile and role permissions." });
+      operation({ tag: "Auth", method: "post", path: "/api/auth/refresh", summary: "Refresh token", description: "Refreshes the current session or access token." });
+      operation({ tag: "Auth", method: "post", path: "/api/auth/forgot-password", summary: "Forgot password", description: "Sends a password reset link or OTP to the user.", body: "PasswordResetRequest", security: [] });
+      operation({ tag: "Auth", method: "post", path: "/api/auth/reset-password", summary: "Reset password", description: "Resets a password using a valid reset token.", body: "ChangePasswordRequest", security: [] });
+      operation({ tag: "Auth", method: "post", path: "/api/auth/change-password", summary: "Change password", description: "Changes the current user's password after login.", body: "ChangePasswordRequest" });
+
+      // Admin dashboard
+      operation({ tag: "Admin Dashboard", method: "get", path: "/api/admin/dashboard/summary", summary: "Admin dashboard summary", description: "Shows total tenants, active devices, users, storage, revenue, and failed jobs." });
+      operation({ tag: "Admin Dashboard", method: "get", path: "/api/admin/dashboard/activity", summary: "Recent platform activity", description: "Returns recent admin, tenant, user, device, and billing activity." });
+      operation({ tag: "Admin Dashboard", method: "get", path: "/api/admin/system/health", summary: "System health", description: "Checks AWS, Redis, SQS, DynamoDB, S3, and CloudFront health indicators." });
+
+      // Admin tenants
+      operation({ tag: "Admin Tenants", method: "get", path: "/api/admin/tenants", summary: "List tenants", description: "Lists all tenants with filtering and pagination." });
+      operation({ tag: "Admin Tenants", method: "post", path: "/api/admin/tenants", summary: "Create tenant", description: "Creates a new tenant/customer account.", body: "TenantRequest" });
+      operation({ tag: "Admin Tenants", method: "get", path: "/api/admin/tenants/{tenantId}", summary: "Get tenant details", description: "Returns tenant profile, status, limits, and plan details.", parameters: [param("tenantId")] });
+      operation({ tag: "Admin Tenants", method: "patch", path: "/api/admin/tenants/{tenantId}", summary: "Update tenant", description: "Updates tenant profile, branding, plan, or limits.", parameters: [param("tenantId")], body: "TenantRequest" });
+      operation({ tag: "Admin Tenants", method: "post", path: "/api/admin/tenants/{tenantId}/suspend", summary: "Suspend tenant", description: "Suspends a tenant and blocks tenant panel/device access.", parameters: [param("tenantId")] });
+      operation({ tag: "Admin Tenants", method: "post", path: "/api/admin/tenants/{tenantId}/activate", summary: "Activate tenant", description: "Reactivates a suspended tenant.", parameters: [param("tenantId")] });
+      operation({ tag: "Admin Tenants", method: "get", path: "/api/admin/tenants/{tenantId}/usage", summary: "Tenant usage", description: "Returns device, user, media, and storage usage for a tenant.", parameters: [param("tenantId")] });
+      operation({ tag: "Admin Tenants", method: "post", path: "/api/admin/tenants/{tenantId}/impersonate", summary: "Impersonate tenant", description: "Creates a support impersonation session with audit logging.", parameters: [param("tenantId")] });
+
+      // Admin users and billing
+      operation({ tag: "Admin Users", method: "get", path: "/api/admin/users", summary: "List platform users", description: "Lists admin, agent, and tenant users." });
+      operation({ tag: "Admin Users", method: "post", path: "/api/admin/users", summary: "Create platform user", description: "Creates an admin, agent, or tenant user.", body: "UserRequest" });
+      operation({ tag: "Admin Users", method: "get", path: "/api/admin/users/{userId}", summary: "Get user details", description: "Returns user details and role.", parameters: [param("userId")] });
+      operation({ tag: "Admin Users", method: "patch", path: "/api/admin/users/{userId}", summary: "Update user", description: "Updates user profile or status.", parameters: [param("userId")], body: "UserRequest" });
+      operation({ tag: "Admin Users", method: "post", path: "/api/admin/users/{userId}/deactivate", summary: "Deactivate user", description: "Disables a user account.", parameters: [param("userId")] });
+      operation({ tag: "Admin Users", method: "post", path: "/api/admin/users/{userId}/activate", summary: "Activate user", description: "Reactivates a disabled user account.", parameters: [param("userId")] });
+      operation({ tag: "Admin Users", method: "patch", path: "/api/admin/users/{userId}/role", summary: "Change user role", description: "Changes a user's role and permissions.", parameters: [param("userId")], body: "UserRequest" });
+
+      operation({ tag: "Admin Billing", method: "get", path: "/api/admin/plans", summary: "List plans", description: "Lists subscription plans." });
+      operation({ tag: "Admin Billing", method: "post", path: "/api/admin/plans", summary: "Create plan", description: "Creates a subscription plan.", body: "PlanRequest" });
+      operation({ tag: "Admin Billing", method: "patch", path: "/api/admin/plans/{planId}", summary: "Update plan", description: "Updates a subscription plan.", parameters: [param("planId")], body: "PlanRequest" });
+      operation({ tag: "Admin Billing", method: "delete", path: "/api/admin/plans/{planId}", summary: "Delete plan", description: "Deletes or archives a subscription plan.", parameters: [param("planId")] });
+      operation({ tag: "Admin Billing", method: "get", path: "/api/admin/subscriptions", summary: "List subscriptions", description: "Lists tenant subscriptions." });
+      operation({ tag: "Admin Billing", method: "get", path: "/api/admin/subscriptions/{subscriptionId}", summary: "Get subscription", description: "Returns subscription details.", parameters: [param("subscriptionId")] });
+      operation({ tag: "Admin Billing", method: "patch", path: "/api/admin/subscriptions/{subscriptionId}/status", summary: "Update subscription status", description: "Updates subscription status.", parameters: [param("subscriptionId")] });
+      operation({ tag: "Admin Billing", method: "get", path: "/api/admin/invoices", summary: "List invoices", description: "Lists invoices." });
+      operation({ tag: "Admin Billing", method: "get", path: "/api/admin/payments", summary: "List payments", description: "Lists payment records." });
+      operation({ tag: "Audit Logs", method: "get", path: "/api/admin/audit-logs", summary: "List audit logs", description: "Lists system-wide audit logs." });
+      operation({ tag: "Audit Logs", method: "get", path: "/api/admin/audit-logs/{logId}", summary: "Get audit log", description: "Returns a single audit log detail.", parameters: [param("logId")] });
+
+      // Agent/Tenant dashboard
+      operation({ tag: "Agent Dashboard", method: "get", path: "/api/agent/dashboard/summary", summary: "Tenant dashboard summary", description: "Returns tenant devices, media, schedules, storage, and alert summary." });
+      operation({ tag: "Agent Dashboard", method: "get", path: "/api/agent/dashboard/recent-activity", summary: "Tenant recent activity", description: "Returns recent activity for the logged-in tenant." });
+      operation({ tag: "Agent Dashboard", method: "get", path: "/api/agent/dashboard/alerts", summary: "Tenant alerts", description: "Returns device alerts, failed uploads, and warnings." });
+      operation({ tag: "Tenant Profile", method: "get", path: "/api/agent/tenant/profile", summary: "Get tenant profile", description: "Returns tenant profile and settings." });
+      operation({ tag: "Tenant Profile", method: "patch", path: "/api/agent/tenant/profile", summary: "Update tenant profile", description: "Updates tenant profile settings.", body: "TenantRequest" });
+      operation({ tag: "Tenant Profile", method: "patch", path: "/api/agent/tenant/branding", summary: "Update branding", description: "Updates logo, colors, and white-label settings.", body: "TenantRequest" });
+      operation({ tag: "Tenant Profile", method: "get", path: "/api/agent/tenant/usage", summary: "Tenant usage", description: "Returns tenant storage, device, user, and plan usage." });
+      crud("Agent Users", "/api/agent/users", "userId", "tenant user", "UserRequest");
+      operation({ tag: "Agent Users", method: "post", path: "/api/agent/users/{userId}/deactivate", summary: "Deactivate tenant user", description: "Disables a tenant user.", parameters: [param("userId")] });
+
+      // Media
+      crud("Media", "/api/agent/media", "mediaId", "media", "MediaCreateRequest");
+      operation({ tag: "Media", method: "post", path: "/api/agent/media/upload-url", summary: "Generate S3 upload URL", description: "Creates a presigned S3 URL for direct browser upload.", body: "UploadUrlRequest" });
+      operation({ tag: "Media", method: "post", path: "/api/agent/media/{mediaId}/complete-upload", summary: "Complete upload", description: "Marks upload complete and triggers processing.", parameters: [param("mediaId")] });
+      operation({ tag: "Media", method: "get", path: "/api/agent/media/{mediaId}/preview-url", summary: "Get preview URL", description: "Returns a CloudFront preview URL for media.", parameters: [param("mediaId")] });
+      operation({ tag: "Media", method: "post", path: "/api/agent/media/{mediaId}/reprocess", summary: "Reprocess media", description: "Retries processing for failed media.", parameters: [param("mediaId")] });
+      operation({ tag: "Media", method: "get", path: "/api/agent/media/folders", summary: "List media folders", description: "Lists media folders." });
+      operation({ tag: "Media", method: "post", path: "/api/agent/media/folders", summary: "Create media folder", description: "Creates a media folder." });
+      operation({ tag: "Media", method: "get", path: "/api/agent/media/tags", summary: "List media tags", description: "Lists media tags." });
+      operation({ tag: "Media", method: "post", path: "/api/agent/media/tags", summary: "Create media tag", description: "Creates a media tag." });
+
+      // Playlists
+      crud("Playlists", "/api/agent/playlists", "playlistId", "playlist", "PlaylistRequest");
+      operation({ tag: "Playlists", method: "post", path: "/api/agent/playlists/{playlistId}/items", summary: "Add playlist item", description: "Adds media to a playlist.", parameters: [param("playlistId")], body: "PlaylistItemRequest" });
+      operation({ tag: "Playlists", method: "patch", path: "/api/agent/playlists/{playlistId}/items/reorder", summary: "Reorder playlist items", description: "Reorders playlist media items.", parameters: [param("playlistId")], body: "ReorderRequest" });
+      operation({ tag: "Playlists", method: "patch", path: "/api/agent/playlists/{playlistId}/items/{itemId}", summary: "Update playlist item", description: "Updates playlist item duration or settings.", parameters: [param("playlistId"), param("itemId")], body: "PlaylistItemRequest" });
+      operation({ tag: "Playlists", method: "delete", path: "/api/agent/playlists/{playlistId}/items/{itemId}", summary: "Remove playlist item", description: "Removes media from a playlist.", parameters: [param("playlistId"), param("itemId")] });
+      operation({ tag: "Playlists", method: "get", path: "/api/agent/playlists/{playlistId}/preview", summary: "Preview playlist", description: "Returns playlist sequence preview data.", parameters: [param("playlistId")] });
+      operation({ tag: "Playlists", method: "get", path: "/api/agent/playlists/{playlistId}/validate", summary: "Validate playlist", description: "Checks missing media, unsupported files, and duration issues.", parameters: [param("playlistId")] });
+
+      // Schedules
+      crud("Schedules", "/api/agent/schedules", "scheduleId", "schedule", "ScheduleRequest");
+      operation({ tag: "Schedules", method: "post", path: "/api/agent/schedules/check-conflicts", summary: "Check schedule conflicts", description: "Checks schedule overlaps before saving.", body: "ScheduleRequest" });
+      operation({ tag: "Schedules", method: "get", path: "/api/agent/schedules/calendar", summary: "Calendar data", description: "Returns schedule data for calendar views." });
+      operation({ tag: "Schedules", method: "post", path: "/api/agent/schedules/{scheduleId}/devices", summary: "Assign devices to schedule", description: "Assigns schedule to devices.", parameters: [param("scheduleId")], body: "ScheduleRequest" });
+      operation({ tag: "Schedules", method: "delete", path: "/api/agent/schedules/{scheduleId}/devices", summary: "Remove devices from schedule", description: "Removes device assignments from schedule.", parameters: [param("scheduleId")] });
+
+      // Devices
+      crud("Devices", "/api/agent/devices", "deviceId", "device", "DeviceRequest");
+      operation({ tag: "Devices", method: "post", path: "/api/agent/devices/{deviceId}/assign-playlist", summary: "Assign playlist", description: "Assigns a playlist to a device.", parameters: [param("deviceId")], body: "PlaylistRequest" });
+      operation({ tag: "Devices", method: "post", path: "/api/agent/devices/{deviceId}/assign-schedule", summary: "Assign schedule", description: "Assigns a schedule to a device.", parameters: [param("deviceId")], body: "ScheduleRequest" });
+      operation({ tag: "Devices", method: "get", path: "/api/agent/devices/{deviceId}/status", summary: "Device live status", description: "Returns live Redis-backed device status.", parameters: [param("deviceId")] });
+      operation({ tag: "Devices", method: "get", path: "/api/agent/devices/{deviceId}/manifest", summary: "Preview device manifest", description: "Previews the current device manifest.", parameters: [param("deviceId")] });
+      operation({ tag: "Devices", method: "post", path: "/api/agent/devices/{deviceId}/regenerate-token", summary: "Regenerate device token", description: "Generates a new device token and invalidates the old token.", parameters: [param("deviceId")] });
+      operation({ tag: "Devices", method: "get", path: "/api/agent/devices/groups", summary: "List device groups", description: "Lists device groups." });
+      operation({ tag: "Devices", method: "post", path: "/api/agent/devices/groups", summary: "Create device group", description: "Creates a device group.", body: "DeviceRequest" });
+      operation({ tag: "Devices", method: "patch", path: "/api/agent/devices/groups/{groupId}", summary: "Update device group", description: "Updates a device group.", parameters: [param("groupId")], body: "DeviceRequest" });
+      operation({ tag: "Devices", method: "post", path: "/api/agent/devices/groups/{groupId}/devices", summary: "Add devices to group", description: "Adds devices to a group.", parameters: [param("groupId")], body: "DeviceRequest" });
+
+      // Device commands
+      operation({ tag: "Device Commands", method: "get", path: "/api/agent/devices/{deviceId}/commands", summary: "List command history", description: "Lists remote command history for a device.", parameters: [param("deviceId")] });
+      ["refresh", "reboot", "clear-cache", "screenshot"].forEach((command) => {
+        operation({
+          tag: "Device Commands",
+          method: "post",
+          path: `/api/agent/devices/{deviceId}/commands/${command}`,
+          summary: `Send ${command} command`,
+          description: `Queues a ${command} command for the device.`,
+          parameters: [param("deviceId")],
+          body: "CommandRequest",
+        });
+      });
+      operation({ tag: "Device Commands", method: "get", path: "/api/agent/devices/{deviceId}/commands/{commandId}", summary: "Get command status", description: "Returns command delivery and execution status.", parameters: [param("deviceId"), param("commandId")] });
+
+      // Device/player APIs
+      operation({ tag: "Device Player", method: "post", path: "/api/device/register", summary: "Register physical device", description: "Registers a BrightSign/player device using serial number and registration code.", body: "DeviceRegisterRequest", security: [] });
+      operation({ tag: "Device Player", method: "post", path: "/api/device/heartbeat", summary: "Device heartbeat", description: "Device sends online status every 30-60 seconds.", body: "HeartbeatRequest", security: [{ deviceToken: [] }] });
+      operation({ tag: "Device Player", method: "get", path: "/api/device/manifest", summary: "Fetch device manifest", description: "Device fetches playlist, media URLs, schedules, and sensor rules.", security: [{ deviceToken: [] }] });
+      operation({ tag: "Device Player", method: "post", path: "/api/device/manifest/ack", summary: "Acknowledge manifest", description: "Device confirms manifest received and applied.", body: "CommandRequest", security: [{ deviceToken: [] }] });
+      operation({ tag: "Device Player", method: "post", path: "/api/device/telemetry", summary: "Submit proof-of-play telemetry", description: "Device sends batched proof-of-play records.", body: "TelemetryRequest", security: [{ deviceToken: [] }] });
+      operation({ tag: "Device Player", method: "post", path: "/api/device/sensor-events", summary: "Submit sensor events", description: "Device sends batched sensor interaction records.", body: "TelemetryRequest", security: [{ deviceToken: [] }] });
+      operation({ tag: "Device Player", method: "post", path: "/api/device/alerts", summary: "Submit urgent alert", description: "Device sends urgent alerts to live dashboards.", body: "TelemetryRequest", security: [{ deviceToken: [] }] });
+      operation({ tag: "Device Player", method: "get", path: "/api/device/commands/poll", summary: "Poll pending commands", description: "Device checks for pending commands.", security: [{ deviceToken: [] }] });
+      operation({ tag: "Device Player", method: "post", path: "/api/device/commands/{commandId}/ack", summary: "Acknowledge command", description: "Device confirms command received.", parameters: [param("commandId")], body: "CommandRequest", security: [{ deviceToken: [] }] });
+      operation({ tag: "Device Player", method: "post", path: "/api/device/commands/{commandId}/result", summary: "Submit command result", description: "Device submits command execution result.", parameters: [param("commandId")], body: "CommandRequest", security: [{ deviceToken: [] }] });
+      operation({ tag: "Device Player", method: "post", path: "/api/device/logs", summary: "Upload device logs", description: "Device uploads diagnostic logs.", body: "TelemetryRequest", security: [{ deviceToken: [] }] });
+
+      // Sensor rules
+      crud("Sensor Rules", "/api/agent/sensor-rules", "ruleId", "sensor rule", "SensorRuleRequest");
+      operation({ tag: "Sensor Rules", method: "post", path: "/api/agent/sensor-rules/{ruleId}/enable", summary: "Enable sensor rule", description: "Enables a sensor rule.", parameters: [param("ruleId")] });
+      operation({ tag: "Sensor Rules", method: "post", path: "/api/agent/sensor-rules/{ruleId}/disable", summary: "Disable sensor rule", description: "Disables a sensor rule.", parameters: [param("ruleId")] });
+      operation({ tag: "Sensor Rules", method: "post", path: "/api/agent/sensor-rules/validate", summary: "Validate sensor rule", description: "Validates IF/THEN sensor rule configuration before saving.", body: "SensorRuleRequest" });
+      operation({ tag: "Sensor Rules", method: "get", path: "/api/agent/sensor-types", summary: "List sensor types", description: "Lists supported sensors and available conditions/actions." });
+
+      // Reports
+      ["proof-of-play", "device-uptime", "media-performance", "sensor-events", "storage-usage"].forEach((report) => {
+        operation({
+          tag: "Reports",
+          method: "get",
+          path: `/api/agent/reports/${report}`,
+          summary: `${report} report`,
+          description: `Returns ${report} analytics with date, device, playlist, and media filters where applicable.`,
+        });
+      });
+      operation({ tag: "Reports", method: "post", path: "/api/agent/reports/export/csv", summary: "Export CSV report", description: "Queues or generates a CSV report.", body: "ReportExportRequest" });
+      operation({ tag: "Reports", method: "post", path: "/api/agent/reports/export/pdf", summary: "Export PDF report", description: "Queues or generates a PDF report.", body: "ReportExportRequest" });
+      operation({ tag: "Reports", method: "get", path: "/api/agent/reports/jobs/{jobId}", summary: "Report job status", description: "Checks report generation job status.", parameters: [param("jobId")] });
+
+      // Notifications
+      operation({ tag: "Notifications", method: "get", path: "/api/agent/notifications", summary: "List tenant notifications", description: "Lists tenant notifications." });
+      operation({ tag: "Notifications", method: "post", path: "/api/agent/notifications/{notificationId}/read", summary: "Mark notification read", description: "Marks a notification as read.", parameters: [param("notificationId")] });
+      operation({ tag: "Notifications", method: "post", path: "/api/agent/notifications/read-all", summary: "Mark all notifications read", description: "Marks all tenant notifications as read." });
+      operation({ tag: "Notifications", method: "get", path: "/api/admin/notifications", summary: "List admin notifications", description: "Lists platform admin notifications." });
+
+      // Internal jobs
+      [
+        ["/api/internal/jobs/media/process", "Process uploaded media"],
+        ["/api/internal/jobs/telemetry/ingest", "Ingest telemetry batch"],
+        ["/api/internal/jobs/reports/generate", "Generate report files"],
+        ["/api/internal/jobs/device-command/process", "Process device command queue"],
+        ["/api/internal/jobs/retry", "Retry failed job"],
+      ].forEach(([path, summary]) => {
+        operation({
+          tag: "Internal Jobs",
+          method: "post",
+          path,
+          summary,
+          description: `${summary}. Protected for internal worker usage.`,
+          body: "CommandRequest",
+          security: [{ internalToken: [] }],
+        });
+      });
+
+      // Webhooks
+      [
+        ["/api/webhooks/s3", "S3 object event webhook"],
+        ["/api/webhooks/media-processing", "Media processing result webhook"],
+        ["/api/webhooks/payment", "Payment gateway webhook"],
+        ["/api/webhooks/cloudfront", "CloudFront event webhook"],
+      ].forEach(([path, summary]) => {
+        operation({
+          tag: "Webhooks",
+          method: "post",
+          path,
+          summary,
+          description: `${summary}. Receives trusted external service events.`,
+          body: "CommandRequest",
+          security: [],
+        });
+      });
+
+      // Assets
+      operation({ tag: "Assets", method: "post", path: "/api/assets/signed-url", summary: "Generate signed asset URL", description: "Generates a private CloudFront signed URL for media, reports, or invoices.", body: "AssetSignedUrlRequest" });
+      operation({ tag: "Assets", method: "get", path: "/api/assets/{assetId}/download", summary: "Download asset", description: "Downloads or redirects to a secure asset URL.", parameters: [param("assetId")] });
+      operation({ tag: "Assets", method: "get", path: "/api/assets/{assetId}/metadata", summary: "Get asset metadata", description: "Returns asset metadata.", parameters: [param("assetId")] });
+
+      SwaggerUIBundle({
+        spec: api,
+        dom_id: "#swagger-ui",
+        deepLinking: true,
+        displayRequestDuration: true,
+        persistAuthorization: true,
+        defaultModelsExpandDepth: 1,
+        defaultModelExpandDepth: 2,
+      });
+    </script>
+  </body>
+</html>
