@@ -61,7 +61,7 @@ export default function AdminSidebar() {
           <Layers className="w-5 h-5" />
         </div>
         <span className="font-semibold text-zinc-900 dark:text-zinc-50 text-base tracking-tight">
-          Rubenias
+          REDS XOS
         </span>
       </div>
 

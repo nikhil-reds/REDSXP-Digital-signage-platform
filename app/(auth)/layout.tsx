@@ -36,7 +36,7 @@ export default function AuthLayout({ children }: AuthLayoutProps) {
             />
           </svg>
           <span className="text-xl font-bold tracking-tight text-white font-mono">
-            RUBENIOUS
+            REDS XOS
           </span>
         </div>
 
@@ -52,7 +52,7 @@ export default function AuthLayout({ children }: AuthLayoutProps) {
         </div>
 
         <div className="relative z-20 mt-8 flex items-center justify-between text-xs text-zinc-500 border-t border-zinc-900 pt-6">
-          <span>&copy; {new Date().getFullYear()} Rubenious</span>
+          <span>&copy; {new Date().getFullYear()} REDS XOS</span>
           <div className="flex gap-4">
             <Link href="#" className="hover:text-white transition-colors">Privacy</Link>
             <Link href="#" className="hover:text-white transition-colors">Terms</Link>
@@ -82,7 +82,7 @@ export default function AuthLayout({ children }: AuthLayoutProps) {
               />
             </svg>
             <span className="text-lg font-bold tracking-tight text-white font-mono">
-              RUBENIOUS
+              REDS XOS
             </span>
           </div>
 

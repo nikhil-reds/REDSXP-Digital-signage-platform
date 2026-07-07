@@ -73,7 +73,7 @@ export default function AgentSidebar() {
           </div>
           {!isCollapsed && (
             <span className="font-bold text-[#18202B] dark:text-[#F2F5F8] text-base tracking-tight truncate">
-              Rubenius Agent
+              REDS XOS
             </span>
           )}
         </div>
