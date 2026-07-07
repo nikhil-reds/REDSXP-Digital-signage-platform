@@ -1,3 +1,4 @@
+
 -- CreateEnum
 CREATE TYPE "TenantStatus" AS ENUM ('ACTIVE', 'SUSPENDED');
 

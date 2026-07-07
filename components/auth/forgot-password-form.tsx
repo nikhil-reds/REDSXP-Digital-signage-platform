@@ -24,12 +24,17 @@ export default function ForgotPasswordForm() {
     }
 
     setIsLoading(true);
-    // Simulate API call
     try {
-      await new Promise((resolve) => setTimeout(resolve, 1500));
+      const response = await fetch("/api/auth/forgot-password", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email }),
+      });
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.message || "Failed to send reset link.");
       setSuccess(true);
     } catch (err) {
-      setError("Failed to send reset link. Please try again.");
+      setError(err instanceof Error ? err.message : "Failed to send reset link. Please try again.");
     } finally {
       setIsLoading(false);
     }
