@@ -2,7 +2,7 @@
 
 import React from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import {
   LayoutDashboard,
   Globe,
@@ -43,6 +43,15 @@ const navItems: NavItem[] = [
 
 export default function AdminSidebar() {
   const pathname = usePathname();
+  const router = useRouter();
+
+  const handleLogout = async () => {
+    const response = await fetch("/api/auth/logout", { method: "POST" });
+    if (response.ok) {
+      router.replace("/login");
+      router.refresh();
+    }
+  };
 
   return (
     <aside className="w-64 border-r border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 flex flex-col h-screen shrink-0 font-sans">
@@ -110,6 +119,7 @@ export default function AdminSidebar() {
           </div>
         </div>
         <button
+          onClick={handleLogout}
           title="Sign out"
           className="p-1.5 rounded-lg text-zinc-400 hover:text-zinc-900 hover:bg-zinc-100 dark:hover:text-zinc-50 dark:hover:bg-zinc-900 transition-all duration-200 shrink-0"
         >
