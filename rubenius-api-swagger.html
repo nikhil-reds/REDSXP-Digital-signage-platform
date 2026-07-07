@@ -145,6 +145,17 @@
                 password: { type: "string", format: "password", example: "StrongPassword123" },
               },
             },
+            RegisterRequest: {
+              type: "object",
+              required: ["firstName", "lastName", "workspaceName", "email", "password"],
+              properties: {
+                firstName: { type: "string", example: "Alex" },
+                lastName: { type: "string", example: "Rivera" },
+                workspaceName: { type: "string", example: "Acme Content" },
+                email: { type: "string", format: "email", example: "alex@acme.com" },
+                password: { type: "string", format: "password", minLength: 8 },
+              },
+            },
             PasswordResetRequest: {
               type: "object",
               required: ["email"],
@@ -180,6 +191,16 @@
                 lastName: { type: "string" },
                 role: { type: "string", example: "Tenant Owner" },
                 status: { type: "string", enum: ["ACTIVE", "INACTIVE", "SUSPENDED"] },
+              },
+            },
+            AdminUserCreateRequest: {
+              type: "object",
+              required: ["firstName", "lastName", "email", "password"],
+              properties: {
+                firstName: { type: "string" },
+                lastName: { type: "string" },
+                email: { type: "string", format: "email" },
+                password: { type: "string", format: "password", minLength: 12 },
               },
             },
             PlanRequest: {
@@ -502,6 +523,7 @@
 
       // Auth
       operation({ tag: "Auth", method: "post", path: "/api/auth/login", summary: "Login user", description: "Logs in an admin, agent, or tenant user and creates a session.", body: "LoginRequest", security: [] });
+      operation({ tag: "Auth", method: "post", path: "/api/auth/register", summary: "Register workspace", description: "Creates a tenant workspace and its first user, then starts a session.", body: "RegisterRequest", security: [] });
       operation({ tag: "Auth", method: "post", path: "/api/auth/logout", summary: "Logout user", description: "Clears the current user session." });
       operation({ tag: "Auth", method: "get", path: "/api/auth/me", summary: "Get current user", description: "Returns the current logged-in user profile and role permissions." });
       operation({ tag: "Auth", method: "post", path: "/api/auth/refresh", summary: "Refresh token", description: "Refreshes the current session or access token." });
@@ -525,8 +547,8 @@
       operation({ tag: "Admin Tenants", method: "post", path: "/api/admin/tenants/{tenantId}/impersonate", summary: "Impersonate tenant", description: "Creates a support impersonation session with audit logging.", parameters: [param("tenantId")] });
 
       // Admin users and billing
-      operation({ tag: "Admin Users", method: "get", path: "/api/admin/users", summary: "List platform users", description: "Lists admin, agent, and tenant users." });
-      operation({ tag: "Admin Users", method: "post", path: "/api/admin/users", summary: "Create platform user", description: "Creates an admin, agent, or tenant user.", body: "UserRequest" });
+      operation({ tag: "Admin Users", method: "get", path: "/api/admin/users", summary: "List administrators", description: "Lists platform administrators with search, status filtering, and pagination." });
+      operation({ tag: "Admin Users", method: "post", path: "/api/admin/users", summary: "Create administrator", description: "Creates an active platform administrator in the current admin workspace.", body: "AdminUserCreateRequest" });
       operation({ tag: "Admin Users", method: "get", path: "/api/admin/users/{userId}", summary: "Get user details", description: "Returns user details and role.", parameters: [param("userId")] });
       operation({ tag: "Admin Users", method: "patch", path: "/api/admin/users/{userId}", summary: "Update user", description: "Updates user profile or status.", parameters: [param("userId")], body: "UserRequest" });
       operation({ tag: "Admin Users", method: "post", path: "/api/admin/users/{userId}/deactivate", summary: "Deactivate user", description: "Disables a user account.", parameters: [param("userId")] });
