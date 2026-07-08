@@ -1,7 +1,7 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
-import { X, UploadCloud, RefreshCw, AlertCircle, FileText, CheckCircle2 } from "lucide-react";
+import React, { useState, useRef } from "react";
+import { X, UploadCloud, RefreshCw, AlertCircle, CheckCircle2 } from "lucide-react";
 
 interface MediaUploadModalProps {
   onClose: () => void;
@@ -10,11 +10,14 @@ interface MediaUploadModalProps {
 
 export default function MediaUploadModal({ onClose, onUploadSuccess }: MediaUploadModalProps) {
   const [dragActive, setDragActive] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  
   const [uploadingFiles, setUploadingFiles] = useState<Array<{
     name: string;
     size: string;
     progress: number;
     status: "uploading" | "transcoding" | "success" | "failed";
+    error?: string;
   }>>([]);
 
   const handleDrag = (e: React.DragEvent) => {
@@ -27,67 +30,112 @@ export default function MediaUploadModal({ onClose, onUploadSuccess }: MediaUplo
     }
   };
 
-  // Simulate file drop
   const handleDrop = (e: React.DragEvent) => {
     e.preventDefault();
     e.stopPropagation();
     setDragActive(false);
-    
-    // Add simulated files
-    const files = [
-      { name: "Promo_Hot_Coffee_Winter_10s.mp4", size: "28.4 MB", progress: 0, status: "uploading" as const },
-      { name: "Special_Offer_Flyer_Landscape.png", size: "3.2 MB", progress: 0, status: "uploading" as const }
-    ];
-    setUploadingFiles(files);
+    if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+      handleFiles(Array.from(e.dataTransfer.files));
+    }
   };
 
-  // Progress simulation hook
-  useEffect(() => {
-    if (uploadingFiles.length === 0) return;
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files.length > 0) {
+      handleFiles(Array.from(e.target.files));
+    }
+  };
 
-    const timer = setInterval(() => {
-      setUploadingFiles((prev) =>
-        prev.map((file) => {
-          if (file.status === "success") return file;
-          
-          if (file.progress < 100) {
-            const nextProgress = file.progress + Math.floor(Math.random() * 20) + 10;
-            return {
-              ...file,
-              progress: Math.min(nextProgress, 100),
-              status: nextProgress >= 100 ? "transcoding" as const : "uploading" as const
-            };
-          } else if (file.status === "transcoding") {
-            // After uploading, transcoding finishes
-            setTimeout(() => {
-              setUploadingFiles((current) =>
-                current.map((f) =>
-                  f.name === file.name ? { ...f, status: "success" as const } : f
-                )
-              );
-              // Trigger parent success adding the video
-              onUploadSuccess({
-                id: `media-${Date.now()}`,
-                name: file.name,
-                type: file.name.endsWith(".mp4") ? "Video" : "Image",
-                dimensions: file.name.endsWith(".mp4") ? "1920×1080" : "1920×1080",
-                duration: file.name.endsWith(".mp4") ? "10s" : undefined,
-                size: file.size,
-                status: "Ready",
-                uploader: "Aarav Mehta",
-                date: "Today, 4:30 PM",
-                usedInPlaylists: []
-              });
-            }, 1500);
-            return { ...file, progress: 100 };
-          }
-          return file;
+  const handleFiles = (files: File[]) => {
+    // Add to UI
+    const newUploads = files.map(file => ({
+      name: file.name,
+      size: (file.size / (1024 * 1024)).toFixed(1) + " MB",
+      progress: 0,
+      status: "uploading" as const
+    }));
+    
+    setUploadingFiles(prev => [...prev, ...newUploads]);
+
+    // Process each file
+    files.forEach(file => uploadFileToS3(file));
+  };
+
+  const updateFileStatus = (filename: string, updates: any) => {
+    setUploadingFiles(prev => prev.map(f => f.name === filename ? { ...f, ...updates } : f));
+  };
+
+  const uploadFileToS3 = async (file: File) => {
+    try {
+      // 1. Get Presigned URL
+      const presignedRes = await fetch("/api/media/presigned", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          filename: file.name,
+          contentType: file.type || "application/octet-stream"
         })
-      );
-    }, 800);
+      });
+      
+      if (!presignedRes.ok) throw new Error("Failed to get upload URL");
+      const { presignedUrl, s3Key, cdnUrl } = await presignedRes.json();
 
-    return () => clearInterval(timer);
-  }, [uploadingFiles]);
+      // 2. Upload to S3 using XMLHttpRequest for progress
+      await new Promise<void>((resolve, reject) => {
+        const xhr = new XMLHttpRequest();
+        xhr.open("PUT", presignedUrl);
+        xhr.setRequestHeader("Content-Type", file.type || "application/octet-stream");
+        
+        xhr.upload.onprogress = (event) => {
+          if (event.lengthComputable) {
+            const progress = Math.round((event.loaded / event.total) * 100);
+            updateFileStatus(file.name, { progress });
+          }
+        };
+
+        xhr.onload = () => {
+          if (xhr.status >= 200 && xhr.status < 300) {
+            resolve();
+          } else {
+            reject(new Error(`S3 Upload failed with status ${xhr.status}`));
+          }
+        };
+        xhr.onerror = () => reject(new Error("Network error during upload"));
+        xhr.send(file);
+      });
+
+      // 3. Status transcode processing...
+      updateFileStatus(file.name, { status: "transcoding", progress: 100 });
+
+      // Determine type
+      let mediaType = "Image";
+      if (file.type.includes("video")) mediaType = "Video";
+      if (file.type.includes("html") || file.name.endsWith(".zip")) mediaType = "HTML5";
+
+      // 4. Save to Database
+      const createRes = await fetch("/api/media", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: file.name,
+          filename: file.name,
+          s3Key,
+          cdnUrl,
+          sizeBytes: file.size,
+          type: mediaType
+        })
+      });
+
+      if (!createRes.ok) throw new Error("Failed to save media record");
+      const newAsset = await createRes.json();
+
+      updateFileStatus(file.name, { status: "success" });
+      onUploadSuccess(newAsset);
+
+    } catch (error: any) {
+      console.error("Upload error:", error);
+      updateFileStatus(file.name, { status: "failed", error: error.message || "Upload failed" });
+    }
+  };
 
   return (
     <div className="fixed inset-0 bg-black/55 dark:bg-black/80 flex items-center justify-center z-50 animate-fadeIn font-sans">
@@ -115,16 +163,20 @@ export default function MediaUploadModal({ onClose, onUploadSuccess }: MediaUplo
         <div className="p-5 space-y-4 text-xs">
           
           {/* Drag & drop zone */}
+          <input 
+            type="file" 
+            ref={fileInputRef} 
+            onChange={handleFileChange} 
+            className="hidden" 
+            multiple 
+            accept="image/*,video/mp4,.zip,.html"
+          />
           <div
             onDragEnter={handleDrag}
             onDragOver={handleDrag}
             onDragLeave={handleDrag}
             onDrop={handleDrop}
-            onClick={() => {
-              // Mock simple browse
-              const files = [{ name: "Promo_Cold_Brew_June_15s.mp4", size: "35.1 MB", progress: 0, status: "uploading" as const }];
-              setUploadingFiles(files);
-            }}
+            onClick={() => fileInputRef.current?.click()}
             className={`border-2 border-dashed rounded-xl p-8 text-center flex flex-col items-center justify-center gap-3 cursor-pointer transition-all ${
               dragActive
                 ? "border-[#2859D9] bg-blue-50/10 dark:border-[#6F96FF]"
@@ -165,6 +217,7 @@ export default function MediaUploadModal({ onClose, onUploadSuccess }: MediaUplo
                           {file.name}
                         </span>
                         <span className="text-[9px] text-zinc-400 mt-0.5 block">{file.size}</span>
+                        {file.error && <span className="text-[9px] text-red-500 mt-0.5 block">{file.error}</span>}
                       </div>
                       
                       {/* Status indicator */}
@@ -172,11 +225,12 @@ export default function MediaUploadModal({ onClose, onUploadSuccess }: MediaUplo
                         {file.status === "uploading" && <span className="text-blue-500">Uploading {file.progress}%</span>}
                         {file.status === "transcoding" && <span className="text-amber-500 flex items-center gap-1"><RefreshCw className="w-2.5 h-2.5 animate-spin" /> Processing</span>}
                         {file.status === "success" && <span className="text-emerald-500 flex items-center gap-0.5"><CheckCircle2 className="w-3 h-3" /> Ready</span>}
+                        {file.status === "failed" && <span className="text-red-500 flex items-center gap-0.5"><AlertCircle className="w-3 h-3" /> Failed</span>}
                       </span>
                     </div>
 
                     {/* Progress slider bar */}
-                    {file.status !== "success" && (
+                    {(file.status === "uploading" || file.status === "transcoding") && (
                       <div className="w-full bg-[#E2E6EC] dark:bg-zinc-800 h-1 rounded-full overflow-hidden">
                         <div
                           className={`h-full rounded-full transition-all duration-300 ${
@@ -188,12 +242,12 @@ export default function MediaUploadModal({ onClose, onUploadSuccess }: MediaUplo
                     )}
 
                     {/* Cancel trigger */}
-                    {file.status !== "success" && (
+                    {(file.status === "uploading" || file.status === "failed") && (
                       <button
                         onClick={() => setUploadingFiles(uploadingFiles.filter((f) => f.name !== file.name))}
                         className="absolute right-3 bottom-3 text-[9px] font-bold text-zinc-400 hover:text-red-500 cursor-pointer"
                       >
-                        Cancel
+                        {file.status === "failed" ? "Dismiss" : "Cancel"}
                       </button>
                     )}
                   </div>
