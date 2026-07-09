@@ -55,16 +55,29 @@ export default function MediaPreviewDrawer({ asset, onClose, onDeleteAsset }: Me
 
       {/* Asset Preview Slot */}
       <div className="p-4 border-b border-[#E2E6EC] dark:border-[#283243] bg-zinc-50/30 dark:bg-zinc-950/20 aspect-video flex items-center justify-center relative overflow-hidden select-none">
-        {isVideo ? (
-          <Film className="w-12 h-12 text-[#2859D9]/40" />
-        ) : isHtml ? (
-          <Code className="w-12 h-12 text-purple-500/40" />
-        ) : (
-          <ImageIcon className="w-12 h-12 text-emerald-500/40" />
+        
+        {asset.cdnUrl && !isVideo && !isHtml && (
+          <img src={asset.cdnUrl} alt={asset.name} className="absolute inset-0 w-full h-full object-contain" />
         )}
-        <span className="absolute bottom-2 left-2 text-[9px] font-bold text-zinc-400 bg-white/80 dark:bg-zinc-950/80 px-1.5 py-0.5 rounded border border-[#E2E6EC] dark:border-[#283243]">
-          File Preview Slot
-        </span>
+        {asset.cdnUrl && isVideo && (
+          <video src={asset.cdnUrl} className="absolute inset-0 w-full h-full object-contain" controls />
+        )}
+
+        {/* Fallback Icons if no URL or if HTML */}
+        {(!asset.cdnUrl || isHtml) && (
+          <>
+            {isVideo ? (
+              <Film className="w-12 h-12 text-[#2859D9]/40" />
+            ) : isHtml ? (
+              <Code className="w-12 h-12 text-purple-500/40" />
+            ) : (
+              <ImageIcon className="w-12 h-12 text-emerald-500/40" />
+            )}
+            <span className="absolute bottom-2 left-2 text-[9px] font-bold text-zinc-400 bg-white/80 dark:bg-zinc-950/80 px-1.5 py-0.5 rounded border border-[#E2E6EC] dark:border-[#283243]">
+              File Preview Slot
+            </span>
+          </>
+        )}
       </div>
 
       {/* Detailed Metadata parameters */}

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   Search,
   Grid,
@@ -90,7 +90,8 @@ const initialAssets: MediaAsset[] = [
 ];
 
 export default function AgentMediaPage() {
-  const [assets, setAssets] = useState<MediaAsset[]>(initialAssets);
+  const [assets, setAssets] = useState<MediaAsset[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const [viewMode, setViewMode] = useState<"grid" | "table">("grid");
   const [selectedAsset, setSelectedAsset] = useState<MediaAsset | null>(null);
   const [showUploadModal, setShowUploadModal] = useState(false);
@@ -101,6 +102,19 @@ export default function AgentMediaPage() {
   const [orientationFilter, setOrientationFilter] = useState("All");
   const [statusFilter, setStatusFilter] = useState("All");
 
+  useEffect(() => {
+    fetch("/api/media")
+      .then(res => res.json())
+      .then(data => {
+        if (Array.isArray(data)) {
+          // Map backend attributes to frontend UI requirements if needed
+          setAssets(data);
+        }
+      })
+      .catch(err => console.error("Failed to load assets:", err))
+      .finally(() => setIsLoading(false));
+  }, []);
+
   // Filter application
   const filteredAssets = assets.filter((asset) => {
     const matchesSearch = asset.name.toLowerCase().includes(search.toLowerCase()) ||
@@ -109,7 +123,7 @@ export default function AgentMediaPage() {
     const matchesType = typeFilter === "All" || asset.type === typeFilter;
     
     // Check orientation: Landscape starts with 1920 or is Flexible, Portrait starts with 1080 or 2160 (if height is bigger)
-    const isPortrait = asset.dimensions.startsWith("1080") || asset.dimensions.startsWith("2160");
+    const isPortrait = asset.dimensions?.startsWith("1080") || asset.dimensions?.startsWith("2160");
     const matchesOrientation =
       orientationFilter === "All" ||
       (orientationFilter === "Landscape" && !isPortrait) ||
