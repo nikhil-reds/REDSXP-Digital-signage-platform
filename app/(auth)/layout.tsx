@@ -20,24 +20,12 @@ export default function AuthLayout({ children }: AuthLayoutProps) {
           }}
         />
 
-        <div className="relative z-20 flex items-center gap-2">
-          {/* Logo SVG: Modern abstract geometric design */}
-          <svg
-            className="h-8 w-8 text-white"
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke="currentColor"
-            strokeWidth={2}
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              d="M4 5a1 1 0 011-1h14a1 1 0 011 1v2a1 1 0 01-1 1H5a1 1 0 01-1-1V5zM4 13a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H5a1 1 0 01-1-1v-6zM16 13a1 1 0 011-1h2a1 1 0 011 1v6a1 1 0 01-1 1h-2a1 1 0 01-1-1v-6z"
-            />
-          </svg>
-          <span className="text-xl font-bold tracking-tight text-white font-mono">
-            REDS XOS
-          </span>
+        <div className="relative z-20 flex items-center">
+          <img
+            src="/reds-tag.svg"
+            alt="REDS Logo"
+            className="h-16 w-auto object-contain"
+          />
         </div>
 
         <div className="relative z-20 mt-auto">
@@ -67,23 +55,12 @@ export default function AuthLayout({ children }: AuthLayoutProps) {
           <div className="absolute -inset-[1px] -z-10 rounded-2xl bg-gradient-to-tr from-zinc-900 via-transparent to-zinc-900 opacity-50 blur-sm pointer-events-none" />
 
           {/* Simple logo header for small screens */}
-          <div className="flex lg:hidden items-center justify-center gap-2 mb-8">
-            <svg
-              className="h-7 w-7 text-white"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-              strokeWidth={2}
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                d="M4 5a1 1 0 011-1h14a1 1 0 011 1v2a1 1 0 01-1 1H5a1 1 0 01-1-1V5zM4 13a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H5a1 1 0 01-1-1v-6zM16 13a1 1 0 011-1h2a1 1 0 011 1v6a1 1 0 01-1 1h-2a1 1 0 01-1-1v-6z"
-              />
-            </svg>
-            <span className="text-lg font-bold tracking-tight text-white font-mono">
-              REDS XOS
-            </span>
+          <div className="flex lg:hidden items-center justify-center mb-8">
+            <img
+              src="/reds-tag.svg"
+              alt="REDS Logo"
+              className="h-14 w-auto object-contain"
+            />
           </div>
 
           {children}
