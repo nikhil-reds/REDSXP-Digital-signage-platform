@@ -20,8 +20,7 @@ import {
   Coffee,
   ChevronLeft,
   ChevronRight,
-  Settings,
-  Sparkles
+  Settings
 } from "lucide-react";
 
 interface NavItem {
@@ -68,13 +67,20 @@ export default function AgentSidebar() {
       {/* Brand Header */}
       <div className="p-4 border-b border-[#E2E6EC] dark:border-[#283243] flex items-center justify-between">
         <div className="flex items-center gap-3 overflow-hidden">
-          <div className="bg-[#2859D9] dark:bg-[#6F96FF] text-white rounded-xl p-1.5 flex items-center justify-center w-8 h-8 shadow-xs shrink-0">
-            <Sparkles className="w-5 h-5" />
-          </div>
-          {!isCollapsed && (
-            <span className="font-bold text-[#18202B] dark:text-[#F2F5F8] text-base tracking-tight truncate">
-              REDS XOS
-            </span>
+          {isCollapsed ? (
+            <div className="w-8 h-8 flex items-center justify-center shrink-0">
+              <img
+                src="/reds-tag.svg"
+                alt="REDS Logo"
+                className="w-full h-full object-contain"
+              />
+            </div>
+          ) : (
+            <img
+              src="/reds-tag.svg"
+              alt="REDS Logo"
+              className="h-9 w-auto object-contain"
+            />
           )}
         </div>
         <button
