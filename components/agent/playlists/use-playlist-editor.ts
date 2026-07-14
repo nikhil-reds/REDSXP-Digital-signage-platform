@@ -1,6 +1,14 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
+import {
+  createPlaylist,
+  fetchMediaLibrary,
+  fetchPlaylist,
+  updatePlaylist,
+  type SavePlaylistPayload,
+} from "./api";
 import {
   CLIP_TYPE_COLORS,
   DEVICE_PROFILES,
@@ -9,40 +17,50 @@ import {
   INITIAL_DEVICE,
   INITIAL_DISPLAY,
   INITIAL_FALLBACK,
-  INITIAL_PLAYLIST_ITEMS,
-  INITIAL_PLAYLIST_NAME,
-  LIBRARY_ASSETS,
   LOCKED_TRACKS,
 } from "./constants";
 import { aspectRatioLabel, formatDuration, getCompatibility } from "./utils";
-import { DisplayConfigTab, DisplayProfile, Fit, PlaylistClip, Transition, ViewMode } from "./types";
+import { DisplayConfigTab, DisplayProfile, Fit, LibraryAsset, PlaylistClip, Transition, ViewMode } from "./types";
 
 const PAD = 12;
 
 interface DragState {
-  id: number;
+  id: string;
   dx: number;
 }
 
-export function usePlaylistEditor() {
-  const [playlistName, setPlaylistName] = useState(INITIAL_PLAYLIST_NAME);
-  const [items, setItems] = useState<PlaylistClip[]>(INITIAL_PLAYLIST_ITEMS);
-  const [nextId, setNextId] = useState(INITIAL_PLAYLIST_ITEMS.length + 1);
-  const [selectedId, setSelectedId] = useState<number | null>(2);
+interface UsePlaylistEditorOptions {
+  playlistId?: string;
+}
+
+export function usePlaylistEditor({ playlistId }: UsePlaylistEditorOptions = {}) {
+  const router = useRouter();
+
+  const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
+  const [currentPlaylistId, setCurrentPlaylistId] = useState(playlistId);
+
+  const [libraryAssets, setLibraryAssets] = useState<LibraryAsset[]>([]);
+  const [playlistName, setPlaylistName] = useState("");
+  const [items, setItems] = useState<PlaylistClip[]>([]);
+  const [selectedId, setSelectedId] = useState<string | null>(null);
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState("All");
   const [viewMode, setViewMode] = useState<ViewMode>("list");
   const [fallback, setFallback] = useState(INITIAL_FALLBACK);
-  const [dirty, setDirty] = useState(true);
+  const [dirty, setDirty] = useState(false);
   const [zoom, setZoom] = useState(22);
-  const [time, setTime] = useState(3);
+  const [time, setTime] = useState(0);
   const [playing, setPlaying] = useState(false);
   const [drag, setDrag] = useState<DragState | null>(null);
-  const [history, setHistory] = useState<string[]>(() => [JSON.stringify(INITIAL_PLAYLIST_ITEMS)]);
+  const [history, setHistory] = useState<string[]>(() => [JSON.stringify([])]);
   const [histIdx, setHistIdx] = useState(0);
   const [display, setDisplayState] = useState<DisplayProfile>(INITIAL_DISPLAY);
   const [device, setDevice] = useState(INITIAL_DEVICE);
   const [displayConfigOpen, setDisplayConfigOpen] = useState(false);
+  const [publishModalOpen, setPublishModalOpen] = useState(false);
   const [configTab, setConfigTab] = useState<DisplayConfigTab>("presets");
   const [customW, setCustomW] = useState(1920);
   const [customH, setCustomH] = useState(1080);
@@ -50,9 +68,11 @@ export function usePlaylistEditor() {
   const [safeAction, setSafeAction] = useState(false);
   const [safeBleed, setSafeBleed] = useState(false);
 
-  const dragCtx = useRef<{ id: number; startX: number } | null>(null);
-  const resizeCtx = useRef<{ id: number; startX: number; startDuration: number } | null>(null);
+  const dragCtx = useRef<{ id: string; startX: number } | null>(null);
+  const resizeCtx = useRef<{ id: string; startX: number; startDuration: number } | null>(null);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const nextInstanceIdRef = useRef(0);
+  const genInstanceId = useCallback(() => `clip-${nextInstanceIdRef.current++}`, []);
 
   // Mirrors of the latest state, read from the stable window pointer listeners below
   // so drag/resize logic always sees fresh values without reattaching listeners mid-gesture.
@@ -65,6 +85,71 @@ export function usePlaylistEditor() {
   useEffect(() => {
     zoomRef.current = zoom;
   }, [zoom]);
+
+  // Sets items as the new undo baseline (used after an initial load and after a
+  // successful save) — resets the history stack rather than pushing onto it.
+  const setBaseline = useCallback((nextItems: PlaylistClip[]) => {
+    setItems(nextItems);
+    setHistory([JSON.stringify(nextItems)]);
+    setHistIdx(0);
+    setDirty(false);
+  }, []);
+
+  // Load the media library, and (if editing) the target playlist, on mount.
+  useEffect(() => {
+    let cancelled = false;
+
+    async function load() {
+      setLoading(true);
+      setLoadError(null);
+      try {
+        const assets = await fetchMediaLibrary();
+        if (cancelled) return;
+        setLibraryAssets(assets);
+
+        if (playlistId) {
+          const detail = await fetchPlaylist(playlistId);
+          if (cancelled) return;
+          const assetById = new Map(assets.map((a) => [a.id, a]));
+          const hydrated: PlaylistClip[] = detail.items.map((item) => {
+            const asset = assetById.get(item.mediaId);
+            return {
+              instanceId: genInstanceId(),
+              mediaId: item.mediaId,
+              name: asset?.name ?? "Unknown asset",
+              type: asset?.type ?? "Image",
+              w: asset?.w ?? 0,
+              h: asset?.h ?? 0,
+              size: asset?.size ?? "—",
+              duration: item.durationSec,
+              transition: "Fade",
+              transDur: 1,
+              thumb: asset?.thumb ?? CLIP_TYPE_COLORS.Image,
+              src: asset?.src ?? "",
+              fit: "Fill",
+            };
+          });
+          setPlaylistName(detail.name);
+          setBaseline(hydrated);
+          setSelectedId(hydrated[0]?.instanceId ?? null);
+        } else {
+          setPlaylistName("Untitled Playlist");
+          setBaseline([]);
+          setSelectedId(null);
+        }
+      } catch (err) {
+        if (!cancelled) setLoadError(err instanceof Error ? err.message : "Failed to load playlist data");
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    }
+
+    load();
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [playlistId]);
 
   // Non-nested: pushHistory truncates any redo-tail and appends one snapshot, so the new
   // index is always histIdx + 1 — computed directly rather than inside a setState updater,
@@ -100,6 +185,41 @@ export function usePlaylistEditor() {
     setDirty(true);
   }, [history, histIdx]);
 
+  const save = useCallback(async () => {
+    setSaving(true);
+    setSaveError(null);
+    try {
+      const payload: SavePlaylistPayload = {
+        name: playlistName,
+        items: items.map((it, i) => ({ mediaId: it.mediaId, position: i, durationSec: it.duration })),
+      };
+      if (currentPlaylistId) {
+        await updatePlaylist(currentPlaylistId, payload);
+      } else {
+        const created = await createPlaylist(payload);
+        setCurrentPlaylistId(created.id);
+        router.replace(`/agent/playlists/create-playlist?id=${created.id}`);
+      }
+      setBaseline(items);
+    } catch (err) {
+      setSaveError(err instanceof Error ? err.message : "Failed to save playlist");
+    } finally {
+      setSaving(false);
+    }
+  }, [playlistName, items, currentPlaylistId, router, setBaseline]);
+
+  const publish = useCallback(async () => {
+    setPublishModalOpen(true);
+    await save();
+  }, [save]);
+
+  const closePublishModal = useCallback(() => setPublishModalOpen(false), []);
+
+  const finishPublish = useCallback(() => {
+    setPublishModalOpen(false);
+    router.push("/agent/playlists");
+  }, [router]);
+
   const play = useCallback(() => {
     if (timerRef.current) return;
     timerRef.current = setInterval(() => {
@@ -119,14 +239,14 @@ export function usePlaylistEditor() {
 
   const deleteSelected = useCallback(() => {
     if (selectedId == null) return;
-    const nextItems = items.filter((it) => it.id !== selectedId);
+    const nextItems = items.filter((it) => it.instanceId !== selectedId);
     setSelectedId(null);
     commit(nextItems);
   }, [items, selectedId, commit]);
 
   const moveSelected = useCallback(
     (dir: -1 | 1) => {
-      const i = items.findIndex((it) => it.id === selectedId);
+      const i = items.findIndex((it) => it.instanceId === selectedId);
       const j = i + dir;
       if (i < 0 || j < 0 || j >= items.length) return;
       const next = items.slice();
@@ -138,19 +258,19 @@ export function usePlaylistEditor() {
   );
 
   const duplicateSelected = useCallback(() => {
-    const sel = items.find((it) => it.id === selectedId);
+    const sel = items.find((it) => it.instanceId === selectedId);
     if (!sel) return;
     const idx = items.indexOf(sel);
     const next = items.slice();
-    next.splice(idx + 1, 0, { ...sel, id: nextId });
-    setSelectedId(nextId);
-    setNextId((n) => n + 1);
+    const newInstanceId = genInstanceId();
+    next.splice(idx + 1, 0, { ...sel, instanceId: newInstanceId });
+    setSelectedId(newInstanceId);
     commit(next);
-  }, [items, selectedId, nextId, commit]);
+  }, [items, selectedId, genInstanceId, commit]);
 
   const updateSelected = useCallback(
     (field: keyof PlaylistClip, value: PlaylistClip[keyof PlaylistClip]) => {
-      const next = items.map((it) => (it.id === selectedId ? { ...it, [field]: value } : it));
+      const next = items.map((it) => (it.instanceId === selectedId ? { ...it, [field]: value } : it));
       commit(next);
     },
     [items, selectedId, commit]
@@ -158,7 +278,6 @@ export function usePlaylistEditor() {
 
   const setDisplayProfile = useCallback((name: string, w: number, h: number, extraDevice?: string) => {
     setDisplayState({ name, w, h });
-    setDirty(true);
     if (extraDevice) setDevice(extraDevice);
   }, []);
 
@@ -175,7 +294,7 @@ export function usePlaylistEditor() {
         const dx = e.clientX - resizeCtx.current.startX;
         const dur = Math.max(1, Math.round((resizeCtx.current.startDuration + dx / zoomRef.current) * 2) / 2);
         const rid = resizeCtx.current.id;
-        setItems((prev) => prev.map((it) => (it.id === rid ? { ...it, duration: dur } : it)));
+        setItems((prev) => prev.map((it) => (it.instanceId === rid ? { ...it, duration: dur } : it)));
         setDirty(true);
       }
     };
@@ -191,7 +310,7 @@ export function usePlaylistEditor() {
         if (dragState && Math.abs(dragState.dx) > 4) {
           const pps = zoomRef.current;
           const current = itemsRef.current.slice();
-          const i = current.findIndex((it) => it.id === id);
+          const i = current.findIndex((it) => it.instanceId === id);
           if (i >= 0) {
             let start = 0;
             for (let k = 0; k < i; k++) start += current[k].duration;
@@ -234,7 +353,7 @@ export function usePlaylistEditor() {
   }, []);
 
   const total = items.reduce((a, it) => a + it.duration, 0);
-  const sel = items.find((it) => it.id === selectedId) || null;
+  const sel = items.find((it) => it.instanceId === selectedId) || null;
   const dispLandscape = display.w >= display.h;
 
   const starts = useMemo(() => {
@@ -263,10 +382,10 @@ export function usePlaylistEditor() {
   const clips = useMemo(
     () =>
       items.map((it, i) => {
-        const selected = it.id === selectedId;
+        const selected = it.instanceId === selectedId;
         const c = getCompatibility(it, display);
         const warning = c.level === "warn";
-        const dragging = drag && drag.id === it.id;
+        const dragging = drag && drag.id === it.instanceId;
         return {
           clip: it,
           name: it.name,
@@ -289,14 +408,14 @@ export function usePlaylistEditor() {
           onPointerDown: (e: React.PointerEvent) => {
             if (e.button !== 0) return;
             e.stopPropagation();
-            dragCtx.current = { id: it.id, startX: e.clientX };
-            setSelectedId(it.id);
-            setDrag({ id: it.id, dx: 0 });
+            dragCtx.current = { id: it.instanceId, startX: e.clientX };
+            setSelectedId(it.instanceId);
+            setDrag({ id: it.instanceId, dx: 0 });
           },
           onResizeDown: (e: React.PointerEvent) => {
             e.stopPropagation();
-            resizeCtx.current = { id: it.id, startX: e.clientX, startDuration: it.duration };
-            setSelectedId(it.id);
+            resizeCtx.current = { id: it.instanceId, startX: e.clientX, startDuration: it.duration };
+            setSelectedId(it.instanceId);
           },
         };
       }),
@@ -308,7 +427,7 @@ export function usePlaylistEditor() {
       items.slice(1).map((it, k) => {
         const i = k + 1;
         return {
-          key: it.id,
+          key: it.instanceId,
           left: PAD + starts[i] * zoom,
           tooltip: `Transition: ${it.transition}${it.transition === "Cut" ? "" : ` (${it.transDur}s)`} — click to cycle`,
           onClick: (e: React.MouseEvent) => {
@@ -316,7 +435,7 @@ export function usePlaylistEditor() {
             const order: Transition[] = ["Fade", "Crossfade", "Cut"];
             const next = order[(order.indexOf(it.transition) + 1) % 3];
             const nextItems = items.map((x) =>
-              x.id === it.id ? { ...x, transition: next, transDur: next === "Cut" ? 0 : x.transDur || 1 } : x
+              x.instanceId === it.instanceId ? { ...x, transition: next, transDur: next === "Cut" ? 0 : x.transDur || 1 } : x
             );
             commit(nextItems);
           },
@@ -335,7 +454,8 @@ export function usePlaylistEditor() {
   const q = search.trim().toLowerCase();
   const libItems = useMemo(
     () =>
-      LIBRARY_ASSETS.filter((m) => filter === "All" || m.type === filter)
+      libraryAssets
+        .filter((m) => filter === "All" || m.type === filter)
         .filter((m) => !q || m.name.toLowerCase().includes(q))
         .map((m) => {
           const c = getCompatibility(m, display);
@@ -351,10 +471,13 @@ export function usePlaylistEditor() {
             compatShort: c.short,
             compatOk: c.level === "ok",
             compatTip: `${c.label}. ${c.tip}`,
+            processing: m.status !== "Ready",
             onAdd: () => {
+              const newInstanceId = genInstanceId();
               const nextItems = items.concat([
                 {
-                  id: nextId,
+                  instanceId: newInstanceId,
+                  mediaId: m.id,
                   name: m.name,
                   type: m.type,
                   w: m.w,
@@ -364,16 +487,16 @@ export function usePlaylistEditor() {
                   transition: "Fade",
                   transDur: 1,
                   thumb: m.thumb,
+                  src: m.src,
                   fit: "Fill",
                 },
               ]);
-              setSelectedId(nextId);
-              setNextId((n) => n + 1);
+              setSelectedId(newInstanceId);
               commit(nextItems);
             },
           };
         }),
-    [filter, q, display, items, nextId, commit]
+    [libraryAssets, filter, q, display, items, genInstanceId, commit]
   );
 
   const filterTabs = ["All", "Video", "Image", "HTML5"].map((label) => ({
@@ -383,10 +506,10 @@ export function usePlaylistEditor() {
   }));
 
   const overviewBlocks = items.map((it) => ({
-    key: it.id,
+    key: it.instanceId,
     widthPct: total ? (it.duration / total) * 100 : 0,
     bg: it.type === "Image" ? "#D97C1E" : it.type === "Video" ? "#7A5236" : "#2F5FD4",
-    opacity: it.id === selectedId ? 1 : 0.55,
+    opacity: it.instanceId === selectedId ? 1 : 0.55,
   }));
 
   const dAR = display.w / display.h;
@@ -497,8 +620,18 @@ export function usePlaylistEditor() {
 
   const totalLabel = formatDuration(total);
 
+  const statusText = saving
+    ? "Saving…"
+    : saveError
+    ? "Save failed"
+    : dirty
+    ? "Unsaved changes"
+    : "Saved";
+
   return {
     onKeyDown,
+    loading,
+    loadError,
 
     toolbar: {
       playlistName,
@@ -509,7 +642,9 @@ export function usePlaylistEditor() {
       itemCount: items.length,
       totalLabel,
       dirty,
-      statusText: dirty ? "Unsaved changes" : "Draft saved",
+      saving,
+      saveError,
+      statusText,
       onUndo: undo,
       onRedo: redo,
       undoDisabled: histIdx <= 0,
@@ -520,8 +655,8 @@ export function usePlaylistEditor() {
       dispIconW,
       dispIconH,
       onOpenDisplayConfig: () => setDisplayConfigOpen(true),
-      onSaveDraft: () => setDirty(false),
-      onPublish: () => setDirty(false),
+      onSaveDraft: save,
+      onPublish: publish,
     },
 
     library: {
@@ -545,6 +680,10 @@ export function usePlaylistEditor() {
       assetAspect: cur && cur.w ? `${cur.w} / ${cur.h}` : "9 / 16",
       warning: !!(curCompat && curCompat.level === "warn"),
       warningText: curCompat ? curCompat.label : "",
+      currentClipKey: cur ? cur.instanceId : "empty",
+      currentClipType: cur ? cur.type : null,
+      currentClipSrc: cur?.src || null,
+      currentClipFit: cur ? cur.fit : "Fill",
       currentClipName: cur ? cur.name : "No clips",
       clipProgressPct: (clipProgress * 100).toFixed(1),
       playing,
@@ -652,6 +791,21 @@ export function usePlaylistEditor() {
       displayName: display.name,
       displayRes: `${display.w} × ${display.h}`,
       displayAspect: aspectRatioLabel(display.w, display.h),
+      deviceName: device,
+    },
+
+    publishModal: {
+      open: publishModalOpen,
+      saving,
+      error: saveError,
+      onClose: closePublishModal,
+      onRetry: publish,
+      onDone: finishPublish,
+      playlistName,
+      itemCount: items.length,
+      totalLabel,
+      displayName: display.name,
+      displayRes: `${display.w} × ${display.h}`,
       deviceName: device,
     },
   };
