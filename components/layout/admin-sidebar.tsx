@@ -57,9 +57,9 @@ export default function AdminSidebar() {
       {/* Brand Header */}
       <div className="p-4 border-b border-zinc-100 dark:border-zinc-900 flex items-center gap-3">
         <img
-          src="/reds-tag.svg"
-          alt="REDS Logo"
-          className="h-9 w-auto object-contain"
+          src="/reds-xos-logo.png"
+          alt="REDS XOS Logo"
+          className="h-7 w-auto object-contain"
         />
       </div>
 
