@@ -1,16 +1,4 @@
-import { DeviceProfile, DisplayProfile, LibraryAsset, PlaylistClip } from "./types";
-
-export const LIBRARY_ASSETS: LibraryAsset[] = [
-  { name: "Monsoon_Cold_Coffee_15s.mp4", type: "Video", w: 1920, h: 1080, size: "42.8 MB", dur: 15, thumb: "linear-gradient(135deg, #8A5A3B, #4A2E1D)" },
-  { name: "Breakfast_Combo_Landscape.jpg", type: "Image", w: 1920, h: 1080, size: "4.2 MB", dur: 8, thumb: "linear-gradient(135deg, #E8B34B, #C97A2B)" },
-  { name: "Rewards_QR_July.html", type: "HTML5", w: 0, h: 0, size: "8.7 MB", dur: 20, thumb: "linear-gradient(135deg, #243447, #101825)" },
-  { name: "Mango_Frappe_Promo_10s.mp4", type: "Video", w: 1080, h: 1920, size: "31.6 MB", dur: 10, thumb: "linear-gradient(135deg, #E9A13B, #C4611F)" },
-  { name: "Store_Menu_July_v3.png", type: "Image", w: 2160, h: 3840, size: "12.4 MB", dur: 12, thumb: "linear-gradient(135deg, #4C7A5E, #2C4A3A)" },
-  { name: "Independence_Day_Teaser.mp4", type: "Video", w: 1920, h: 1080, size: "86.1 MB", dur: 12, thumb: "linear-gradient(135deg, #2E4A8A, #1A2A50)" },
-  { name: "Summer_Blend_Promotion.mp4", type: "Video", w: 1920, h: 1080, size: "38.2 MB", dur: 10, thumb: "linear-gradient(135deg, #C46A3A, #8A3F1E)" },
-  { name: "Espresso_Macchiato_Still.jpg", type: "Image", w: 1920, h: 1080, size: "2.1 MB", dur: 8, thumb: "linear-gradient(135deg, #5A3A28, #2E1D13)" },
-  { name: "Loyalty_Banner_Lowres.jpg", type: "Image", w: 960, h: 540, size: "0.4 MB", dur: 8, thumb: "linear-gradient(135deg, #6A4A7A, #3A2A45)" },
-];
+import { DeviceProfile, DisplayProfile } from "./types";
 
 export const DISPLAY_PRESETS: DisplayProfile[] = [
   { name: "Landscape 16:9", w: 1920, h: 1080 },
@@ -47,15 +35,6 @@ export const CLIP_TYPE_COLORS: Record<string, string> = {
 };
 
 export const LOCKED_TRACKS = [{ name: "Audio" }, { name: "Zones" }, { name: "Widgets" }];
-
-export const INITIAL_PLAYLIST_NAME = "Monsoon Café Promotions";
-
-export const INITIAL_PLAYLIST_ITEMS: PlaylistClip[] = [
-  { id: 1, name: "Breakfast_Combo_Landscape.jpg", type: "Image", w: 1920, h: 1080, size: "4.2 MB", duration: 8, transition: "Fade", transDur: 1, thumb: "linear-gradient(135deg, #E8B34B, #C97A2B)", fit: "Fill" },
-  { id: 2, name: "Monsoon_Cold_Coffee_15s.mp4", type: "Video", w: 1920, h: 1080, size: "42.8 MB", duration: 15, transition: "Crossfade", transDur: 1.5, thumb: "linear-gradient(135deg, #8A5A3B, #4A2E1D)", fit: "Fill" },
-  { id: 3, name: "Rewards_QR_July.html", type: "HTML5", w: 0, h: 0, size: "8.7 MB", duration: 20, transition: "Cut", transDur: 0, thumb: "linear-gradient(135deg, #243447, #101825)", fit: "Fit" },
-  { id: 4, name: "Store_Menu_July_v3.png", type: "Image", w: 2160, h: 3840, size: "12.4 MB", duration: 12, transition: "Fade", transDur: 1, thumb: "linear-gradient(135deg, #4C7A5E, #2C4A3A)", fit: "Fit" },
-];
 
 export const INITIAL_DISPLAY: DisplayProfile = { name: "Landscape 16:9", w: 1920, h: 1080 };
 export const INITIAL_DEVICE = "BrightSign XC4055";
