@@ -28,7 +28,7 @@ interface ClipRenderData {
 }
 
 interface TransMarkerData {
-  key: number;
+  key: string;
   left: number;
   tooltip: string;
   onClick: (e: React.MouseEvent) => void;
@@ -40,7 +40,7 @@ interface TickData {
 }
 
 interface OverviewBlockData {
-  key: number;
+  key: string;
   widthPct: number;
   bg: string;
   opacity: number;
@@ -171,7 +171,7 @@ export default function PlaylistTimeline({
                 const Icon = c.isVideo ? Film : c.isHtml ? Code : ImageIcon;
                 return (
                   <div
-                    key={c.clip.id}
+                    key={c.clip.instanceId}
                     onPointerDown={c.onPointerDown}
                     onClick={c.onClick}
                     title={c.tooltip}
