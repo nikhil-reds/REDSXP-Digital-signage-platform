@@ -1,229 +1,304 @@
 "use client";
 
 import React from "react";
-import {
-  Film,
-  Image as ImageIcon,
-  Code,
-  Trash,
-  Copy,
-  ArrowUp,
-  ArrowDown,
-  AlertTriangle,
-  Move
-} from "lucide-react";
+import { ArrowLeft, ArrowRight, Code, Copy, Film, Image as ImageIcon, Lock, Trash2 } from "lucide-react";
+import { PlaylistClip } from "./types";
 
-export interface PlaylistItem {
-  uuid: string;
-  id: string;
+interface ClipRenderData {
+  clip: PlaylistClip;
   name: string;
-  type: "Video" | "Image" | "HTML5";
-  dimensions: string;
-  duration: number;
-  transition: "Fade" | "Crossfade" | "Cut";
-  transitionDuration: number;
+  type: string;
+  isVideo: boolean;
+  isImage: boolean;
+  isHtml: boolean;
+  left: number;
+  width: number;
+  bg: string;
+  selected: boolean;
+  warning: boolean;
+  dragging: boolean;
+  dragDx: number;
+  durLabel: string;
+  transitionName: string;
+  tooltip: string;
+  resizable: boolean;
+  onClick: (e: React.MouseEvent) => void;
+  onPointerDown: (e: React.PointerEvent) => void;
+  onResizeDown: (e: React.PointerEvent) => void;
+}
+
+interface TransMarkerData {
+  key: number;
+  left: number;
+  tooltip: string;
+  onClick: (e: React.MouseEvent) => void;
+}
+
+interface TickData {
+  left: number;
+  label: string;
+}
+
+interface OverviewBlockData {
+  key: number;
+  widthPct: number;
+  bg: string;
+  opacity: number;
 }
 
 interface PlaylistTimelineProps {
-  items: PlaylistItem[];
-  selectedIndex: number | null;
-  onSelectItem: (idx: number) => void;
-  onUpdateItem: (idx: number, updated: PlaylistItem) => void;
-  onRemoveItem: (idx: number) => void;
-  onMoveItem: (idx: number, dir: "up" | "down") => void;
-  onDuplicateItem: (idx: number) => void;
-  orientation: "Landscape" | "Portrait";
+  itemCount: number;
+  totalLabel: string;
+  zoom: number;
+  onZoomChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
+  onZoomIn: () => void;
+  onZoomOut: () => void;
+  timelineWidth: number;
+  ticks: TickData[];
+  clips: ClipRenderData[];
+  transMarkers: TransMarkerData[];
+  playheadLeft: number;
+  onRulerClick: (e: React.MouseEvent<HTMLDivElement>) => void;
+  onLaneClick: (e: React.MouseEvent<HTMLDivElement>) => void;
+  lockedTracks: { name: string }[];
+  overviewBlocks: OverviewBlockData[];
+  selActionsVisible: boolean;
+  selActionsLeft: number;
+  onSelLeft: (e: React.MouseEvent) => void;
+  onSelRight: (e: React.MouseEvent) => void;
+  onSelDuplicate: (e: React.MouseEvent) => void;
+  onSelDelete: (e: React.MouseEvent) => void;
 }
 
 export default function PlaylistTimeline({
-  items,
-  selectedIndex,
-  onSelectItem,
-  onUpdateItem,
-  onRemoveItem,
-  onMoveItem,
-  onDuplicateItem,
-  orientation
+  itemCount,
+  totalLabel,
+  zoom,
+  onZoomChange,
+  onZoomIn,
+  onZoomOut,
+  timelineWidth,
+  ticks,
+  clips,
+  transMarkers,
+  playheadLeft,
+  onRulerClick,
+  onLaneClick,
+  lockedTracks,
+  overviewBlocks,
+  selActionsVisible,
+  selActionsLeft,
+  onSelLeft,
+  onSelRight,
+  onSelDuplicate,
+  onSelDelete,
 }: PlaylistTimelineProps) {
-  
   return (
-    <div className="flex-1 bg-[#F6F7F9] dark:bg-[#090D14] p-5 overflow-y-auto flex flex-col h-full space-y-4">
-      <div className="flex justify-between items-center shrink-0">
-        <div>
-          <h2 className="text-xs font-bold text-[#18202B] dark:text-[#F2F5F8] uppercase tracking-wider">
-            Loop Timeline Timeline ({items.length} items)
-          </h2>
-          <p className="text-[10px] text-zinc-400">Order, duration, and transition sequencer.</p>
-        </div>
-        
-        <div className="text-right">
-          <span className="block text-xs font-bold text-[#18202B] dark:text-[#F2F5F8]">
-            {items.reduce((acc, curr) => acc + curr.duration, 0)}s
+    <div className="h-[300px] flex flex-col bg-white dark:bg-[#111722] border-t border-[#E2E6EC] dark:border-[#283243] min-h-0 font-sans">
+      <div className="flex items-center justify-between px-3.5 py-2 border-b border-[#E2E6EC] dark:border-[#283243] shrink-0">
+        <div className="flex items-center gap-3">
+          <span className="text-xs font-bold text-zinc-900 dark:text-zinc-100">Timeline</span>
+          <span className="font-mono text-[11px] text-zinc-450">
+            {itemCount} clips · {totalLabel} total loop
           </span>
-          <span className="text-[9px] text-zinc-400 font-semibold uppercase">Total Loop Time</span>
+        </div>
+        <div className="flex items-center gap-2.5">
+          <span className="inline-flex items-center gap-1 text-[10.5px] font-semibold text-zinc-450">Snap on</span>
+          <div className="flex items-center gap-1.5">
+            <button
+              onClick={onZoomOut}
+              className="w-[22px] h-[22px] rounded border border-[#E2E6EC] dark:border-[#283243] bg-white dark:bg-[#111722] text-zinc-450 text-sm leading-none hover:bg-[#F6F7F9] dark:hover:bg-[#18202E] hover:text-zinc-700 dark:hover:text-zinc-200 cursor-pointer"
+            >
+              −
+            </button>
+            <input
+              type="range"
+              min={8}
+              max={60}
+              value={zoom}
+              onChange={onZoomChange}
+              className="w-[120px] cursor-pointer accent-[#2859D9] dark:accent-[#6F96FF]"
+              aria-label="Timeline zoom"
+            />
+            <button
+              onClick={onZoomIn}
+              className="w-[22px] h-[22px] rounded border border-[#E2E6EC] dark:border-[#283243] bg-white dark:bg-[#111722] text-zinc-450 text-sm leading-none hover:bg-[#F6F7F9] dark:hover:bg-[#18202E] hover:text-zinc-700 dark:hover:text-zinc-200 cursor-pointer"
+            >
+              +
+            </button>
+          </div>
         </div>
       </div>
 
-      {items.length === 0 ? (
-        <div className="flex-1 border-2 border-dashed border-[#E2E6EC] dark:border-[#283243] rounded-xl flex flex-col items-center justify-center text-center p-8 space-y-2 bg-white dark:bg-[#111722]/50">
-          <PlaySquare className="w-8 h-8 text-zinc-300 animate-pulse" />
-          <p className="text-xs text-zinc-400">Timeline loop is empty.</p>
-          <span className="text-[10px] text-zinc-400 block">Click "+ Add" on the library sidebar to append media.</span>
+      <div className="flex-1 grid grid-cols-[96px_1fr] min-h-0">
+        <div className="border-r border-[#E2E6EC] dark:border-[#283243] flex flex-col pt-[26px]">
+          <div className="h-[84px] flex items-center px-2.5 text-[10.5px] font-bold text-zinc-900 dark:text-zinc-100">
+            <span className="inline-flex items-center gap-1.5">
+              <Film className="w-3 h-3" />
+              Video
+            </span>
+          </div>
+          {lockedTracks.map((t) => (
+            <div
+              key={t.name}
+              className="h-[26px] flex items-center justify-between px-2.5 text-[10px] font-semibold text-zinc-450 opacity-45"
+            >
+              {t.name}
+              <Lock className="w-2.5 h-2.5" />
+            </div>
+          ))}
         </div>
-      ) : (
-        <div className="space-y-2.5 flex-1 overflow-y-auto pr-1">
-          {items.map((item, idx) => {
-            const isSelected = selectedIndex === idx;
-            const isVideo = item.type === "Video";
-            const isHtml = item.type === "HTML5";
-            const Icon = isVideo ? Film : isHtml ? Code : ImageIcon;
-            
-            // Check orientation warning: if portrait model size is placed on landscape dashboard
-            const isItemPortrait = item.dimensions.startsWith("1080") || item.dimensions.startsWith("2160");
-            const hasWarning = (orientation === "Landscape" && isItemPortrait) || (orientation === "Portrait" && !isItemPortrait && item.type !== "HTML5");
 
-            return (
-              <div
-                key={item.uuid}
-                onClick={() => onSelectItem(idx)}
-                className={`p-3.5 border rounded-xl bg-white dark:bg-[#111722] hover:shadow-xs transition-all flex items-center justify-between gap-4 cursor-pointer relative ${
-                  isSelected
-                    ? "border-[#2859D9] dark:border-[#6F96FF] ring-2 ring-blue-500/10"
-                    : "border-[#E2E6EC] dark:border-[#283243]"
-                }`}
-              >
-                {/* Visual order bubble */}
-                <div className="absolute -left-2.5 top-1/2 -translate-y-1/2 w-5 h-5 rounded-full bg-zinc-900 dark:bg-white text-white dark:text-zinc-950 font-bold text-[9px] flex items-center justify-center shadow border border-white dark:border-[#090D14] shrink-0 select-none">
-                  {idx + 1}
+        <div className="overflow-x-auto overflow-y-hidden relative">
+          <div className="relative h-full" style={{ width: `${timelineWidth}px`, minWidth: "100%" }}>
+            <div
+              onClick={onRulerClick}
+              className="relative h-[26px] border-b border-[#E2E6EC] dark:border-[#283243] cursor-pointer bg-white dark:bg-[#111722]"
+            >
+              {ticks.map((tk, i) => (
+                <div key={i} className="absolute top-0 bottom-0 flex flex-col justify-end" style={{ left: `${tk.left}px` }}>
+                  <span className="font-mono text-[9px] text-zinc-450 translate-x-[3px] mb-1.5">{tk.label}</span>
+                  <div className="absolute left-0 bottom-0 w-px h-[5px] bg-zinc-450" />
                 </div>
+              ))}
+            </div>
 
-                <div className="flex items-center gap-3.5 pl-2.5 min-w-0 flex-1">
-                  {/* Order controllers */}
-                  <div className="flex flex-col gap-0.5" onClick={(e) => e.stopPropagation()}>
-                    <button
-                      onClick={() => onMoveItem(idx, "up")}
-                      disabled={idx === 0}
-                      className="p-0.5 rounded hover:bg-[#F6F7F9] dark:hover:bg-zinc-800 disabled:opacity-30 text-zinc-400 cursor-pointer"
-                    >
-                      <ArrowUp className="w-3 h-3" />
-                    </button>
-                    <button
-                      onClick={() => onMoveItem(idx, "down")}
-                      disabled={idx === items.length - 1}
-                      className="p-0.5 rounded hover:bg-[#F6F7F9] dark:hover:bg-zinc-800 disabled:opacity-30 text-zinc-400 cursor-pointer"
-                    >
-                      <ArrowDown className="w-3 h-3" />
-                    </button>
-                  </div>
-
-                  {/* Thumbnail type */}
-                  <div className="p-2 bg-[#F6F7F9] dark:bg-[#171F2C] border border-[#E2E6EC] dark:border-[#283243] rounded-lg text-zinc-400 shrink-0">
-                    <Icon className="w-4 h-4 shrink-0" />
-                  </div>
-
-                  <div className="min-w-0 flex-1">
-                    <span className="block text-xs font-bold text-zinc-800 dark:text-zinc-200 truncate">
-                      {item.name}
-                    </span>
-                    <span className="text-[9px] text-zinc-400 dark:text-zinc-500 font-semibold block mt-0.5">
-                      {item.type} · {item.dimensions}
-                    </span>
-                    
-                    {/* Incompatible Alert banner */}
-                    {hasWarning && (
-                      <span className="inline-flex items-center gap-1 text-[8px] font-bold text-amber-500 uppercase mt-1 animate-pulse">
-                        <AlertTriangle className="w-2.5 h-2.5 shrink-0" />
-                        Orientation Mismatch
+            <div
+              onClick={onLaneClick}
+              className="relative h-[84px] bg-[#F6F7F9] dark:bg-[#0D1320] border-b border-[#E2E6EC] dark:border-[#283243]"
+            >
+              {clips.map((c) => {
+                const Icon = c.isVideo ? Film : c.isHtml ? Code : ImageIcon;
+                return (
+                  <div
+                    key={c.clip.id}
+                    onPointerDown={c.onPointerDown}
+                    onClick={c.onClick}
+                    title={c.tooltip}
+                    className={`absolute top-2.5 h-16 rounded-lg box-border overflow-hidden cursor-grab flex flex-col justify-center gap-0.5 px-2.5 border-[1.5px] hover:brightness-110 ${
+                      c.selected
+                        ? "border-[#2859D9] dark:border-[#6F96FF] ring-2 ring-[#2859D9]/30 dark:ring-[#6F96FF]/30"
+                        : c.warning
+                        ? "border-amber-500 shadow-sm"
+                        : "border-white/15 shadow-sm"
+                    } ${c.dragging ? "shadow-lg" : ""}`}
+                    style={{
+                      left: `${c.left}px`,
+                      width: `${c.width}px`,
+                      background: c.bg,
+                      zIndex: c.dragging ? 20 : c.selected ? 5 : 2,
+                      transform: c.dragging ? `translateX(${c.dragDx}px) scale(1.02)` : "none",
+                      transition: c.dragging ? "none" : "left 0.18s ease, width 0.12s ease, box-shadow 0.15s",
+                    }}
+                  >
+                    <div className="flex items-center gap-1.5 min-w-0">
+                      <span className="shrink-0 text-white/95 inline-flex">
+                        <Icon className="w-2.5 h-2.5" />
                       </span>
+                      <span className="text-[11px] font-bold text-white whitespace-nowrap overflow-hidden text-ellipsis [text-shadow:0_1px_2px_rgba(0,0,0,0.35)]">
+                        {c.name}
+                      </span>
+                      {c.warning && <span className="shrink-0 text-[10px]">⚠</span>}
+                    </div>
+                    <div className="font-mono text-[9.5px] text-white/85 whitespace-nowrap overflow-hidden text-ellipsis">
+                      {c.durLabel} · {c.type} · {c.transitionName}
+                    </div>
+                    {c.resizable && (
+                      <div
+                        onPointerDown={c.onResizeDown}
+                        title="Drag to change duration"
+                        className="absolute right-0 top-0 bottom-0 w-2.5 cursor-ew-resize flex items-center justify-center"
+                      >
+                        <div className="w-[3px] h-[22px] rounded bg-white/65" />
+                      </div>
                     )}
                   </div>
+                );
+              })}
+
+              {transMarkers.map((tm) => (
+                <button
+                  key={tm.key}
+                  onClick={tm.onClick}
+                  title={tm.tooltip}
+                  className="absolute top-[30px] w-5 h-5 -ml-2.5 rounded-full border-[1.5px] border-[#E2E6EC] dark:border-[#283243] bg-white dark:bg-[#111722] text-zinc-450 cursor-pointer z-[6] flex items-center justify-center p-0 shadow-sm hover:border-[#2859D9] dark:hover:border-[#6F96FF] hover:text-[#2859D9] dark:hover:text-[#6F96FF] hover:scale-125 transition-transform"
+                  style={{ left: `${tm.left}px` }}
+                >
+                  <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor">
+                    <polygon points="4,5 11,12 4,19" />
+                    <polygon points="20,5 13,12 20,19" />
+                  </svg>
+                </button>
+              ))}
+
+              {selActionsVisible && (
+                <div
+                  className="absolute -top-0.5 z-[8] flex gap-0.5 bg-white dark:bg-[#111722] border border-[#E2E6EC] dark:border-[#283243] rounded-md p-0.5 shadow-md"
+                  style={{ left: `${selActionsLeft}px` }}
+                >
+                  <button
+                    onClick={onSelLeft}
+                    title="Move earlier"
+                    className="w-5 h-[18px] rounded text-zinc-450 hover:bg-[#F6F7F9] dark:hover:bg-[#18202E] hover:text-zinc-700 dark:hover:text-zinc-200 flex items-center justify-center cursor-pointer"
+                  >
+                    <ArrowLeft className="w-2.5 h-2.5" />
+                  </button>
+                  <button
+                    onClick={onSelRight}
+                    title="Move later"
+                    className="w-5 h-[18px] rounded text-zinc-450 hover:bg-[#F6F7F9] dark:hover:bg-[#18202E] hover:text-zinc-700 dark:hover:text-zinc-200 flex items-center justify-center cursor-pointer"
+                  >
+                    <ArrowRight className="w-2.5 h-2.5" />
+                  </button>
+                  <button
+                    onClick={onSelDuplicate}
+                    title="Duplicate"
+                    className="w-5 h-[18px] rounded text-zinc-450 hover:bg-[#F6F7F9] dark:hover:bg-[#18202E] hover:text-zinc-700 dark:hover:text-zinc-200 flex items-center justify-center cursor-pointer"
+                  >
+                    <Copy className="w-2.5 h-2.5" />
+                  </button>
+                  <button
+                    onClick={onSelDelete}
+                    title="Delete (⌫)"
+                    className="w-5 h-[18px] rounded text-zinc-450 hover:bg-red-500/15 hover:text-red-500 flex items-center justify-center cursor-pointer"
+                  >
+                    <Trash2 className="w-2.5 h-2.5" />
+                  </button>
                 </div>
+              )}
+            </div>
 
-                {/* Duration and Transitions */}
-                <div className="flex items-center gap-3 shrink-0" onClick={(e) => e.stopPropagation()}>
-                  <div className="flex flex-col gap-1 w-16">
-                    <span className="text-[8px] font-bold uppercase tracking-wider text-zinc-400">Duration</span>
-                    <input
-                      type="number"
-                      min="1"
-                      value={item.duration}
-                      onChange={(e) =>
-                        onUpdateItem(idx, {
-                          ...item,
-                          duration: Math.max(1, parseInt(e.target.value) || 1)
-                        })
-                      }
-                      className="px-1.5 py-0.5 text-[10px] font-bold bg-[#F6F7F9] dark:bg-[#171F2C] border border-[#E2E6EC] dark:border-[#283243] rounded text-center w-full focus:outline-none focus:ring-1 focus:ring-[#2859D9]"
-                    />
-                  </div>
+            {lockedTracks.map((t) => (
+              <div
+                key={t.name}
+                className="h-[26px] border-b border-[#E2E6EC] dark:border-[#283243] opacity-60"
+                style={{
+                  background:
+                    "repeating-linear-gradient(45deg, transparent, transparent 8px, rgba(120,130,145,0.08) 8px, rgba(120,130,145,0.08) 16px)",
+                }}
+              />
+            ))}
 
-                  <div className="flex flex-col gap-1 w-20">
-                    <span className="text-[8px] font-bold uppercase tracking-wider text-zinc-400">Transition</span>
-                    <select
-                      value={item.transition}
-                      onChange={(e) =>
-                        onUpdateItem(idx, {
-                          ...item,
-                          transition: e.target.value as any
-                        })
-                      }
-                      className="px-1.5 py-0.5 text-[9px] font-bold bg-[#F6F7F9] dark:bg-[#171F2C] border border-[#E2E6EC] dark:border-[#283243] rounded text-zinc-700 dark:text-zinc-300 w-full focus:outline-none cursor-pointer"
-                    >
-                      <option value="Fade">Fade</option>
-                      <option value="Crossfade">Crossfade</option>
-                      <option value="Cut">Cut</option>
-                    </select>
-                  </div>
-
-                  <div className="flex items-center gap-0.5 border-l border-[#E2E6EC] dark:border-[#283243] pl-2.5">
-                    <button
-                      onClick={() => onDuplicateItem(idx)}
-                      className="p-1 rounded text-zinc-450 hover:bg-[#F6F7F9] dark:hover:bg-zinc-800 hover:text-zinc-700 cursor-pointer"
-                      title="Duplicate Item"
-                    >
-                      <Copy className="w-3.5 h-3.5" />
-                    </button>
-                    <button
-                      onClick={() => onRemoveItem(idx)}
-                      className="p-1 rounded text-zinc-450 hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-950/20 cursor-pointer"
-                      title="Delete Item"
-                    >
-                      <Trash className="w-3.5 h-3.5" />
-                    </button>
-                  </div>
-                </div>
-
-              </div>
-            );
-          })}
+            <div
+              className="absolute top-0 bottom-0 w-0 z-10 pointer-events-none"
+              style={{ left: `${playheadLeft}px` }}
+            >
+              <div className="absolute -left-px top-0 bottom-0 w-0.5 bg-red-500" />
+              <div className="absolute -left-[5.5px] top-0 w-0 h-0 border-l-[6px] border-l-transparent border-r-[6px] border-r-transparent border-t-[8px] border-t-red-500" />
+            </div>
+          </div>
         </div>
-      )}
+      </div>
 
+      <div className="flex items-center gap-2.5 px-3.5 py-1.5 border-t border-[#E2E6EC] dark:border-[#283243] shrink-0">
+        <span className="text-[9.5px] font-bold tracking-wide text-zinc-450 shrink-0">OVERVIEW</span>
+        <div className="flex-1 h-2.5 rounded-md bg-[#F6F7F9] dark:bg-[#0D1320] flex overflow-hidden gap-px">
+          {overviewBlocks.map((ob) => (
+            <div key={ob.key} style={{ width: `${ob.widthPct}%`, background: ob.bg, opacity: ob.opacity }} />
+          ))}
+        </div>
+        <span className="font-mono text-[10px] text-zinc-450 shrink-0">{totalLabel}</span>
+      </div>
     </div>
-  );
-}
-
-// Small mock helper
-function PlaySquare({ className }: { className?: string }) {
-  return (
-    <svg
-      className={className}
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      viewBox="0 0 24 24"
-      xmlns="http://www.w3.org/2000/svg"
-    >
-      <path
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-      />
-      <path
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        d="M15.91 11.672a.375.375 0 010 .656l-5.603 3.113a.375.375 0 01-.557-.328V8.887c0-.286.307-.466.557-.327l5.603 3.112z"
-      />
-    </svg>
   );
 }
