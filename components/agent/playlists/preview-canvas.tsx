@@ -1,7 +1,8 @@
 "use client";
 
-import React from "react";
+import React, { useEffect, useRef } from "react";
 import { Pause, Play, RotateCcw } from "lucide-react";
+import { ClipType, Fit } from "./types";
 
 interface PreviewCanvasProps {
   displayName: string;
@@ -13,6 +14,10 @@ interface PreviewCanvasProps {
   assetAspect: string;
   warning: boolean;
   warningText: string;
+  currentClipKey: string;
+  currentClipType: ClipType | null;
+  currentClipSrc: string | null;
+  currentClipFit: Fit;
   currentClipName: string;
   clipProgressPct: string;
   playing: boolean;
@@ -38,6 +43,10 @@ export default function PreviewCanvas({
   assetAspect,
   warning,
   warningText,
+  currentClipKey,
+  currentClipType,
+  currentClipSrc,
+  currentClipFit,
   currentClipName,
   clipProgressPct,
   playing,
@@ -52,6 +61,21 @@ export default function PreviewCanvas({
   onToggleSafeAction,
   onToggleSafeBleed,
 }: PreviewCanvasProps) {
+  const videoRef = useRef<HTMLVideoElement>(null);
+
+  // Imperatively drive the real <video> element's playback from the `playing` state —
+  // it remounts (via `key={currentClipKey}`) on every clip change, so this also re-applies
+  // the current play/pause state to whichever clip just became active.
+  useEffect(() => {
+    const el = videoRef.current;
+    if (!el) return;
+    if (playing) {
+      el.play().catch(() => {});
+    } else {
+      el.pause();
+    }
+  }, [playing, currentClipKey]);
+
   return (
     <main className="flex-1 flex flex-col items-center justify-center gap-3 min-h-0 min-w-0 px-6 py-4 bg-[#F6F7F9] dark:bg-[#090D14]">
       <div
@@ -64,15 +88,54 @@ export default function PreviewCanvas({
           height: !landscape ? "calc(100% - 60px)" : undefined,
         }}
       >
-        <div className="absolute inset-0 opacity-90 transition-colors duration-300" style={{ background: thumb }} />
-
-        {letterbox && (
-          <div className="absolute inset-0 flex items-center justify-center bg-black">
-            <div
-              className="h-full shadow-[0_0_0_1px_rgba(255,255,255,0.2)]"
-              style={{ aspectRatio: assetAspect, background: thumb }}
+        {currentClipSrc ? (
+          currentClipType === "Video" ? (
+            <video
+              key={currentClipKey}
+              ref={videoRef}
+              src={currentClipSrc}
+              loop
+              muted
+              playsInline
+              className={`absolute inset-0 w-full h-full bg-black ${
+                currentClipFit === "Fill" ? "object-cover" : "object-contain"
+              }`}
             />
-          </div>
+          ) : currentClipType === "Image" ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              key={currentClipKey}
+              src={currentClipSrc}
+              alt={currentClipName}
+              className={`absolute inset-0 w-full h-full bg-black ${
+                currentClipFit === "Fill" ? "object-cover" : "object-contain"
+              }`}
+            />
+          ) : (
+            <iframe
+              key={currentClipKey}
+              src={currentClipSrc}
+              title={currentClipName}
+              className="absolute inset-0 w-full h-full border-0 bg-white"
+            />
+          )
+        ) : (
+          <>
+            <div className="absolute inset-0 opacity-90 transition-colors duration-300" style={{ background: thumb }} />
+            {letterbox && (
+              <div className="absolute inset-0 flex items-center justify-center bg-black">
+                <div
+                  className="h-full shadow-[0_0_0_1px_rgba(255,255,255,0.2)]"
+                  style={{ aspectRatio: assetAspect, background: thumb }}
+                />
+              </div>
+            )}
+            <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 text-white/95 pointer-events-none">
+              <div className="font-mono text-xs bg-black/35 rounded px-2.5 py-1 [text-shadow:0_1px_6px_rgba(0,0,0,0.7)]">
+                {currentClipName}
+              </div>
+            </div>
+          </>
         )}
 
         {safeActionOn && (
@@ -96,12 +159,6 @@ export default function PreviewCanvas({
             </span>
           </div>
         )}
-
-        <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 text-white/95 pointer-events-none">
-          <div className="font-mono text-xs bg-black/35 rounded px-2.5 py-1 [text-shadow:0_1px_6px_rgba(0,0,0,0.7)]">
-            {currentClipName}
-          </div>
-        </div>
 
         <span className="absolute top-2.5 right-2.5 text-[9.5px] font-bold text-white bg-black/55 border border-white/25 rounded px-1.5 py-0.5 tracking-wide">
           {displayName} · {displayRes}
