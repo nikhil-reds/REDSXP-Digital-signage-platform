@@ -5,6 +5,7 @@ import { Code, Film, Grid2x2, Image as ImageIcon, List, Plus, Search } from "luc
 import { ViewMode } from "./types";
 
 interface LibraryCardData {
+  asset: { id: string };
   name: string;
   size: string;
   dims: string;
@@ -15,6 +16,7 @@ interface LibraryCardData {
   compatShort: string;
   compatOk: boolean;
   compatTip: string;
+  processing: boolean;
   onAdd: () => void;
 }
 
@@ -113,7 +115,7 @@ export default function AssetLibraryPanel({
           const Icon = item.isVideo ? Film : item.isHtml ? Code : ImageIcon;
           return (
             <div
-              key={item.name}
+              key={item.asset.id}
               title={item.compatTip}
               className={`border border-[#E2E6EC] dark:border-[#283243] rounded-lg bg-white dark:bg-[#111722] hover:border-[#2859D9]/40 dark:hover:border-[#6F96FF]/40 hover:shadow-md hover:-translate-y-px cursor-grab transition-all flex gap-2 ${
                 grid ? "flex-col p-2" : "flex-row items-center p-2"
@@ -142,12 +144,18 @@ export default function AssetLibraryPanel({
                   >
                     {item.compatShort}
                   </span>
+                  {item.processing && (
+                    <span className="text-[9px] font-bold rounded px-1 text-zinc-500 bg-zinc-500/10 animate-pulse">
+                      Processing
+                    </span>
+                  )}
                 </div>
               </div>
               <button
                 onClick={item.onAdd}
-                title="Add to timeline"
-                className={`shrink-0 h-6 px-2 rounded-md border border-[#E2E6EC] dark:border-[#283243] bg-white dark:bg-[#111722] text-zinc-450 text-[11px] font-bold hover:bg-[#2859D9] hover:border-[#2859D9] hover:text-white dark:hover:bg-[#6F96FF] dark:hover:border-[#6F96FF] dark:hover:text-[#111722] cursor-pointer transition-colors flex items-center gap-1 ${
+                disabled={item.processing}
+                title={item.processing ? "Still processing — not ready to add yet" : "Add to timeline"}
+                className={`shrink-0 h-6 px-2 rounded-md border border-[#E2E6EC] dark:border-[#283243] bg-white dark:bg-[#111722] text-zinc-450 text-[11px] font-bold hover:bg-[#2859D9] hover:border-[#2859D9] hover:text-white dark:hover:bg-[#6F96FF] dark:hover:border-[#6F96FF] dark:hover:text-[#111722] cursor-pointer transition-colors flex items-center gap-1 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-white disabled:hover:text-zinc-450 dark:disabled:hover:bg-[#111722] ${
                   grid ? "self-stretch justify-center" : ""
                 }`}
               >
