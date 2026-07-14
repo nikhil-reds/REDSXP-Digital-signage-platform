@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg id="Layer_1" data-name="Layer 1" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 360 210">
+  <defs>
+    <style>
+      .cls-1 {
+        font-family: GolosText-Medium, 'Golos Text';
+        font-size: 13.09px;
+        font-weight: 500;
+      }
+
+      .cls-1, .cls-2 {
+        fill: #5dbb54;
+      }
+
+      .cls-3 {
+        letter-spacing: 0em;
+      }
+
+      .cls-4 {
+        letter-spacing: -.01em;
+      }
+
+      .cls-5 {
+        letter-spacing: -.02em;
+      }
+    </style>
+  </defs>
+  <g>
+    <path class="cls-2" d="M99.4,137.91h-13.68v-16.42l-9.12-9.23h-15.04l-11.74-11.75v37.4h-11.84v-44.39l11.84-11.75v18.75h35.9v-7.77l-10.97-10.98h-24.94v-11.85h29.79l17.95,17.97v12.63l-8.05,8.06,9.9,9.91v19.43ZM122.59,126.06h47.74v11.85h-36l-11.74-11.85ZM154.81,112.27h-32.22v13.79h-11.84v-38.17l17.95-17.97h41.63v11.85h-36.78l-10.97,10.98v7.77h32.22v11.75h0ZM239.89,126.06h-11.84v-33.32l-10.97-10.98h-24.94v-11.85h29.79l17.95,17.97v38.17h0ZM192.15,81.77v44.29h35.9l-11.74,11.85h-36v-44.39s11.84-11.75,11.84-11.75ZM273.88,81.77l-10.96,10.98v7.38h29.5l17.95,17.97v7.96h-13.68l-11.74,11.85h-33.87v-11.85h45.61v-4.95l-9.12-9.13h-24.65l-11.84-11.85v-12.24l17.95-17.97h41.63v11.85h-36.78Z"/>
+    <g>
+      <path class="cls-2" d="M315.72,69.91v.57h-1.46v4.79h-.7v-4.79h-1.47v-.57h3.63Z"/>
+      <path class="cls-2" d="M322.02,69.95v5.32h-.7v-3.97l-1.77,3.97h-.49l-1.78-3.98v3.98h-.7v-5.32h.75l1.97,4.4,1.97-4.4h.75Z"/>
+    </g>
+  </g>
+  <text class="cls-1" transform="translate(37.98 161.02)"><tspan class="cls-4" x="0" y="0">R</tspan><tspan x="8.77" y="0">UBENIUS EXPERIENTIAL DESIGN </tspan><tspan class="cls-5" x="220.12" y="0">SY</tspan><tspan class="cls-3" x="236.62" y="0">S</tspan><tspan x="244.99" y="0">TEM</tspan></text>
+</svg>

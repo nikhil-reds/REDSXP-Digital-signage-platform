@@ -16,6 +16,7 @@ export interface MediaAsset {
   uploader: string;
   date: string;
   usedInPlaylists: string[];
+  cdnUrl?: string; // Real S3 URL
 }
 
 interface MediaGridProps {
@@ -34,7 +35,7 @@ export default function MediaGrid({ assets, onSelectMedia }: MediaGridProps) {
         const isFailed = asset.status === "Failed";
 
         // Determine aspect ratio for representation
-        const isPortrait = asset.dimensions.startsWith("1080") || asset.dimensions.startsWith("2160");
+        const isPortrait = asset.dimensions?.startsWith("1080") || asset.dimensions?.startsWith("2160");
 
         return (
           <div
@@ -45,10 +46,18 @@ export default function MediaGrid({ assets, onSelectMedia }: MediaGridProps) {
             {/* Visual Thumbnail representation */}
             <div className="relative aspect-video bg-[#F6F7F9] dark:bg-[#090D14] flex items-center justify-center border-b border-[#E2E6EC] dark:border-[#283243] overflow-hidden">
               
-              {/* Type Icons */}
-              {isVideo && <Film className="w-8 h-8 text-[#2859D9] dark:text-[#6F96FF] opacity-40 group-hover:scale-105 transition-transform" />}
-              {isHtml && <Code className="w-8 h-8 text-purple-500 opacity-40 group-hover:scale-105 transition-transform" />}
-              {!isVideo && !isHtml && <ImageIcon className="w-8 h-8 text-emerald-500 opacity-40 group-hover:scale-105 transition-transform" />}
+              {/* Actual Image if ready and cdnUrl is provided */}
+              {asset.cdnUrl && !isVideo && !isHtml && (
+                <img src={asset.cdnUrl} alt={asset.name} className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform" />
+              )}
+              {asset.cdnUrl && isVideo && (
+                <video src={asset.cdnUrl} className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform" muted playsInline />
+              )}
+
+              {/* Type Icons (fallback) */}
+              {(!asset.cdnUrl || isHtml) && isVideo && <Film className="w-8 h-8 text-[#2859D9] dark:text-[#6F96FF] opacity-40 group-hover:scale-105 transition-transform" />}
+              {(!asset.cdnUrl || isHtml) && isHtml && <Code className="w-8 h-8 text-purple-500 opacity-40 group-hover:scale-105 transition-transform" />}
+              {(!asset.cdnUrl || isHtml) && !isVideo && !isHtml && <ImageIcon className="w-8 h-8 text-emerald-500 opacity-40 group-hover:scale-105 transition-transform" />}
 
               {/* Badges */}
               <span className="absolute top-2 left-2 text-[8px] bg-zinc-900/80 text-white dark:bg-white/80 dark:text-zinc-950 font-bold px-1.5 py-0.5 rounded-sm uppercase tracking-wide">

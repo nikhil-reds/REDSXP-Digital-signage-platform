@@ -12,12 +12,14 @@ const s3Client = new S3Client({
 export async function uploadToS3(
   file: File | Buffer,
   fileName: string,
-  contentType: string
+  contentType: string,
+  bucketName?: string
 ): Promise<string> {
   const fileBuffer = file instanceof File ? Buffer.from(await file.arrayBuffer()) : file;
+  const bucket = bucketName || process.env.AWS_BUCKET!;
 
   const params = {
-    Bucket: process.env.AWS_BUCKET,
+    Bucket: bucket,
     Key: fileName,
     Body: fileBuffer,
     ContentType: contentType,
@@ -30,39 +32,70 @@ export async function uploadToS3(
     await s3Client.send(command);
     // Construct the URL manually or use a specific domain if configured (e.g. CloudFront)
     // Standard format: https://<bucket-name>.s3.<region>.amazonaws.com/<key>
-    return `https://${process.env.AWS_BUCKET}.s3.${process.env.AWS_REGION}.amazonaws.com/${fileName}`;
+    return `https://${bucket}.s3.${process.env.AWS_REGION}.amazonaws.com/${fileName}`;
   } catch (error) {
     console.error("Error uploading to S3:", error);
     throw new Error("Failed to upload file to S3");
   }
 }
 
-export async function deleteFromS3(fileUrl: string): Promise<void> {
+export async function deleteFromS3(fileUrl: string, bucketName?: string): Promise<void> {
   if (!fileUrl) return;
 
   try {
-    const bucketName = process.env.AWS_BUCKET;
     const region = process.env.AWS_REGION;
+    let bucket = bucketName;
+    let key = "";
 
-    // Extract key from URL
-    // URL format: https://<bucket>.s3.<region>.amazonaws.com/<key>
-    const urlPattern = new RegExp(`^https://${bucketName}\\.s3\\.${region}\\.amazonaws\\.com/(.+)$`);
-    const match = fileUrl.match(urlPattern);
+    try {
+      const url = new URL(fileUrl);
+      const hostname = url.hostname;
+      // standard format: <bucket>.s3.<region>.amazonaws.com or <bucket>.s3.amazonaws.com
+      const s3Index = hostname.indexOf(".s3.");
+      const s3IndexAlt = hostname.indexOf(".s3-");
+      const s3IndexGlobal = hostname.indexOf(".s3.amazonaws.com");
+      
+      let foundIndex = -1;
+      if (s3Index !== -1) foundIndex = s3Index;
+      else if (s3IndexAlt !== -1) foundIndex = s3IndexAlt;
+      else if (s3IndexGlobal !== -1) foundIndex = s3IndexGlobal;
 
-    if (!match) {
+      if (foundIndex !== -1) {
+        if (!bucket) {
+          bucket = hostname.substring(0, foundIndex);
+        }
+        key = decodeURIComponent(url.pathname.substring(1));
+      } else {
+        const defaultBucket = bucket || process.env.AWS_BUCKET!;
+        const urlPattern = new RegExp(`^https://${defaultBucket}\\.s3\\.${region}\\.amazonaws\\.com/(.+)$`);
+        const match = fileUrl.match(urlPattern);
+        if (match) {
+          if (!bucket) bucket = defaultBucket;
+          key = decodeURIComponent(match[1]);
+        }
+      }
+    } catch (e) {
+      const defaultBucket = bucket || process.env.AWS_BUCKET!;
+      const urlPattern = new RegExp(`^https://${defaultBucket}\\.s3\\.${region}\\.amazonaws\\.com/(.+)$`);
+      const match = fileUrl.match(urlPattern);
+      if (match) {
+        if (!bucket) bucket = defaultBucket;
+        key = decodeURIComponent(match[1]);
+      }
+    }
+
+    if (!bucket || !key) {
       console.warn("Could not parse S3 URL for deletion:", fileUrl);
       return;
     }
 
-    const key = match[1];
-
     const command = new DeleteObjectCommand({
-      Bucket: bucketName,
+      Bucket: bucket,
       Key: key,
     });
 
     await s3Client.send(command);
-    console.log("Successfully deleted from S3:", key);
+    console.log("Successfully deleted from S3:", key, "from bucket:", bucket);
   } catch (error) {
     console.error("Error deleting from S3:", error);
     // Don't throw here to avoid blocking DB updates if S3 fails, but log it
