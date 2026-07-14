@@ -1,29 +1,58 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Plus, Search } from "lucide-react";
+import { AlertTriangle, Loader2, Plus, Search } from "lucide-react";
 import PlaylistsTable from "@/components/agent/playlists/playlists-table";
 import { PlaylistSummary } from "@/components/agent/playlists/types";
-
-const INITIAL_PLAYLISTS: PlaylistSummary[] = [
-  { id: "pl-1", name: "Monsoon Café Promotions", itemCount: 4, totalDuration: 55, orientation: "Landscape", status: "Draft", updatedAt: "Today, 3:42 PM" },
-  { id: "pl-2", name: "Airport Express Menu", itemCount: 6, totalDuration: 78, orientation: "Landscape", status: "Published", updatedAt: "Today, 1:15 PM" },
-  { id: "pl-3", name: "Lunch Combos", itemCount: 5, totalDuration: 62, orientation: "Landscape", status: "Published", updatedAt: "Yesterday, 4:05 PM" },
-  { id: "pl-4", name: "Mango Frappe Launch", itemCount: 3, totalDuration: 34, orientation: "Portrait", status: "Draft", updatedAt: "2 Jul 2026, 11:15 AM" },
-  { id: "pl-5", name: "Store Loyalty Kiosk Loop", itemCount: 4, totalDuration: 48, orientation: "Portrait", status: "Published", updatedAt: "28 Jun 2026, 9:00 AM" },
-  { id: "pl-6", name: "Independence Day Teaser Loop", itemCount: 2, totalDuration: 32, orientation: "Landscape", status: "Draft", updatedAt: "24 Jun 2026, 6:20 PM" },
-];
+import { deletePlaylist, fetchPlaylists } from "@/components/agent/playlists/api";
 
 export default function AgentPlaylistsPage() {
   const router = useRouter();
-  const [playlists] = useState<PlaylistSummary[]>(INITIAL_PLAYLISTS);
+  const [playlists, setPlaylists] = useState<PlaylistSummary[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [search, setSearch] = useState("");
+  const [reloadKey, setReloadKey] = useState(0);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function load() {
+      setLoading(true);
+      setError(null);
+      try {
+        const data = await fetchPlaylists();
+        if (!cancelled) setPlaylists(data);
+      } catch (err) {
+        if (!cancelled) setError(err instanceof Error ? err.message : "Failed to load playlists");
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    }
+
+    load();
+    return () => {
+      cancelled = true;
+    };
+  }, [reloadKey]);
 
   const filteredPlaylists = playlists.filter((p) => p.name.toLowerCase().includes(search.toLowerCase()));
 
-  const goToEditor = () => router.push("/agent/playlists/create-playlist");
+  const editPlaylist = (playlist: PlaylistSummary) => router.push(`/agent/playlists/create-playlist?id=${playlist.id}`);
+
+  const removePlaylist = async (playlist: PlaylistSummary) => {
+    if (!window.confirm(`Delete "${playlist.name}"? This can't be undone.`)) return;
+    const previous = playlists;
+    setPlaylists((prev) => prev.filter((p) => p.id !== playlist.id));
+    try {
+      await deletePlaylist(playlist.id);
+    } catch (err) {
+      setPlaylists(previous);
+      alert(err instanceof Error ? err.message : "Failed to delete playlist");
+    }
+  };
 
   return (
     <div className="py-6 px-8 space-y-6 mx-auto font-sans">
@@ -61,9 +90,28 @@ export default function AgentPlaylistsPage() {
         </div>
       </div>
 
-      {/* Table */}
+      {/* Table / states */}
       <div className="flex-1">
-        <PlaylistsTable playlists={filteredPlaylists} onEdit={goToEditor} />
+        {loading ? (
+          <div className="flex flex-col items-center justify-center gap-2 py-16 text-zinc-450">
+            <Loader2 className="w-5 h-5 animate-spin" />
+            <p className="text-xs font-semibold">Loading playlists…</p>
+          </div>
+        ) : error ? (
+          <div className="flex flex-col items-center justify-center gap-2 py-16 text-center px-6">
+            <AlertTriangle className="w-5 h-5 text-red-500" />
+            <p className="text-xs font-bold text-zinc-900 dark:text-zinc-100">Couldn&apos;t load playlists</p>
+            <p className="text-xs text-zinc-450 max-w-sm">{error}</p>
+            <button
+              onClick={() => setReloadKey((k) => k + 1)}
+              className="mt-1 text-xs font-bold text-[#2859D9] dark:text-[#6F96FF] hover:underline cursor-pointer"
+            >
+              Try again
+            </button>
+          </div>
+        ) : (
+          <PlaylistsTable playlists={filteredPlaylists} onEdit={editPlaylist} onDelete={removePlaylist} />
+        )}
       </div>
     </div>
   );
