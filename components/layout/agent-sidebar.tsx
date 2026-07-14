@@ -68,18 +68,18 @@ export default function AgentSidebar() {
       <div className="p-4 border-b border-[#E2E6EC] dark:border-[#283243] flex items-center justify-between">
         <div className="flex items-center gap-3 overflow-hidden">
           {isCollapsed ? (
-            <div className="w-8 h-8 flex items-center justify-center shrink-0">
+            <div className="w-6 h-6 flex items-center justify-center shrink-0">
               <img
-                src="/reds-tag.svg"
-                alt="REDS Logo"
+                src="/reds-xos-logo.png"
+                alt="REDS XOS Logo"
                 className="w-full h-full object-contain"
               />
             </div>
           ) : (
             <img
-              src="/reds-tag.svg"
-              alt="REDS Logo"
-              className="h-9 w-auto object-contain"
+              src="/reds-xos-logo.png"
+              alt="REDS XOS Logo"
+              className="h-7 w-auto object-contain"
             />
           )}
         </div>
