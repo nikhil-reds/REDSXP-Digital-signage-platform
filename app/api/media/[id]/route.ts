@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { deleteFromS3 } from "@/lib/s3";
+import { deleteFromS3, getPresignedDownloadUrl } from "@/lib/s3";
 
 export async function GET(request: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -13,9 +13,14 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
       return NextResponse.json({ error: "Media not found" }, { status: 404 });
     }
 
+    // The bucket is private — sign a short-lived playback URL rather than
+    // returning the raw S3 URL, which 403s in the browser.
+    const cdnUrl = await getPresignedDownloadUrl(media.s3Key).catch(() => media.cdnUrl);
+
     const serializedMedia = {
       ...media,
       sizeBytes: media.sizeBytes.toString(),
+      cdnUrl,
     };
 
     return NextResponse.json(serializedMedia);
@@ -39,9 +44,12 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
       },
     });
 
+    const cdnUrl = await getPresignedDownloadUrl(media.s3Key).catch(() => media.cdnUrl);
+
     const serializedMedia = {
       ...media,
       sizeBytes: media.sizeBytes.toString(),
+      cdnUrl,
     };
 
     return NextResponse.json(serializedMedia);
