@@ -22,8 +22,8 @@ export default function AuthLayout({ children }: AuthLayoutProps) {
 
         <div className="relative z-20 flex items-center">
           <img
-            src="/reds-tag.svg"
-            alt="REDS Logo"
+            src="/reds-xos-logo.png"
+            alt="REDS XOS Logo"
             className="h-16 w-auto object-contain"
           />
         </div>
@@ -57,8 +57,8 @@ export default function AuthLayout({ children }: AuthLayoutProps) {
           {/* Simple logo header for small screens */}
           <div className="flex lg:hidden items-center justify-center mb-8">
             <img
-              src="/reds-tag.svg"
-              alt="REDS Logo"
+              src="/reds-xos-logo.png"
+              alt="REDS XOS Logo"
               className="h-14 w-auto object-contain"
             />
           </div>
