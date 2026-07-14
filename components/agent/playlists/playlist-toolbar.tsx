@@ -9,6 +9,8 @@ interface ToolbarProps {
   itemCount: number;
   totalLabel: string;
   dirty: boolean;
+  saving: boolean;
+  saveError: string | null;
   statusText: string;
   onUndo: () => void;
   onRedo: () => void;
@@ -30,6 +32,8 @@ export default function PlaylistToolbar({
   itemCount,
   totalLabel,
   dirty,
+  saving,
+  saveError,
   statusText,
   onUndo,
   onRedo,
@@ -61,7 +65,14 @@ export default function PlaylistToolbar({
           />
           <span className="text-[10.5px] text-zinc-450 dark:text-zinc-500">
             {itemCount} clips · {totalLabel} loop ·{" "}
-            <span className={`font-semibold ${dirty ? "text-amber-500" : "text-emerald-500"}`}>{statusText}</span>
+            <span
+              title={saveError ?? undefined}
+              className={`font-semibold ${
+                saveError ? "text-red-500" : saving ? "text-zinc-450" : dirty ? "text-amber-500" : "text-emerald-500"
+              }`}
+            >
+              {statusText}
+            </span>
           </span>
         </div>
 
@@ -109,14 +120,16 @@ export default function PlaylistToolbar({
 
         <button
           onClick={onSaveDraft}
-          className="h-8 px-3.5 rounded-lg border border-[#E2E6EC] dark:border-[#283243] bg-white dark:bg-[#111722] hover:bg-[#F6F7F9] dark:hover:bg-[#18202E] text-xs font-bold text-zinc-700 dark:text-zinc-300 flex items-center gap-1.5 cursor-pointer transition-colors"
+          disabled={saving}
+          className="h-8 px-3.5 rounded-lg border border-[#E2E6EC] dark:border-[#283243] bg-white dark:bg-[#111722] hover:bg-[#F6F7F9] dark:hover:bg-[#18202E] text-xs font-bold text-zinc-700 dark:text-zinc-300 flex items-center gap-1.5 cursor-pointer transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
         >
           <Save className="w-3.5 h-3.5" />
           Save Draft
         </button>
         <button
           onClick={onPublish}
-          className="h-8 px-3.5 rounded-lg border-none bg-[#2859D9] dark:bg-[#6F96FF] text-white dark:text-[#111722] text-xs font-bold flex items-center gap-1.5 shadow-sm hover:opacity-90 cursor-pointer transition-opacity"
+          disabled={saving}
+          className="h-8 px-3.5 rounded-lg border-none bg-[#2859D9] dark:bg-[#6F96FF] text-white dark:text-[#111722] text-xs font-bold flex items-center gap-1.5 shadow-sm hover:opacity-90 cursor-pointer transition-opacity disabled:opacity-50 disabled:cursor-not-allowed"
         >
           <Send className="w-3.5 h-3.5" />
           Publish Loop
