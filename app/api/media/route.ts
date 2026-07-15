@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { getPresignedDownloadUrl } from "@/lib/s3";
 
 export async function GET(request: Request) {
   try {
@@ -13,24 +14,31 @@ export async function GET(request: Request) {
     });
 
     // Format for UI consumption
-    const serializedMedia = media.map(m => {
-      let type = "Image";
-      if (m.mediaType?.name === "video") type = "Video";
-      if (m.mediaType?.name === "html") type = "HTML5";
+    const serializedMedia = await Promise.all(
+      media.map(async (m) => {
+        let type = "Image";
+        if (m.mediaType?.name === "video") type = "Video";
+        if (m.mediaType?.name === "html") type = "HTML5";
 
-      return {
-        ...m,
-        sizeBytes: m.sizeBytes.toString(),
-        type,
-        size: (Number(m.sizeBytes) / (1024 * 1024)).toFixed(1) + " MB",
-        dimensions: m.width && m.height ? `${m.width}x${m.height}` : "1920x1080",
-        duration: m.durationSec ? `${m.durationSec}s` : undefined,
-        uploader: "Admin",
-        date: m.createdAt.toLocaleDateString("en-US", { day: 'numeric', month: 'short', year: 'numeric' }),
-        usedInPlaylists: [],
-        status: m.status === "READY" ? "Ready" : m.status === "PROCESSING" ? "Transcoding" : "Failed"
-      };
-    });
+        // The bucket is private — sign a short-lived playback URL rather than
+        // returning the raw S3 URL, which 403s in the browser.
+        const cdnUrl = await getPresignedDownloadUrl(m.s3Key).catch(() => m.cdnUrl);
+
+        return {
+          ...m,
+          sizeBytes: m.sizeBytes.toString(),
+          cdnUrl,
+          type,
+          size: (Number(m.sizeBytes) / (1024 * 1024)).toFixed(1) + " MB",
+          dimensions: m.width && m.height ? `${m.width}x${m.height}` : "1920x1080",
+          duration: m.durationSec ? `${m.durationSec}s` : undefined,
+          uploader: "Admin",
+          date: m.createdAt.toLocaleDateString("en-US", { day: 'numeric', month: 'short', year: 'numeric' }),
+          usedInPlaylists: [],
+          status: m.status === "READY" ? "Ready" : m.status === "PROCESSING" ? "Transcoding" : "Failed"
+        };
+      })
+    );
 
     return NextResponse.json(serializedMedia);
   } catch (error) {
@@ -82,9 +90,12 @@ export async function POST(request: Request) {
       },
     });
 
+    const cdnUrl = await getPresignedDownloadUrl(media.s3Key).catch(() => media.cdnUrl);
+
     const serializedMedia = {
       ...media,
       sizeBytes: media.sizeBytes.toString(),
+      cdnUrl,
       // Add mock relations for the UI
       type: body.type || "Image",
       uploader: "Current User", // Mock uploader

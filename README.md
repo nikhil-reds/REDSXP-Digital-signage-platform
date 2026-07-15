@@ -1,6 +1,6 @@
 # Rubenius — Digital Signage Platform
 
-Rubenius is a white-label, multi-tenant SaaS platform for digital signage powered by industrial-grade **BrightSign** hardware. Businesses (tenants) can upload media, construct playlists, configure sensor-driven edge content rules, schedule screen playback, and deploy content across thousands of displays globally through a single unified dashboard.
+Rubenius is white-label, multi-tenant SaaS platform for digital signage powered by industrial-grade **BrightSign** hardware. Businesses (tenants) can upload media, construct playlists, configure sensor-driven edge content rules, schedule screen playback, and deploy content across thousands of displays globally through a single unified dashboard.
 
 ---
 

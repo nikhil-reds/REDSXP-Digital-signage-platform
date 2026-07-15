@@ -16,8 +16,7 @@ import {
   Activity,
   Settings,
   Users,
-  LogOut,
-  Layers
+  LogOut
 } from "lucide-react";
 
 interface NavItem {
@@ -57,12 +56,11 @@ export default function AdminSidebar() {
     <aside className="w-64 border-r border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 flex flex-col h-screen shrink-0 font-sans">
       {/* Brand Header */}
       <div className="p-4 border-b border-zinc-100 dark:border-zinc-900 flex items-center gap-3">
-        <div className="bg-zinc-950 dark:bg-zinc-50 text-white dark:text-zinc-950 rounded-xl p-1.5 flex items-center justify-center w-8 h-8 shadow-sm">
-          <Layers className="w-5 h-5" />
-        </div>
-        <span className="font-semibold text-zinc-900 dark:text-zinc-50 text-base tracking-tight">
-          REDS XOS
-        </span>
+        <img
+          src="/reds-xos-logo.png"
+          alt="REDS XOS Logo"
+          className="h-7 w-auto object-contain"
+        />
       </div>
 
       {/* Navigation Links */}
