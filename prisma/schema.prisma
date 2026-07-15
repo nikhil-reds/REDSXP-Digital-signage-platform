@@ -27,6 +27,7 @@ model Tenant {
 
   users              User[]
   devices            Device[]
+  deviceGroups       DeviceGroup[]
   media              Media[]
   mediaCategories    MediaCategory[]
   playlists          Playlist[]
@@ -183,6 +184,7 @@ model Playlist {
   tags          Tag[]              @relation("PlaylistToTag")
   playlistItems PlaylistItem[]
   devices       Device[]
+  deviceGroups  DeviceGroup[]
   calendars     Calendar[]
 
   @@map("playlists")
@@ -240,26 +242,48 @@ model Calendar {
 }
 
 model Device {
-  id              String       @id @default(uuid())
-  tenantId        String       @map("tenant_id")
-  serialNumber    String       @unique @map("serial_number")
-  deviceToken     String       @map("device_token")
+  id              String        @id @default(uuid())
+  tenantId        String        @map("tenant_id")
+  serialNumber    String        @unique @map("serial_number")
+  deviceToken     String        @map("device_token")
   model           String
   name            String
   location        String?
-  firmwareVersion String?      @map("firmware_version")
-  lastSeen        DateTime?    @map("last_seen")
-  status          DeviceStatus @default(OFFLINE)
-  createdAt       DateTime     @default(now()) @map("created_at")
-  updatedAt       DateTime     @updatedAt @map("updated_at")
+  firmwareVersion String?       @map("firmware_version")
+  lastSeen        DateTime?     @map("last_seen")
+  status          DeviceStatus  @default(OFFLINE)
+  storagePercent  Int?          @map("storage_percent")
+  alertsCount     Int           @default(0) @map("alerts_count")
+  alertsSeverity  AlertSeverity @default(NONE) @map("alerts_severity")
+  createdAt       DateTime      @default(now()) @map("created_at")
+  updatedAt       DateTime      @updatedAt @map("updated_at")
 
-  currentPlaylistId String?    @map("current_playlist_id")
-  playlist          Playlist?  @relation(fields: [currentPlaylistId], references: [id], onDelete: SetNull)
-  tenant            Tenant     @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  tags              Tag[]      @relation("DeviceToTag")
-  calendars         Calendar[] @relation("CalendarToDevice")
+  currentPlaylistId String?      @map("current_playlist_id")
+  playlist          Playlist?    @relation(fields: [currentPlaylistId], references: [id], onDelete: SetNull)
+  groupId           String?      @map("group_id")
+  group             DeviceGroup? @relation(fields: [groupId], references: [id], onDelete: SetNull)
+  tenant            Tenant       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  tags              Tag[]        @relation("DeviceToTag")
+  calendars         Calendar[]   @relation("CalendarToDevice")
 
   @@map("devices")
+}
+
+model DeviceGroup {
+  id            String   @id @default(uuid())
+  tenantId      String   @map("tenant_id")
+  name          String
+  scheduleLabel String?  @map("schedule_label")
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  currentPlaylistId String?   @map("current_playlist_id")
+  playlist          Playlist? @relation(fields: [currentPlaylistId], references: [id], onDelete: SetNull)
+  tenant            Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  devices           Device[]
+
+  @@unique([tenantId, name])
+  @@map("device_groups")
 }
 
 // ═══════════════════════════════════════
@@ -421,5 +445,13 @@ enum InvoiceStatus {
 
 enum DeviceStatus {
   ONLINE
+  DELAYED
   OFFLINE
+}
+
+enum AlertSeverity {
+  NONE
+  MEDIUM
+  HIGH
+  CRITICAL
 }
