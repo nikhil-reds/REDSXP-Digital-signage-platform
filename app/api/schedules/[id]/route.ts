@@ -6,7 +6,7 @@ import { CalendarStatus } from "@/app/generated/prisma/client";
 const serializeSchedule = (schedule: any) => {
   if (!schedule) return null;
   const serialized = { ...schedule };
-  
+
   if (serialized.playlist) {
     serialized.playlist = {
       ...serialized.playlist,
@@ -19,7 +19,11 @@ const serializeSchedule = (schedule: any) => {
       })) || [],
     };
   }
-  
+
+  if (Array.isArray(serialized.devices)) {
+    serialized.deviceIds = serialized.devices.map((d: any) => d.id);
+  }
+
   return serialized;
 };
 
