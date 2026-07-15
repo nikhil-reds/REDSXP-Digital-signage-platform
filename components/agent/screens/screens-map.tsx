@@ -44,7 +44,7 @@ export default function ScreensMap({ screens, onSelectScreen, selectedScreenId }
       </svg>
 
       {/* Floating Panel Legend */}
-      <div className="absolute top-4 left-4 bg-white/90 dark:bg-[#111722]/90 border border-[#E2E6EC] dark:border-[#283243] p-3.5 rounded-lg shadow-sm z-10 space-y-2 text-[10px] font-semibold text-zinc-500 max-w-[200px]">
+      <div className="absolute top-4 left-4 bg-white/90 dark:bg-[#111722]/90 border border-[#E2E6EC] dark:border-[#283243] p-3.5 rounded-lg shadow-sm z-10 space-y-2 text-[10px] font-semibold text-zinc-500 dark:text-zinc-400 max-w-[200px]">
         <h4 className="font-bold text-zinc-800 dark:text-zinc-200 uppercase tracking-wider mb-1 flex items-center gap-1.5">
           <Map className="w-3.5 h-3.5 text-[#2859D9] dark:text-[#6F96FF]" />
           Regional Map Legend
@@ -109,11 +109,11 @@ export default function ScreensMap({ screens, onSelectScreen, selectedScreenId }
               </span>
               
               <div className="border-t border-[#E2E6EC] dark:border-[#283243] my-1.5 pt-1.5 flex flex-col gap-1 text-[10px]">
-                <div className="flex justify-between items-center text-zinc-500">
+                <div className="flex justify-between items-center text-zinc-500 dark:text-zinc-400">
                   <span>Current:</span>
                   <span className="font-semibold text-zinc-800 dark:text-zinc-200 truncate max-w-[90px]">{screen.content}</span>
                 </div>
-                <div className="flex justify-between items-center text-zinc-500">
+                <div className="flex justify-between items-center text-zinc-500 dark:text-zinc-400">
                   <span>Status:</span>
                   <span
                     className={`font-bold ${

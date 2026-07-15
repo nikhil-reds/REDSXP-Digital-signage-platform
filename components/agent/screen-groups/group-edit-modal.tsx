@@ -1,41 +1,59 @@
 "use client";
 
-import React, { useState } from "react";
-import { X, PlaySquare, Calendar, Monitor, Sparkles, WifiOff, CheckCircle2 } from "lucide-react";
+import React, { useEffect, useState } from "react";
+import { X, Sparkles, WifiOff, CheckCircle2 } from "lucide-react";
 import { ScreenGroup } from "./groups-grid";
+import { createScreenGroup, fetchScreenGroup, updateScreenGroup } from "./api";
+import { fetchScreens } from "@/components/agent/screens/api";
+import { ScreenDevice } from "@/components/agent/screens/screens-table";
+import { fetchPlaylists } from "@/components/agent/playlists/api";
+import { PlaylistSummary } from "@/components/agent/playlists/types";
 
 interface GroupEditModalProps {
-  group: ScreenGroup;
+  group: ScreenGroup | null;
   onClose: () => void;
-  onSave: (updated: ScreenGroup) => void;
+  onSaved: () => void;
 }
 
-// Mock available screens list for assignments
-const mockScreens = [
-  { id: "scr-1", name: "Koramangala Entrance", group: "Bengaluru Flagship Stores", assigned: true },
-  { id: "scr-2", name: "MG Road Menu Board 01", group: "Menu Boards", assigned: true },
-  { id: "scr-3", name: "MG Road Menu Board 02", group: "Menu Boards", assigned: true },
-  { id: "scr-4", name: "Phoenix Mall Display", group: "Mall Stores", assigned: true },
-  { id: "scr-5", name: "Indiranagar Screen 03", group: "Bengaluru Flagship Stores", assigned: true },
-  { id: "scr-6", name: "Airport T2 Counter 04", group: "Airport Outlets", assigned: true },
-  { id: "scr-7", name: "Whitefield Store 01", group: "None", assigned: false },
-  { id: "scr-8", name: "Whitefield Store 02", group: "None", assigned: false },
-  { id: "scr-9", name: "Jayanagar Screen 01", group: "None", assigned: false },
-  { id: "scr-10", name: "Jayanagar Screen 02", group: "None", assigned: false }
-];
+export default function GroupEditModal({ group, onClose, onSaved }: GroupEditModalProps) {
+  const isCreateMode = group === null;
 
-export default function GroupEditModal({ group, onClose, onSave }: GroupEditModalProps) {
-  const [name, setName] = useState(group.name);
-  const [playlist, setPlaylist] = useState(group.playlist);
-  const [schedule, setSchedule] = useState(group.schedule);
-  
-  // Manage assigned screen IDs
-  const [assignedIds, setAssignedIds] = useState<string[]>(() => {
-    // Initial assignment matching the screen group name
-    return mockScreens
-      .filter((s) => s.group === group.name)
-      .map((s) => s.id);
-  });
+  const [name, setName] = useState(group?.name ?? "");
+  const [playlistId, setPlaylistId] = useState("");
+  const [scheduleLabel, setScheduleLabel] = useState("");
+  const [screens, setScreens] = useState<ScreenDevice[]>([]);
+  const [playlists, setPlaylists] = useState<PlaylistSummary[]>([]);
+  const [assignedIds, setAssignedIds] = useState<string[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    Promise.all([
+      fetchScreens(),
+      fetchPlaylists(),
+      group ? fetchScreenGroup(group.id) : Promise.resolve(null),
+    ])
+      .then(([screenList, playlistList, detail]) => {
+        if (cancelled) return;
+        setScreens(screenList);
+        setPlaylists(playlistList);
+        if (detail) {
+          setPlaylistId(detail.currentPlaylistId ?? "");
+          setScheduleLabel(detail.scheduleLabel ?? "");
+          setAssignedIds(detail.deviceIds);
+        }
+      })
+      .catch((err) => !cancelled && setError(err instanceof Error ? err.message : "Failed to load data"))
+      .finally(() => !cancelled && setIsLoading(false));
+
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const handleToggleScreen = (id: string, checked: boolean) => {
     if (checked) {
@@ -45,26 +63,40 @@ export default function GroupEditModal({ group, onClose, onSave }: GroupEditModa
     }
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    onSave({
-      ...group,
-      name,
-      playlist,
-      schedule,
-      screensCount: assignedIds.length
-    });
+    setIsSubmitting(true);
+    setError(null);
+    try {
+      const payload = {
+        name,
+        currentPlaylistId: playlistId || null,
+        scheduleLabel: scheduleLabel || null,
+        deviceIds: assignedIds,
+      };
+      if (isCreateMode) {
+        await createScreenGroup(payload);
+      } else {
+        await updateScreenGroup(group.id, payload);
+      }
+      onSaved();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to save screen group");
+      setIsSubmitting(false);
+    }
   };
+
+  const alertsCount = group?.alertsCount ?? 0;
 
   return (
     <div className="fixed inset-0 bg-black/55 dark:bg-black/80 flex items-center justify-center z-50 animate-fadeIn font-sans">
       <div className="bg-white dark:bg-[#111722] border border-[#E2E6EC] dark:border-[#283243] rounded-xl w-[520px] max-w-full shadow-2xl flex flex-col max-h-[85vh] overflow-hidden">
-        
+
         {/* Header */}
         <div className="p-5 border-b border-[#E2E6EC] dark:border-[#283243] flex justify-between items-center bg-[#F6F7F9]/50 dark:bg-[#171F2C]/20">
           <div>
             <h3 className="font-bold text-sm text-[#18202B] dark:text-[#F2F5F8]">
-              Configure Screen Group
+              {isCreateMode ? "Create Screen Group" : "Configure Screen Group"}
             </h3>
             <p className="text-[10px] text-[#657080] dark:text-[#9AA7B7] mt-0.5">
               Edit playlist, schedule allocation, and screen assignments.
@@ -72,7 +104,7 @@ export default function GroupEditModal({ group, onClose, onSave }: GroupEditModa
           </div>
           <button
             onClick={onClose}
-            className="p-1 rounded-lg text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-55 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors cursor-pointer"
+            className="p-1 rounded-lg text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-50 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors cursor-pointer"
           >
             <X className="w-4 h-4" />
           </button>
@@ -80,7 +112,7 @@ export default function GroupEditModal({ group, onClose, onSave }: GroupEditModa
 
         {/* Form body */}
         <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-5 space-y-4 text-xs">
-          
+
           {/* Group Name input */}
           <div className="flex flex-col gap-1.5">
             <label className="text-[10px] font-bold uppercase tracking-wider text-zinc-400 dark:text-zinc-500">
@@ -102,32 +134,31 @@ export default function GroupEditModal({ group, onClose, onSave }: GroupEditModa
                 Assigned Playlist
               </label>
               <select
-                value={playlist}
-                onChange={(e) => setPlaylist(e.target.value)}
+                value={playlistId}
+                onChange={(e) => setPlaylistId(e.target.value)}
                 className="w-full px-3 py-2 bg-[#F6F7F9] dark:bg-[#171F2C]/50 border border-[#E2E6EC] dark:border-[#283243] rounded-lg text-xs text-zinc-700 dark:text-zinc-300 font-bold focus:outline-none cursor-pointer"
               >
-                <option value="Monsoon Café Promotions">Monsoon Café Promotions</option>
-                <option value="Airport Express Menu">Airport Express Menu</option>
-                <option value="Lunch Combos">Lunch Combos</option>
-                <option value="Breakfast Menu">Breakfast Menu</option>
+                <option value="">No Playlist</option>
+                {playlists.map((p) => (
+                  <option key={p.id} value={p.id}>
+                    {p.name}
+                  </option>
+                ))}
               </select>
             </div>
 
-            {/* Schedule dropdown */}
+            {/* Schedule label */}
             <div className="flex flex-col gap-1.5">
               <label className="text-[10px] font-bold uppercase tracking-wider text-zinc-400 dark:text-zinc-500">
                 Active Schedule
               </label>
-              <select
-                value={schedule}
-                onChange={(e) => setSchedule(e.target.value)}
-                className="w-full px-3 py-2 bg-[#F6F7F9] dark:bg-[#171F2C]/50 border border-[#E2E6EC] dark:border-[#283243] rounded-lg text-xs text-zinc-700 dark:text-zinc-300 font-bold focus:outline-none cursor-pointer"
-              >
-                <option value="Monsoon Promotions (4:00 PM–9:30 PM)">Monsoon Promotions</option>
-                <option value="Airport Express Menu (All day)">Airport Express Menu</option>
-                <option value="Lunch Combos (11:00 AM–4:00 PM)">Lunch Combos</option>
-                <option value="Breakfast Menu (6:00 AM–11:00 AM)">Breakfast Menu</option>
-              </select>
+              <input
+                type="text"
+                value={scheduleLabel}
+                onChange={(e) => setScheduleLabel(e.target.value)}
+                placeholder="e.g. Lunch Combos (11:00 AM–4:00 PM)"
+                className="w-full px-3 py-2 bg-[#F6F7F9] dark:bg-[#171F2C]/50 border border-[#E2E6EC] dark:border-[#283243] rounded-lg text-xs text-zinc-700 dark:text-zinc-300 font-bold focus:outline-none"
+              />
             </div>
           </div>
 
@@ -137,32 +168,38 @@ export default function GroupEditModal({ group, onClose, onSave }: GroupEditModa
               Assign Screens ({assignedIds.length} screens assigned)
             </label>
             <div className="border border-[#E2E6EC] dark:border-[#283243] rounded-lg max-h-40 overflow-y-auto divide-y divide-[#E2E6EC] dark:divide-[#283243] bg-white dark:bg-zinc-950 p-1">
-              {mockScreens.map((s) => {
-                const isAssigned = assignedIds.includes(s.id);
-                return (
-                  <label
-                    key={s.id}
-                    className="flex items-center gap-3 px-3 py-2 hover:bg-[#F6F7F9]/50 dark:hover:bg-[#171F2C]/20 rounded-md cursor-pointer text-xs transition-colors"
-                  >
-                    <input
-                      type="checkbox"
-                      checked={isAssigned}
-                      onChange={(e) => handleToggleScreen(s.id, e.target.checked)}
-                      className="rounded border-[#E2E6EC] dark:border-[#283243] focus:ring-[#2859D9]"
-                    />
-                    <div className="flex-1 min-w-0">
-                      <span className="block font-bold text-zinc-800 dark:text-zinc-200">
-                        {s.name}
-                      </span>
-                      {s.group !== "None" && s.group !== group.name && (
-                        <span className="text-[9px] text-amber-500 font-semibold uppercase">
-                          Warning: Currently in group "{s.group}"
+              {isLoading ? (
+                <p className="px-3 py-2 text-[11px] text-zinc-400 dark:text-zinc-500">Loading screens…</p>
+              ) : screens.length === 0 ? (
+                <p className="px-3 py-2 text-[11px] text-zinc-400 dark:text-zinc-500">No screens available yet.</p>
+              ) : (
+                screens.map((s) => {
+                  const isAssigned = assignedIds.includes(s.id);
+                  return (
+                    <label
+                      key={s.id}
+                      className="flex items-center gap-3 px-3 py-2 hover:bg-[#F6F7F9]/50 dark:hover:bg-[#171F2C]/20 rounded-md cursor-pointer text-xs transition-colors"
+                    >
+                      <input
+                        type="checkbox"
+                        checked={isAssigned}
+                        onChange={(e) => handleToggleScreen(s.id, e.target.checked)}
+                        className="rounded border-[#E2E6EC] dark:border-[#283243] focus:ring-[#2859D9]"
+                      />
+                      <div className="flex-1 min-w-0">
+                        <span className="block font-bold text-zinc-800 dark:text-zinc-200">
+                          {s.name}
                         </span>
-                      )}
-                    </div>
-                  </label>
-                );
-              })}
+                        {s.group !== "Unassigned" && s.group !== name && (
+                          <span className="text-[9px] text-amber-500 font-semibold uppercase">
+                            Currently in group &quot;{s.group}&quot;
+                          </span>
+                        )}
+                      </div>
+                    </label>
+                  );
+                })
+              )}
             </div>
           </div>
 
@@ -174,10 +211,10 @@ export default function GroupEditModal({ group, onClose, onSave }: GroupEditModa
             </h4>
             <div className="text-[10px] text-zinc-500 dark:text-zinc-400 space-y-1 leading-relaxed">
               <p>● Changes will immediately sync to <span className="font-bold text-zinc-700 dark:text-zinc-200">{assignedIds.length} players</span>.</p>
-              {group.alertsCount > 0 ? (
+              {alertsCount > 0 ? (
                 <p className="flex items-center gap-1 text-amber-600 dark:text-amber-500 font-semibold">
                   <WifiOff className="w-3 h-3 shrink-0" />
-                  1 player ({group.name} offline device) is currently disconnected and will receive this manifest upon next heartbeat check-in.
+                  {alertsCount} player{alertsCount > 1 ? "s" : ""} currently disconnected and will receive this manifest upon next heartbeat check-in.
                 </p>
               ) : (
                 <p className="flex items-center gap-1 text-emerald-600 dark:text-emerald-500 font-semibold">
@@ -188,6 +225,8 @@ export default function GroupEditModal({ group, onClose, onSave }: GroupEditModa
             </div>
           </div>
 
+          {error && <p className="text-[11px] font-semibold text-red-500">{error}</p>}
+
         </form>
 
         {/* Footer actions */}
@@ -195,16 +234,17 @@ export default function GroupEditModal({ group, onClose, onSave }: GroupEditModa
           <button
             type="button"
             onClick={onClose}
-            className="px-4 py-2 border border-[#E2E6EC] dark:border-[#283243] text-xs font-bold rounded-lg text-zinc-650 dark:text-zinc-350 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors cursor-pointer"
+            className="px-4 py-2 border border-[#E2E6EC] dark:border-[#283243] text-xs font-bold rounded-lg text-zinc-600 dark:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors cursor-pointer"
           >
             Discard
           </button>
           <button
             type="submit"
             onClick={handleSubmit}
-            className="px-4 py-2 bg-[#2859D9] dark:bg-[#6F96FF] text-white dark:text-[#111722] text-xs font-bold rounded-lg hover:opacity-90 transition-opacity cursor-pointer animate-pulse"
+            disabled={isSubmitting}
+            className="px-4 py-2 bg-[#2859D9] dark:bg-[#6F96FF] text-white dark:text-[#111722] text-xs font-bold rounded-lg hover:opacity-90 transition-opacity cursor-pointer disabled:opacity-60"
           >
-            Publish Changes
+            {isSubmitting ? "Publishing..." : "Publish Changes"}
           </button>
         </div>
 

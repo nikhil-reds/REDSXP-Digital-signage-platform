@@ -101,7 +101,7 @@ export default function AgentNavbar() {
             className={`p-1.5 rounded-md transition-all duration-200 cursor-pointer ${
               theme === "light"
                 ? "bg-white dark:bg-zinc-800 shadow-xs text-zinc-900 dark:text-zinc-50"
-                : "text-zinc-400 hover:text-zinc-650 dark:hover:text-zinc-350"
+                : "text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300"
             }`}
           >
             <Sun className="w-3.5 h-3.5" />
@@ -112,7 +112,7 @@ export default function AgentNavbar() {
             className={`p-1.5 rounded-md transition-all duration-200 cursor-pointer ${
               theme === "dark"
                 ? "bg-white dark:bg-zinc-800 shadow-xs text-zinc-900 dark:text-zinc-50"
-                : "text-zinc-400 hover:text-zinc-650 dark:hover:text-zinc-350"
+                : "text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300"
             }`}
           >
             <Moon className="w-3.5 h-3.5" />
@@ -123,7 +123,7 @@ export default function AgentNavbar() {
             className={`p-1.5 rounded-md transition-all duration-200 cursor-pointer ${
               theme === "system"
                 ? "bg-white dark:bg-zinc-800 shadow-xs text-zinc-900 dark:text-zinc-50"
-                : "text-zinc-400 hover:text-zinc-650 dark:hover:text-zinc-350"
+                : "text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300"
             }`}
           >
             <Monitor className="w-3.5 h-3.5" />

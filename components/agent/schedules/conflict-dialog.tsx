@@ -1,24 +1,26 @@
 "use client";
 
 import React from "react";
-import { AlertTriangle, X, ShieldCheck, ChevronRight } from "lucide-react";
-import { CampaignSchedule } from "./schedule-calendar";
+import { AlertTriangle, X, ShieldCheck } from "lucide-react";
+import { ScheduleSummary } from "./api";
+import { formatDays } from "./schedule-calendar";
 
 interface ConflictDialogProps {
   onClose: () => void;
-  campaign1: CampaignSchedule;
-  campaign2: CampaignSchedule;
+  campaign1: ScheduleSummary;
+  campaign2: ScheduleSummary;
 }
 
 export default function ConflictDialog({ onClose, campaign1, campaign2 }: ConflictDialogProps) {
-  // Campaign 2 (Weekend Live Music) has Priority 60, Campaign 1 (Monsoon Café) has Priority 40
   const winner = campaign2.priority > campaign1.priority ? campaign2 : campaign1;
   const loser = campaign2.priority > campaign1.priority ? campaign1 : campaign2;
+
+  const sharedDays = campaign1.daysOfWeek.filter((d) => campaign2.daysOfWeek.includes(d));
 
   return (
     <div className="fixed inset-0 bg-black/55 dark:bg-black/80 flex items-center justify-center z-50 animate-fadeIn font-sans">
       <div className="bg-white dark:bg-[#111722] border border-[#E2E6EC] dark:border-[#283243] rounded-xl w-[450px] max-w-full shadow-2xl p-5 space-y-4">
-        
+
         {/* Header */}
         <div className="flex justify-between items-start gap-4 pb-3 border-b border-[#E2E6EC] dark:border-[#283243]">
           <div className="flex items-center gap-2 text-amber-600 dark:text-amber-500 font-bold">
@@ -38,7 +40,15 @@ export default function ConflictDialog({ onClose, campaign1, campaign2 }: Confli
         {/* Conflict Description */}
         <div className="text-xs space-y-3">
           <p className="text-zinc-500 leading-relaxed">
-            An overlap occurs on <span className="font-bold text-zinc-800 dark:text-zinc-200">Friday, Saturday, and Sunday</span> from <span className="font-bold text-zinc-800 dark:text-zinc-200">6:00 PM to 9:30 PM</span>.
+            An overlap occurs on <span className="font-bold text-zinc-800 dark:text-zinc-200">{formatDays(sharedDays)}</span> between{" "}
+            <span className="font-bold text-zinc-800 dark:text-zinc-200">
+              {campaign1.dailyStartTime}–{campaign1.dailyEndTime}
+            </span>{" "}
+            and{" "}
+            <span className="font-bold text-zinc-800 dark:text-zinc-200">
+              {campaign2.dailyStartTime}–{campaign2.dailyEndTime}
+            </span>{" "}
+            on shared screens.
           </p>
 
           <div className="space-y-2">
@@ -46,8 +56,10 @@ export default function ConflictDialog({ onClose, campaign1, campaign2 }: Confli
             <div className="p-3 border border-zinc-250 dark:border-zinc-800 rounded-lg flex justify-between items-center gap-3">
               <div>
                 <span className="text-[9px] font-bold uppercase tracking-wider text-zinc-400">Campaign A</span>
-                <span className="block font-bold text-zinc-850 dark:text-zinc-200 mt-0.5">{campaign1.playlistName}</span>
-                <span className="text-[9px] text-zinc-400">{campaign1.timeRange}</span>
+                <span className="block font-bold text-zinc-850 dark:text-zinc-200 mt-0.5">{campaign1.name}</span>
+                <span className="text-[9px] text-zinc-400">
+                  {campaign1.dailyStartTime} - {campaign1.dailyEndTime}
+                </span>
               </div>
               <span className="text-[9px] px-2 py-0.5 bg-zinc-100 dark:bg-zinc-800 text-zinc-650 rounded-sm font-bold font-mono">
                 Priority {campaign1.priority}
@@ -58,8 +70,10 @@ export default function ConflictDialog({ onClose, campaign1, campaign2 }: Confli
             <div className="p-3 border border-zinc-250 dark:border-zinc-800 rounded-lg flex justify-between items-center gap-3">
               <div>
                 <span className="text-[9px] font-bold uppercase tracking-wider text-zinc-400">Campaign B</span>
-                <span className="block font-bold text-zinc-850 dark:text-zinc-200 mt-0.5">{campaign2.playlistName}</span>
-                <span className="text-[9px] text-zinc-400">{campaign2.timeRange}</span>
+                <span className="block font-bold text-zinc-850 dark:text-zinc-200 mt-0.5">{campaign2.name}</span>
+                <span className="text-[9px] text-zinc-400">
+                  {campaign2.dailyStartTime} - {campaign2.dailyEndTime}
+                </span>
               </div>
               <span className="text-[9px] px-2 py-0.5 bg-zinc-100 dark:bg-zinc-800 text-zinc-650 rounded-sm font-bold font-mono">
                 Priority {campaign2.priority}
@@ -75,7 +89,7 @@ export default function ConflictDialog({ onClose, campaign1, campaign2 }: Confli
             </h4>
             <div className="text-[10px] text-zinc-600 dark:text-zinc-400 leading-normal space-y-1">
               <p>
-                ● <span className="font-bold text-zinc-900 dark:text-white">"{winner.playlistName}"</span> overrides "{loser.playlistName}" because Priority {winner.priority} is higher than Priority {loser.priority}.
+                ● <span className="font-bold text-zinc-900 dark:text-white">&quot;{winner.name}&quot;</span> overrides &quot;{loser.name}&quot; because Priority {winner.priority} is higher than Priority {loser.priority}.
               </p>
               <p>
                 ● Displays will automatically select the winning manifest on the overlap timeline. Fallback assets are ignored.
