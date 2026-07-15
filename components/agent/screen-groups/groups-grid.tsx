@@ -53,7 +53,7 @@ export default function GroupsGrid({ groups, onEditGroup }: GroupsGridProps) {
             <div className="grid grid-cols-3 gap-2.5 my-4 bg-[#F6F7F9] dark:bg-[#171F2C] p-3 rounded-lg border border-[#E2E6EC] dark:border-[#283243] text-center select-none">
               <div>
                 <span className="block text-xs font-bold text-zinc-900 dark:text-zinc-50">{group.screensCount}</span>
-                <span className="text-[9px] text-zinc-400 dark:text-zinc-550 font-semibold uppercase tracking-wide">Screens</span>
+                <span className="text-[9px] text-zinc-400 dark:text-zinc-500 font-semibold uppercase tracking-wide">Screens</span>
               </div>
               <div className="border-x border-[#E2E6EC] dark:border-[#283243]">
                 <span className={`block text-xs font-bold ${
@@ -65,18 +65,18 @@ export default function GroupsGrid({ groups, onEditGroup }: GroupsGridProps) {
                 }`}>
                   {group.onlinePercentage}%
                 </span>
-                <span className="text-[9px] text-zinc-400 dark:text-zinc-550 font-semibold uppercase tracking-wide">Online</span>
+                <span className="text-[9px] text-zinc-400 dark:text-zinc-500 font-semibold uppercase tracking-wide">Online</span>
               </div>
               <div>
                 <span className={`block text-xs font-bold ${isWarning ? "text-red-500" : "text-zinc-400"}`}>
                   {group.alertsCount}
                 </span>
-                <span className="text-[9px] text-zinc-400 dark:text-zinc-550 font-semibold uppercase tracking-wide">Alerts</span>
+                <span className="text-[9px] text-zinc-400 dark:text-zinc-500 font-semibold uppercase tracking-wide">Alerts</span>
               </div>
             </div>
 
             {/* Details Fields */}
-            <div className="space-y-2 text-xs text-zinc-650 dark:text-zinc-350">
+            <div className="space-y-2 text-xs text-zinc-600 dark:text-zinc-300">
               <div className="flex items-center gap-2">
                 <PlaySquare className="w-4 h-4 text-[#2859D9] dark:text-[#6F96FF] shrink-0" />
                 <span className="text-zinc-400 font-medium">Playlist:</span>
@@ -95,7 +95,7 @@ export default function GroupsGrid({ groups, onEditGroup }: GroupsGridProps) {
             </div>
 
             {/* Footer last deployment */}
-            <div className="border-t border-[#E2E6EC] dark:border-[#283243] mt-4 pt-3 flex justify-between items-center text-[10px] text-zinc-400 dark:text-zinc-550">
+            <div className="border-t border-[#E2E6EC] dark:border-[#283243] mt-4 pt-3 flex justify-between items-center text-[10px] text-zinc-400 dark:text-zinc-500">
               <span>Last Sync: {group.lastDeployment}</span>
               {isWarning && (
                 <span className="text-[9px] font-bold text-red-500 flex items-center gap-0.5 animate-pulse">
