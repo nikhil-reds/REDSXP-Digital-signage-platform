@@ -157,13 +157,13 @@ export default function ScreensTable({ screens, onSelectScreen, selectedScreenId
                   >
                     {screen.name}
                   </td>
-                  <td className="p-3.5 text-zinc-550 dark:text-zinc-400" onClick={() => onSelectScreen(screen)}>
+                  <td className="p-3.5 text-zinc-500 dark:text-zinc-400" onClick={() => onSelectScreen(screen)}>
                     {screen.location}
                   </td>
-                  <td className="p-3.5 text-zinc-500" onClick={() => onSelectScreen(screen)}>
+                  <td className="p-3.5 text-zinc-500 dark:text-zinc-400" onClick={() => onSelectScreen(screen)}>
                     {screen.group}
                   </td>
-                  <td className="p-3.5 font-mono text-[10px] text-zinc-450" onClick={() => onSelectScreen(screen)}>
+                  <td className="p-3.5 font-mono text-[10px] text-zinc-500 dark:text-zinc-400" onClick={() => onSelectScreen(screen)}>
                     {screen.model}
                   </td>
                   
@@ -194,7 +194,7 @@ export default function ScreensTable({ screens, onSelectScreen, selectedScreenId
                   <td className="p-3.5 text-[#2859D9] dark:text-[#6F96FF] font-semibold truncate max-w-[150px]" onClick={() => onSelectScreen(screen)}>
                     {screen.content}
                   </td>
-                  <td className="p-3.5 text-zinc-400 font-mono text-[10px]" onClick={() => onSelectScreen(screen)}>
+                  <td className="p-3.5 text-zinc-400 dark:text-zinc-500 font-mono text-[10px]" onClick={() => onSelectScreen(screen)}>
                     {screen.firmware}
                   </td>
                   
@@ -215,7 +215,7 @@ export default function ScreensTable({ screens, onSelectScreen, selectedScreenId
                     </div>
                   </td>
                   
-                  <td className="p-3.5 text-zinc-500" onClick={() => onSelectScreen(screen)}>
+                  <td className="p-3.5 text-zinc-500 dark:text-zinc-400" onClick={() => onSelectScreen(screen)}>
                     {screen.heartbeat}
                   </td>
 
@@ -253,7 +253,7 @@ export default function ScreensTable({ screens, onSelectScreen, selectedScreenId
                             onSelectScreen(screen);
                             setActiveMenuId(null);
                           }}
-                          className="w-full px-3 py-1.5 text-[11px] font-bold text-zinc-700 dark:text-zinc-350 hover:bg-[#F6F7F9] dark:hover:bg-zinc-800 flex items-center gap-2 cursor-pointer"
+                          className="w-full px-3 py-1.5 text-[11px] font-bold text-zinc-700 dark:text-zinc-300 hover:bg-[#F6F7F9] dark:hover:bg-zinc-800 flex items-center gap-2 cursor-pointer"
                         >
                           <Info className="w-3 h-3 text-[#2859D9] dark:text-[#6F96FF]" />
                           Open Details
@@ -263,7 +263,7 @@ export default function ScreensTable({ screens, onSelectScreen, selectedScreenId
                             setConfirmModal({ show: true, type: "sync", screenName: screen.name });
                             setActiveMenuId(null);
                           }}
-                          className="w-full px-3 py-1.5 text-[11px] font-bold text-zinc-700 dark:text-zinc-350 hover:bg-[#F6F7F9] dark:hover:bg-zinc-800 flex items-center gap-2 cursor-pointer"
+                          className="w-full px-3 py-1.5 text-[11px] font-bold text-zinc-700 dark:text-zinc-300 hover:bg-[#F6F7F9] dark:hover:bg-zinc-800 flex items-center gap-2 cursor-pointer"
                         >
                           <RefreshCw className="w-3 h-3 text-emerald-500" />
                           Force Sync
