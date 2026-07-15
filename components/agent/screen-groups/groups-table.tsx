@@ -38,7 +38,7 @@ export default function GroupsTable({ groups, onEditGroup }: GroupsTableProps) {
                   <td className="p-3.5 font-bold text-zinc-900 dark:text-zinc-50">
                     {group.name}
                   </td>
-                  <td className="p-3.5 text-zinc-550 dark:text-zinc-400 font-semibold">
+                  <td className="p-3.5 text-zinc-500 dark:text-zinc-400 font-semibold">
                     {group.screensCount} screens
                   </td>
                   
@@ -84,7 +84,7 @@ export default function GroupsTable({ groups, onEditGroup }: GroupsTableProps) {
                   <td className="p-3.5 text-center">
                     <button
                       onClick={() => onEditGroup(group)}
-                      className="p-1 rounded-md text-zinc-450 hover:bg-[#F6F7F9] dark:hover:bg-[#171F2C] hover:text-[#2859D9] dark:hover:text-[#6F96FF] cursor-pointer"
+                      className="p-1 rounded-md text-zinc-400 dark:text-zinc-500 hover:bg-[#F6F7F9] dark:hover:bg-[#171F2C] hover:text-[#2859D9] dark:hover:text-[#6F96FF] cursor-pointer"
                     >
                       <Edit2 className="w-3.5 h-3.5" />
                     </button>
