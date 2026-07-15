@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   Search,
   Monitor,
@@ -16,97 +16,19 @@ import {
 import ScreensTable, { ScreenDevice } from "@/components/agent/screens/screens-table";
 import ScreensMap from "@/components/agent/screens/screens-map";
 import ScreensDetailDrawer from "@/components/agent/screens/screens-detail-drawer";
+import ScreenCreateModal from "@/components/agent/screens/screen-create-modal";
+import { createScreen, fetchScreens } from "@/components/agent/screens/api";
 
-const initialScreens: ScreenDevice[] = [
-  {
-    id: "scr-1",
-    name: "Koramangala Entrance",
-    location: "Koramangala 5th Block",
-    group: "Bengaluru Flagship Stores",
-    model: "XD1035",
-    status: "Online",
-    content: "Walk-in Offer",
-    firmware: "9.0.145",
-    storage: "48%",
-    heartbeat: "14s ago",
-    alertsCount: 0,
-    alertsSeverity: "none"
-  },
-  {
-    id: "scr-2",
-    name: "MG Road Menu Board 01",
-    location: "MG Road",
-    group: "Menu Boards",
-    model: "XT1144",
-    status: "Online",
-    content: "Lunch Combos",
-    firmware: "9.0.145",
-    storage: "62%",
-    heartbeat: "9s ago",
-    alertsCount: 0,
-    alertsSeverity: "none"
-  },
-  {
-    id: "scr-3",
-    name: "MG Road Menu Board 02",
-    location: "MG Road",
-    group: "Menu Boards",
-    model: "XT1144",
-    status: "Offline",
-    content: "Lunch Combos",
-    firmware: "9.0.145",
-    storage: "58%",
-    heartbeat: "18m ago",
-    alertsCount: 1,
-    alertsSeverity: "critical"
-  },
-  {
-    id: "scr-4",
-    name: "Phoenix Mall Display",
-    location: "Mahadevapura",
-    group: "Mall Stores",
-    model: "XC2055",
-    status: "Online",
-    content: "Monsoon Café Promotions",
-    firmware: "9.0.145",
-    storage: "94%",
-    heartbeat: "21s ago",
-    alertsCount: 1,
-    alertsSeverity: "high"
-  },
-  {
-    id: "scr-5",
-    name: "Indiranagar Screen 03",
-    location: "Indiranagar",
-    group: "Bengaluru Flagship Stores",
-    model: "XD1035",
-    status: "Delayed",
-    content: "Rewards QR July",
-    firmware: "8.5.31",
-    storage: "32%",
-    heartbeat: "72s ago",
-    alertsCount: 1,
-    alertsSeverity: "medium"
-  },
-  {
-    id: "scr-6",
-    name: "Airport T2 Counter 04",
-    location: "Kempegowda Airport",
-    group: "Airport Outlets",
-    model: "LS425",
-    status: "Online",
-    content: "Airport Express Menu",
-    firmware: "9.0.145",
-    storage: "12%",
-    heartbeat: "18s ago",
-    alertsCount: 0,
-    alertsSeverity: "none"
-  }
-];
+function uniqueSorted(values: (string | undefined)[]): string[] {
+  return Array.from(new Set(values.filter((v): v is string => Boolean(v)))).sort();
+}
 
 export default function AgentScreensPage() {
+  const [screens, setScreens] = useState<ScreenDevice[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const [viewMode, setViewMode] = useState<"table" | "map">("table");
   const [selectedScreen, setSelectedScreen] = useState<ScreenDevice | null>(null);
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
 
   // Filters State
   const [search, setSearch] = useState("");
@@ -116,8 +38,25 @@ export default function AgentScreensPage() {
   const [modelFilter, setModelFilter] = useState("All");
   const [alertsFilter, setAlertsFilter] = useState("All");
 
+  useEffect(() => {
+    fetchScreens()
+      .then(setScreens)
+      .catch((err) => console.error("Failed to load screens:", err))
+      .finally(() => setIsLoading(false));
+  }, []);
+
+  const groupOptions = uniqueSorted(screens.map((s) => s.group));
+  const locationOptions = uniqueSorted(screens.map((s) => s.location));
+  const modelOptions = uniqueSorted(screens.map((s) => s.model));
+
+  const handleCreateScreen: React.ComponentProps<typeof ScreenCreateModal>["onCreate"] = async (payload) => {
+    const created = await createScreen(payload);
+    setScreens((prev) => [created, ...prev]);
+    setIsCreateModalOpen(false);
+  };
+
   // Filter application
-  const filteredScreens = initialScreens.filter((screen) => {
+  const filteredScreens = screens.filter((screen) => {
     const matchesSearch =
       screen.name.toLowerCase().includes(search.toLowerCase()) ||
       screen.location.toLowerCase().includes(search.toLowerCase()) ||
@@ -160,7 +99,7 @@ export default function AgentScreensPage() {
                 className={`p-1.5 rounded-md transition-all duration-200 cursor-pointer ${
                   viewMode === "table"
                     ? "bg-[#F6F7F9] dark:bg-[#171F2C] text-[#2859D9] dark:text-[#6F96FF]"
-                    : "text-zinc-400 hover:text-zinc-650"
+                    : "text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300"
                 }`}
                 title="Table List View"
               >
@@ -171,7 +110,7 @@ export default function AgentScreensPage() {
                 className={`p-1.5 rounded-md transition-all duration-200 cursor-pointer ${
                   viewMode === "map"
                     ? "bg-[#F6F7F9] dark:bg-[#171F2C] text-[#2859D9] dark:text-[#6F96FF]"
-                    : "text-zinc-400 hover:text-zinc-650"
+                    : "text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300"
                 }`}
                 title="Map Cluster View"
               >
@@ -180,7 +119,10 @@ export default function AgentScreensPage() {
             </div>
 
             {/* Add Screen action */}
-            <button className="flex items-center gap-1.5 bg-[#2859D9] dark:bg-[#6F96FF] text-white dark:text-[#111722] px-3.5 py-1.5 rounded-lg text-xs font-bold hover:opacity-90 transition-opacity shadow-sm cursor-pointer">
+            <button
+              onClick={() => setIsCreateModalOpen(true)}
+              className="flex items-center gap-1.5 bg-[#2859D9] dark:bg-[#6F96FF] text-white dark:text-[#111722] px-3.5 py-1.5 rounded-lg text-xs font-bold hover:opacity-90 transition-opacity shadow-sm cursor-pointer"
+            >
               <Plus className="w-3.5 h-3.5" />
               <span>Add Screen</span>
             </button>
@@ -198,7 +140,7 @@ export default function AgentScreensPage() {
                 placeholder="Search screen, location, model..."
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                className="w-full pl-9 pr-3 py-1.5 bg-[#F6F7F9] dark:bg-[#171F2C]/50 border border-[#E2E6EC] dark:border-[#283243] rounded-lg text-xs text-[#18202B] dark:text-[#F2F5F8] placeholder-zinc-450 focus:outline-none"
+                className="w-full pl-9 pr-3 py-1.5 bg-[#F6F7F9] dark:bg-[#171F2C]/50 border border-[#E2E6EC] dark:border-[#283243] rounded-lg text-xs text-[#18202B] dark:text-[#F2F5F8] placeholder-zinc-400 focus:outline-none"
               />
             </div>
 
@@ -226,10 +168,11 @@ export default function AgentScreensPage() {
                 className="w-full pl-8 pr-8 py-1.5 border border-[#E2E6EC] dark:border-[#283243] rounded-lg bg-[#F6F7F9] dark:bg-[#171F2C]/50 text-xs text-zinc-700 dark:text-zinc-300 font-bold focus:outline-none appearance-none cursor-pointer"
               >
                 <option value="All">All Screen Groups</option>
-                <option value="Bengaluru Flagship Stores">Flagship Stores</option>
-                <option value="Mall Stores">Mall Stores</option>
-                <option value="Airport Outlets">Airport Outlets</option>
-                <option value="Menu Boards">Menu Boards</option>
+                {groupOptions.map((group) => (
+                  <option key={group} value={group}>
+                    {group}
+                  </option>
+                ))}
               </select>
               <Layers className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-zinc-400" />
               <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-zinc-400 pointer-events-none" />
@@ -243,11 +186,11 @@ export default function AgentScreensPage() {
                 className="w-full pl-8 pr-8 py-1.5 border border-[#E2E6EC] dark:border-[#283243] rounded-lg bg-[#F6F7F9] dark:bg-[#171F2C]/50 text-xs text-zinc-700 dark:text-zinc-300 font-bold focus:outline-none appearance-none cursor-pointer"
               >
                 <option value="All">All Locations</option>
-                <option value="Koramangala 5th Block">Koramangala</option>
-                <option value="MG Road">MG Road</option>
-                <option value="Mahadevapura">Mahadevapura</option>
-                <option value="Indiranagar">Indiranagar</option>
-                <option value="Kempegowda Airport">Kempegowda Airport</option>
+                {locationOptions.map((location) => (
+                  <option key={location} value={location}>
+                    {location}
+                  </option>
+                ))}
               </select>
               <MapPin className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-zinc-400" />
               <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-zinc-400 pointer-events-none" />
@@ -263,10 +206,11 @@ export default function AgentScreensPage() {
                 className="w-full pl-8 pr-8 py-1.5 border border-[#E2E6EC] dark:border-[#283243] rounded-lg bg-[#F6F7F9] dark:bg-[#171F2C]/50 text-xs text-zinc-700 dark:text-zinc-300 font-bold focus:outline-none appearance-none cursor-pointer"
               >
                 <option value="All">All Hardware Models</option>
-                <option value="XD1035">XD1035 Series</option>
-                <option value="XT1144">XT1144 Series</option>
-                <option value="XC2055">XC2055 Series</option>
-                <option value="LS425">LS425 Series</option>
+                {modelOptions.map((model) => (
+                  <option key={model} value={model}>
+                    {model}
+                  </option>
+                ))}
               </select>
               <Cpu className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-zinc-400" />
               <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-zinc-400 pointer-events-none" />
@@ -291,7 +235,17 @@ export default function AgentScreensPage() {
 
         {/* Main Render Area */}
         <div className="flex-1 flex flex-col min-h-0">
-          {viewMode === "table" ? (
+          {isLoading ? (
+            <div className="flex-1 flex items-center justify-center text-xs font-semibold text-zinc-400 dark:text-zinc-500 min-h-[400px]">
+              Loading screens…
+            </div>
+          ) : screens.length === 0 ? (
+            <div className="flex-1 flex flex-col items-center justify-center gap-2 text-center min-h-[400px] border border-dashed border-[#E2E6EC] dark:border-[#283243] rounded-xl">
+              <Monitor className="w-6 h-6 text-zinc-400 dark:text-zinc-500" />
+              <p className="text-xs font-semibold text-zinc-500 dark:text-zinc-400">No screens yet.</p>
+              <p className="text-[11px] text-zinc-400 dark:text-zinc-500">Add your first screen to get started.</p>
+            </div>
+          ) : viewMode === "table" ? (
             <ScreensTable
               screens={filteredScreens}
               onSelectScreen={(screen) => setSelectedScreen(screen)}
@@ -314,6 +268,10 @@ export default function AgentScreensPage() {
           screen={selectedScreen}
           onClose={() => setSelectedScreen(null)}
         />
+      )}
+
+      {isCreateModalOpen && (
+        <ScreenCreateModal onClose={() => setIsCreateModalOpen(false)} onCreate={handleCreateScreen} />
       )}
 
     </div>
