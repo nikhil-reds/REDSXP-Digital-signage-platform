@@ -38,6 +38,7 @@ model Tenant {
   subscriptions      Subscription[]
   payments           Payment[]
   invoices           Invoice[]
+  tickets            Ticket[]
 
   @@map("tenants")
 }
@@ -59,6 +60,8 @@ model User {
   auditLogs           AuditLog[]
   sessions            Session[]
   passwordResetTokens PasswordResetToken[]
+  submittedTickets    Ticket[]             @relation("UserTickets")
+  assignedTickets     Ticket[]             @relation("AssignedTickets")
 
   @@map("users")
 }
@@ -455,3 +458,41 @@ enum AlertSeverity {
   HIGH
   CRITICAL
 }
+
+// ═══════════════════════════════════════
+// 6. TICKETS SYSTEM
+// ═══════════════════════════════════════
+
+model Ticket {
+  id           String         @id @default(uuid())
+  tenantId     String         @map("tenant_id")
+  userId       String?        @map("user_id")
+  assignedToId String?        @map("assigned_to_id")
+  title        String
+  description  String?
+  status       TicketStatus   @default(OPEN)
+  priority     TicketPriority @default(MEDIUM)
+  createdAt    DateTime       @default(now()) @map("created_at")
+  updatedAt    DateTime       @updatedAt @map("updated_at")
+
+  tenant     Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  user       User?  @relation("UserTickets", fields: [userId], references: [id], onDelete: SetNull)
+  assignedTo User?  @relation("AssignedTickets", fields: [assignedToId], references: [id], onDelete: SetNull)
+
+  @@map("tickets")
+}
+
+enum TicketStatus {
+  OPEN
+  IN_PROGRESS
+  RESOLVED
+  CLOSED
+}
+
+enum TicketPriority {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
+
