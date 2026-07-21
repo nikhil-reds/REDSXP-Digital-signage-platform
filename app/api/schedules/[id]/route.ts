@@ -1,6 +1,10 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { CalendarStatus } from "@/app/generated/prisma/client";
+import { emitScheduleUpdatedEvent } from "@/lib/redpanda";
+import { enqueueScheduleEvaluateNowJob } from "@/lib/rabbitmq";
+
+export const runtime = "nodejs";
 
 // Helper to serialize any nested BigInt fields in media files
 const serializeSchedule = (schedule: any) => {
@@ -128,6 +132,13 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
     });
 
     const serializedSchedule = serializeSchedule(updatedCalendar);
+    await emitScheduleUpdatedEvent({ action: "updated", schedule: updatedCalendar }).catch((error) => {
+      console.error("Error emitting schedule.updated event:", error);
+    });
+    await enqueueScheduleEvaluateNowJob({ reason: "schedule.updated", schedule: updatedCalendar }).catch((error) => {
+      console.error("Error enqueueing scheduler.evaluate.now job:", error);
+    });
+
     return NextResponse.json(serializedSchedule);
   } catch (error) {
     console.error("Error updating schedule:", error);
