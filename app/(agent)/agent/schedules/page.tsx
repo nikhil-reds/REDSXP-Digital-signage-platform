@@ -71,6 +71,11 @@ export default function AgentSchedulesPage() {
     loadSchedules();
   };
 
+  const handleEditConflictSchedule = (schedule: ScheduleSummary) => {
+    setConflictModalData(null);
+    setSelectedSchedule(schedule);
+  };
+
   return (
     <div className="py-6 px-8 space-y-6 mx-auto font-sans">
 
@@ -156,6 +161,7 @@ export default function AgentSchedulesPage() {
         <ConflictDialog
           campaign1={conflictModalData.c1}
           campaign2={conflictModalData.c2}
+          onEditSchedule={handleEditConflictSchedule}
           onClose={() => setConflictModalData(null)}
         />
       )}
