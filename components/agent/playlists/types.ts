@@ -35,7 +35,7 @@ export interface LibraryAsset {
   w: number;
   h: number;
   size: string;
-  dur: number;
+  dur: number | null;
   thumb: string;
   /** Real playable/displayable URL (Media.cdnUrl). */
   src: string;

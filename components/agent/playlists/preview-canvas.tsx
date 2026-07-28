@@ -193,12 +193,6 @@ export default function PreviewCanvas({
         <span className="font-mono text-xs text-zinc-450 min-w-[96px] text-center">
           <span className="text-zinc-900 dark:text-zinc-100 font-semibold">{timeLabel}</span> / {totalLabel}
         </span>
-        <span
-          title="Loop enabled"
-          className="inline-flex items-center gap-1 text-[10.5px] font-bold text-[#2859D9] dark:text-[#6F96FF] bg-[#2859D9]/10 dark:bg-[#6F96FF]/10 rounded px-2 py-0.5"
-        >
-          ⟲ LOOP
-        </span>
         <div className="w-px h-5 bg-[#E2E6EC] dark:bg-[#283243]" />
         <div className="flex items-center gap-2">
           <label className="inline-flex items-center gap-1 text-[10.5px] font-semibold text-zinc-450 cursor-pointer">
