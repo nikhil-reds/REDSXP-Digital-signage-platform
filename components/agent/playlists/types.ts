@@ -1,6 +1,7 @@
 export type ClipType = "Video" | "Image" | "HTML5";
 export type Transition = "Fade" | "Crossfade" | "Cut";
-export type Fit = "Fit" | "Fill";
+export type MediaFit = "cover" | "contain" | "fill" | "none" | "scale-down";
+export type MediaPosition = "center" | "top" | "bottom" | "left" | "right";
 export type ViewMode = "grid" | "list";
 export type CompatLevel = "ok" | "warn";
 
@@ -23,7 +24,9 @@ export interface PlaylistClip {
   /** Real playable/displayable URL (Media.cdnUrl) — used for actual preview playback. */
   src: string;
   /** Editor-only convenience, not persisted. */
-  fit: Fit;
+  fit: MediaFit;
+  /** Editor-only convenience, not persisted. */
+  position: MediaPosition;
 }
 
 export type MediaStatus = "Ready" | "Transcoding" | "Failed";
