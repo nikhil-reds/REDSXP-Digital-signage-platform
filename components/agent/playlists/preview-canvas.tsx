@@ -1,7 +1,7 @@
 "use client";
 
-import React, { useEffect, useRef } from "react";
-import { Pause, Play, RotateCcw } from "lucide-react";
+import React, { useEffect, useRef, useState } from "react";
+import { Pause, Play, RotateCcw, Volume2, VolumeX } from "lucide-react";
 import { ClipType, Fit } from "./types";
 
 interface PreviewCanvasProps {
@@ -62,6 +62,7 @@ export default function PreviewCanvas({
   onToggleSafeBleed,
 }: PreviewCanvasProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
+  const [muted, setMuted] = useState(true);
 
   // Imperatively drive the real <video> element's playback from the `playing` state —
   // it remounts (via `key={currentClipKey}`) on every clip change, so this also re-applies
@@ -69,12 +70,13 @@ export default function PreviewCanvas({
   useEffect(() => {
     const el = videoRef.current;
     if (!el) return;
+    el.muted = muted;
     if (playing) {
       el.play().catch(() => {});
     } else {
       el.pause();
     }
-  }, [playing, currentClipKey]);
+  }, [playing, currentClipKey, muted]);
 
   return (
     <main className="flex-1 flex flex-col items-center justify-center gap-3 min-h-0 min-w-0 px-6 py-4 bg-[#F6F7F9] dark:bg-[#090D14]">
@@ -95,7 +97,7 @@ export default function PreviewCanvas({
               ref={videoRef}
               src={currentClipSrc}
               loop
-              muted
+              muted={muted}
               playsInline
               className={`absolute inset-0 w-full h-full bg-black ${
                 currentClipFit === "Fill" ? "object-cover" : "object-contain"
@@ -189,6 +191,15 @@ export default function PreviewCanvas({
           className="w-10 h-10 rounded-full border-none bg-[#2859D9] dark:bg-[#6F96FF] text-white dark:text-[#111722] flex items-center justify-center shadow-md hover:brightness-110 cursor-pointer transition-[filter]"
         >
           {playing ? <Pause className="w-3.5 h-3.5 fill-current" /> : <Play className="w-3.5 h-3.5 fill-current ml-0.5" />}
+        </button>
+        <button
+          onClick={() => setMuted((v) => !v)}
+          disabled={currentClipType !== "Video"}
+          title={muted ? "Unmute video" : "Mute video"}
+          aria-label={muted ? "Unmute video" : "Mute video"}
+          className="w-8 h-8 rounded-full border border-[#E2E6EC] dark:border-[#283243] bg-white dark:bg-[#111722] text-zinc-450 flex items-center justify-center hover:bg-[#F6F7F9] dark:hover:bg-[#18202E] hover:text-zinc-700 dark:hover:text-zinc-200 cursor-pointer transition-colors disabled:opacity-35 disabled:cursor-not-allowed disabled:hover:text-zinc-450 disabled:hover:bg-white dark:disabled:hover:bg-[#111722]"
+        >
+          {muted ? <VolumeX className="w-3.5 h-3.5" /> : <Volume2 className="w-3.5 h-3.5" />}
         </button>
         <span className="font-mono text-xs text-zinc-450 min-w-[96px] text-center">
           <span className="text-zinc-900 dark:text-zinc-100 font-semibold">{timeLabel}</span> / {totalLabel}
