@@ -96,23 +96,6 @@ export default function AgentSidebar() {
         </button>
       </div>
 
-      {/* Tenant Context Box */}
-      {!isCollapsed && (
-        <div className="mx-3 mt-4 p-3 rounded-lg bg-[#F6F7F9] dark:bg-[#171F2C] border border-[#E2E6EC] dark:border-[#283243] flex items-center gap-2.5">
-          <div className="w-8 h-8 rounded-lg bg-red-800 text-white flex items-center justify-center shrink-0">
-            <Coffee className="w-4.5 h-4.5" />
-          </div>
-          <div className="flex flex-col min-w-0">
-            <span className="text-xs font-bold text-[#18202B] dark:text-[#F2F5F8] truncate leading-tight">
-              Café Coffee Day
-            </span>
-            <span className="text-[10px] text-[#657080] dark:text-[#9AA7B7] uppercase tracking-wider font-semibold">
-              Business Plan
-            </span>
-          </div>
-        </div>
-      )}
-
       {/* Navigation Links */}
       <nav className="flex-1 overflow-y-auto px-3 py-4 space-y-1 scrollbar-thin scrollbar-thumb-zinc-200 dark:scrollbar-thumb-zinc-800 scrollbar-track-transparent">
         {navItems.map((item) => {

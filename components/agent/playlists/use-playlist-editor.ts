@@ -7,6 +7,7 @@ import {
   fetchMediaLibrary,
   fetchPlaylist,
   updatePlaylist,
+  DEFAULT_IMAGE_DURATION_SEC,
   type SavePlaylistPayload,
 } from "./api";
 import {
@@ -23,6 +24,24 @@ import { aspectRatioLabel, formatDuration, getCompatibility } from "./utils";
 import { DisplayConfigTab, DisplayProfile, Fit, LibraryAsset, PlaylistClip, Transition, ViewMode } from "./types";
 
 const PAD = 12;
+
+function readVideoDuration(src: string): Promise<number> {
+  return new Promise((resolve, reject) => {
+    const video = document.createElement("video");
+    video.preload = "metadata";
+    video.onloadedmetadata = () => {
+      const duration = Number.isFinite(video.duration) ? Math.max(1, Math.ceil(video.duration)) : null;
+      URL.revokeObjectURL(video.src);
+      if (duration) resolve(duration);
+      else reject(new Error("Video duration is unavailable"));
+    };
+    video.onerror = () => {
+      URL.revokeObjectURL(video.src);
+      reject(new Error("Failed to read video metadata"));
+    };
+    video.src = src;
+  });
+}
 
 interface DragState {
   id: string;
@@ -472,7 +491,12 @@ export function usePlaylistEditor({ playlistId }: UsePlaylistEditorOptions = {})
             compatOk: c.level === "ok",
             compatTip: `${c.label}. ${c.tip}`,
             processing: m.status !== "Ready",
-            onAdd: () => {
+            onAdd: async () => {
+              const duration =
+                m.dur ??
+                (m.type === "Video"
+                  ? await readVideoDuration(m.src).catch(() => DEFAULT_IMAGE_DURATION_SEC)
+                  : DEFAULT_IMAGE_DURATION_SEC);
               const newInstanceId = genInstanceId();
               const nextItems = items.concat([
                 {
@@ -483,7 +507,7 @@ export function usePlaylistEditor({ playlistId }: UsePlaylistEditorOptions = {})
                   w: m.w,
                   h: m.h,
                   size: m.size,
-                  duration: m.dur,
+                  duration,
                   transition: "Fade",
                   transDur: 1,
                   thumb: m.thumb,
