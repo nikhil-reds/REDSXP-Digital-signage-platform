@@ -2,23 +2,47 @@
 
 import React, { useState, useRef } from "react";
 import { X, UploadCloud, RefreshCw, AlertCircle, CheckCircle2 } from "lucide-react";
+import type { MediaAsset } from "./media-grid";
 
 interface MediaUploadModalProps {
   onClose: () => void;
-  onUploadSuccess: (newAsset: any) => void;
+  onUploadSuccess: (newAsset: MediaAsset) => void;
+}
+
+type UploadingFile = {
+  name: string;
+  size: string;
+  progress: number;
+  status: "uploading" | "transcoding" | "success" | "failed";
+  error?: string;
+};
+
+function readVideoMetadata(file: File): Promise<{ durationSec: number; width: number | null; height: number | null }> {
+  return new Promise((resolve, reject) => {
+    const url = URL.createObjectURL(file);
+    const video = document.createElement("video");
+    video.preload = "metadata";
+    video.onloadedmetadata = () => {
+      URL.revokeObjectURL(url);
+      resolve({
+        durationSec: Math.max(1, Math.ceil(video.duration)),
+        width: video.videoWidth || null,
+        height: video.videoHeight || null,
+      });
+    };
+    video.onerror = () => {
+      URL.revokeObjectURL(url);
+      reject(new Error("Failed to read video metadata"));
+    };
+    video.src = url;
+  });
 }
 
 export default function MediaUploadModal({ onClose, onUploadSuccess }: MediaUploadModalProps) {
   const [dragActive, setDragActive] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   
-  const [uploadingFiles, setUploadingFiles] = useState<Array<{
-    name: string;
-    size: string;
-    progress: number;
-    status: "uploading" | "transcoding" | "success" | "failed";
-    error?: string;
-  }>>([]);
+  const [uploadingFiles, setUploadingFiles] = useState<UploadingFile[]>([]);
 
   const handleDrag = (e: React.DragEvent) => {
     e.preventDefault();
@@ -60,7 +84,7 @@ export default function MediaUploadModal({ onClose, onUploadSuccess }: MediaUplo
     files.forEach(file => uploadFileToS3(file));
   };
 
-  const updateFileStatus = (filename: string, updates: any) => {
+  const updateFileStatus = (filename: string, updates: Partial<UploadingFile>) => {
     setUploadingFiles(prev => prev.map(f => f.name === filename ? { ...f, ...updates } : f));
   };
 
@@ -110,6 +134,7 @@ export default function MediaUploadModal({ onClose, onUploadSuccess }: MediaUplo
       let mediaType = "Image";
       if (file.type.includes("video")) mediaType = "Video";
       if (file.type.includes("html") || file.name.endsWith(".zip")) mediaType = "HTML5";
+      const videoMetadata = mediaType === "Video" ? await readVideoMetadata(file).catch(() => null) : null;
 
       // 4. Save to Database
       const createRes = await fetch("/api/media", {
@@ -121,7 +146,10 @@ export default function MediaUploadModal({ onClose, onUploadSuccess }: MediaUplo
           s3Key,
           cdnUrl,
           sizeBytes: file.size,
-          type: mediaType
+          type: mediaType,
+          durationSec: videoMetadata?.durationSec,
+          width: videoMetadata?.width,
+          height: videoMetadata?.height
         })
       });
 
@@ -131,9 +159,9 @@ export default function MediaUploadModal({ onClose, onUploadSuccess }: MediaUplo
       updateFileStatus(file.name, { status: "success" });
       onUploadSuccess(newAsset);
 
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("Upload error:", error);
-      updateFileStatus(file.name, { status: "failed", error: error.message || "Upload failed" });
+      updateFileStatus(file.name, { status: "failed", error: error instanceof Error ? error.message : "Upload failed" });
     }
   };
 

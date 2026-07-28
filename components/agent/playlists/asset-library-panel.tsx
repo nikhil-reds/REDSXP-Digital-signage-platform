@@ -17,7 +17,7 @@ interface LibraryCardData {
   compatOk: boolean;
   compatTip: string;
   processing: boolean;
-  onAdd: () => void;
+  onAdd: () => void | Promise<void>;
 }
 
 interface FilterTab {
