@@ -21,7 +21,7 @@ import {
   LOCKED_TRACKS,
 } from "./constants";
 import { aspectRatioLabel, formatDuration, getCompatibility } from "./utils";
-import { DisplayConfigTab, DisplayProfile, Fit, LibraryAsset, PlaylistClip, Transition, ViewMode } from "./types";
+import { DisplayConfigTab, DisplayProfile, LibraryAsset, MediaFit, MediaPosition, PlaylistClip, Transition, ViewMode } from "./types";
 
 const PAD = 12;
 
@@ -145,7 +145,8 @@ export function usePlaylistEditor({ playlistId }: UsePlaylistEditorOptions = {})
               transDur: 1,
               thumb: asset?.thumb ?? CLIP_TYPE_COLORS.Image,
               src: asset?.src ?? "",
-              fit: "Fill",
+              fit: "scale-down",
+              position: "center",
             };
           });
           setPlaylistName(detail.name);
@@ -512,7 +513,8 @@ export function usePlaylistEditor({ playlistId }: UsePlaylistEditorOptions = {})
                   transDur: 1,
                   thumb: m.thumb,
                   src: m.src,
-                  fit: "Fill",
+                  fit: "scale-down",
+                  position: "center",
                 },
               ]);
               setSelectedId(newInstanceId);
@@ -707,7 +709,8 @@ export function usePlaylistEditor({ playlistId }: UsePlaylistEditorOptions = {})
       currentClipKey: cur ? cur.instanceId : "empty",
       currentClipType: cur ? cur.type : null,
       currentClipSrc: cur?.src || null,
-      currentClipFit: cur ? cur.fit : "Fill",
+      currentClipFit: cur ? cur.fit : "scale-down",
+      currentClipPosition: cur ? cur.position : "center",
       currentClipName: cur ? cur.name : "No clips",
       clipProgressPct: (clipProgress * 100).toFixed(1),
       playing,
@@ -747,9 +750,11 @@ export function usePlaylistEditor({ playlistId }: UsePlaylistEditorOptions = {})
         updateSelected("transDur", Math.max(0, Number(e.target.value) || 0)),
       onTransitionChange: (e: React.ChangeEvent<HTMLSelectElement>) =>
         updateSelected("transition", e.target.value as Transition),
-      selFit: sel ? sel.fit : "Fill",
-      onFitContain: () => updateSelected("fit", "Fit" as Fit),
-      onFitCover: () => updateSelected("fit", "Fill" as Fit),
+      selFit: sel ? sel.fit : "scale-down",
+      selPosition: sel ? sel.position : "center",
+      onFitChange: (e: React.ChangeEvent<HTMLSelectElement>) => updateSelected("fit", e.target.value as MediaFit),
+      onPositionChange: (e: React.ChangeEvent<HTMLSelectElement>) =>
+        updateSelected("position", e.target.value as MediaPosition),
       fallback,
       fallbackOptions: FALLBACK_OPTIONS,
       onFallbackChange: (e: React.ChangeEvent<HTMLSelectElement>) => {

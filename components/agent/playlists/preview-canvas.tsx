@@ -2,7 +2,7 @@
 
 import React, { useEffect, useRef, useState } from "react";
 import { Pause, Play, RotateCcw, Volume2, VolumeX } from "lucide-react";
-import { ClipType, Fit } from "./types";
+import { ClipType, MediaFit, MediaPosition } from "./types";
 
 interface PreviewCanvasProps {
   displayName: string;
@@ -17,7 +17,8 @@ interface PreviewCanvasProps {
   currentClipKey: string;
   currentClipType: ClipType | null;
   currentClipSrc: string | null;
-  currentClipFit: Fit;
+  currentClipFit: MediaFit;
+  currentClipPosition: MediaPosition;
   currentClipName: string;
   clipProgressPct: string;
   playing: boolean;
@@ -47,6 +48,7 @@ export default function PreviewCanvas({
   currentClipType,
   currentClipSrc,
   currentClipFit,
+  currentClipPosition,
   currentClipName,
   clipProgressPct,
   playing,
@@ -99,9 +101,8 @@ export default function PreviewCanvas({
               loop
               muted={muted}
               playsInline
-              className={`absolute inset-0 w-full h-full bg-black ${
-                currentClipFit === "Fill" ? "object-cover" : "object-contain"
-              }`}
+              className="absolute inset-0 w-full h-full bg-black"
+              style={{ objectFit: currentClipFit, objectPosition: currentClipPosition }}
             />
           ) : currentClipType === "Image" ? (
             // eslint-disable-next-line @next/next/no-img-element
@@ -109,9 +110,8 @@ export default function PreviewCanvas({
               key={currentClipKey}
               src={currentClipSrc}
               alt={currentClipName}
-              className={`absolute inset-0 w-full h-full bg-black ${
-                currentClipFit === "Fill" ? "object-cover" : "object-contain"
-              }`}
+              className="absolute inset-0 w-full h-full bg-black"
+              style={{ objectFit: currentClipFit, objectPosition: currentClipPosition }}
             />
           ) : (
             <iframe
