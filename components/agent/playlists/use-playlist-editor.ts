@@ -145,8 +145,8 @@ export function usePlaylistEditor({ playlistId }: UsePlaylistEditorOptions = {})
               transDur: 1,
               thumb: asset?.thumb ?? CLIP_TYPE_COLORS.Image,
               src: asset?.src ?? "",
-              fit: "scale-down",
-              position: "center",
+              fit: item.fit,
+              position: item.positionMode,
             };
           });
           setPlaylistName(detail.name);
@@ -211,7 +211,13 @@ export function usePlaylistEditor({ playlistId }: UsePlaylistEditorOptions = {})
     try {
       const payload: SavePlaylistPayload = {
         name: playlistName,
-        items: items.map((it, i) => ({ mediaId: it.mediaId, position: i, durationSec: it.duration })),
+        items: items.map((it, i) => ({
+          mediaId: it.mediaId,
+          position: i,
+          durationSec: it.duration,
+          fit: it.fit,
+          objectPosition: it.position,
+        })),
       };
       if (currentPlaylistId) {
         await updatePlaylist(currentPlaylistId, payload);

@@ -36,6 +36,14 @@ const normalizePlaylistItemDuration = (durationSec: unknown) => {
   return Number.isFinite(duration) && duration > 0 ? Math.ceil(duration) : 10;
 };
 
+const normalizePlaylistItemFit = (fit: unknown) => {
+  return ["cover", "contain", "fill", "none", "scale-down"].includes(String(fit)) ? String(fit) : "scale-down";
+};
+
+const normalizePlaylistItemPosition = (position: unknown) => {
+  return ["center", "top", "bottom", "left", "right"].includes(String(position)) ? String(position) : "center";
+};
+
 export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
@@ -107,6 +115,8 @@ export async function POST(request: Request) {
               mediaId: item.mediaId,
               position: item.position || 0,
               durationSec: normalizePlaylistItemDuration(item.durationSec),
+              fit: normalizePlaylistItemFit(item.fit),
+              objectPosition: normalizePlaylistItemPosition(item.objectPosition),
             },
           });
         }

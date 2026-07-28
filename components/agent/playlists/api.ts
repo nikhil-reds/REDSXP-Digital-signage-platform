@@ -1,5 +1,5 @@
 import { CLIP_TYPE_COLORS } from "./constants";
-import { ClipType, LibraryAsset, MediaStatus, PlaylistSummary } from "./types";
+import { ClipType, LibraryAsset, MediaFit, MediaPosition, MediaStatus, PlaylistSummary } from "./types";
 
 export const DEFAULT_IMAGE_DURATION_SEC = 10;
 
@@ -33,6 +33,8 @@ interface RawPlaylistItem {
   mediaId: string;
   position: number;
   durationSec: number;
+  fit?: MediaFit | null;
+  objectPosition?: MediaPosition | null;
 }
 
 interface RawPlaylist {
@@ -86,7 +88,7 @@ function mapPlaylistToSummary(p: RawPlaylist): PlaylistSummary {
 export interface PlaylistDetail {
   id: string;
   name: string;
-  items: { mediaId: string; position: number; durationSec: number }[];
+  items: { mediaId: string; position: number; durationSec: number; fit: MediaFit; positionMode: MediaPosition }[];
 }
 
 function toPlaylistDetail(p: RawPlaylist): PlaylistDetail {
@@ -96,13 +98,19 @@ function toPlaylistDetail(p: RawPlaylist): PlaylistDetail {
     items: p.playlistItems
       .slice()
       .sort((a, b) => a.position - b.position)
-      .map((it) => ({ mediaId: it.mediaId, position: it.position, durationSec: it.durationSec })),
+      .map((it) => ({
+        mediaId: it.mediaId,
+        position: it.position,
+        durationSec: it.durationSec,
+        fit: it.fit ?? "scale-down",
+        positionMode: it.objectPosition ?? "center",
+      })),
   };
 }
 
 export interface SavePlaylistPayload {
   name: string;
-  items: { mediaId: string; position: number; durationSec: number }[];
+  items: { mediaId: string; position: number; durationSec: number; fit: MediaFit; objectPosition: MediaPosition }[];
 }
 
 export async function fetchMediaLibrary(): Promise<LibraryAsset[]> {

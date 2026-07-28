@@ -206,13 +206,15 @@ model PlaylistCategory {
 }
 
 model PlaylistItem {
-  id          String   @id @default(uuid())
-  playlistId  String   @map("playlist_id")
-  mediaId     String   @map("media_id")
-  position    Int
-  durationSec Int      @map("duration_sec")
-  createdAt   DateTime @default(now()) @map("created_at")
-  updatedAt   DateTime @updatedAt @map("updated_at")
+  id             String   @id @default(uuid())
+  playlistId     String   @map("playlist_id")
+  mediaId        String   @map("media_id")
+  position       Int
+  durationSec    Int      @map("duration_sec")
+  fit            String   @default("scale-down")
+  objectPosition String   @default("center") @map("object_position")
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
 
   playlist Playlist @relation(fields: [playlistId], references: [id], onDelete: Cascade)
   media    Media    @relation(fields: [mediaId], references: [id], onDelete: Cascade)
