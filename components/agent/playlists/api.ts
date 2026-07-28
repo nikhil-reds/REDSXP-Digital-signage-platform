@@ -1,6 +1,8 @@
 import { CLIP_TYPE_COLORS } from "./constants";
 import { ClipType, LibraryAsset, MediaStatus, PlaylistSummary } from "./types";
 
+export const DEFAULT_IMAGE_DURATION_SEC = 10;
+
 async function request<T>(url: string, init?: RequestInit): Promise<T> {
   const res = await fetch(url, {
     ...init,
@@ -64,7 +66,7 @@ function mapMediaToLibraryAsset(m: RawMedia): LibraryAsset {
     w: m.width ?? 0,
     h: m.height ?? 0,
     size: m.size,
-    dur: m.durationSec ?? 10,
+    dur: m.durationSec ?? (m.type === "Video" ? null : DEFAULT_IMAGE_DURATION_SEC),
     thumb,
     src: m.cdnUrl,
     status: m.status,

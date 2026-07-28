@@ -2,13 +2,26 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { uploadToS3, deleteFromS3 } from "@/lib/s3";
 
+type SerializableMedia = Record<string, unknown> & {
+  sizeBytes: bigint | number | string;
+};
+
+type SerializablePlaylistItem = Record<string, unknown> & {
+  media?: SerializableMedia | null;
+};
+
+type SerializablePlaylist = Record<string, unknown> & {
+  id: string;
+  playlistItems?: SerializablePlaylistItem[];
+};
+
 // Helper to serialize BigInt fields in Media objects
-const serializePlaylist = (playlist: any, bucketName: string, region: string) => {
+const serializePlaylist = (playlist: SerializablePlaylist, bucketName: string, region: string) => {
   const s3Url = `https://${bucketName}.s3.${region}.amazonaws.com/playlists/${playlist.id}.json`;
   return {
     ...playlist,
     s3Url,
-    playlistItems: playlist.playlistItems?.map((item: any) => ({
+    playlistItems: playlist.playlistItems?.map((item) => ({
       ...item,
       media: item.media ? {
         ...item.media,
@@ -16,6 +29,11 @@ const serializePlaylist = (playlist: any, bucketName: string, region: string) =>
       } : null,
     })) || [],
   };
+};
+
+const normalizePlaylistItemDuration = (durationSec: unknown) => {
+  const duration = Number(durationSec);
+  return Number.isFinite(duration) && duration > 0 ? Math.ceil(duration) : 10;
 };
 
 export async function GET(request: Request, { params }: { params: Promise<{ id: string }> }) {
@@ -91,7 +109,7 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
               playlistId: id,
               mediaId: item.mediaId,
               position: item.position || 0,
-              durationSec: item.durationSec || 10,
+              durationSec: normalizePlaylistItemDuration(item.durationSec),
             },
           });
         }
