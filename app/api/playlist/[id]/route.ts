@@ -44,6 +44,11 @@ const normalizePlaylistItemPosition = (position: unknown) => {
   return ["center", "top", "bottom", "left", "right"].includes(String(position)) ? String(position) : "center";
 };
 
+const normalizeDisplayDimension = (value: unknown, fallback: number) => {
+  const dimension = Number(value);
+  return Number.isFinite(dimension) && dimension > 0 ? Math.round(dimension) : fallback;
+};
+
 export async function GET(request: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
     const { id } = await params;
@@ -100,6 +105,16 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
         data: {
           name: body.name !== undefined ? body.name : existingPlaylist.name,
           description: body.description !== undefined ? body.description : existingPlaylist.description,
+          displayName:
+            typeof body.displayName === "string" && body.displayName.trim()
+              ? body.displayName.trim()
+              : existingPlaylist.displayName,
+          displayWidth: body.displayWidth !== undefined
+            ? normalizeDisplayDimension(body.displayWidth, existingPlaylist.displayWidth)
+            : existingPlaylist.displayWidth,
+          displayHeight: body.displayHeight !== undefined
+            ? normalizeDisplayDimension(body.displayHeight, existingPlaylist.displayHeight)
+            : existingPlaylist.displayHeight,
         },
       });
 
