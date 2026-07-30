@@ -150,6 +150,9 @@ export function usePlaylistEditor({ playlistId }: UsePlaylistEditorOptions = {})
             };
           });
           setPlaylistName(detail.name);
+          setDisplayState({ name: detail.displayName, w: detail.displayWidth, h: detail.displayHeight });
+          setCustomW(detail.displayWidth);
+          setCustomH(detail.displayHeight);
           setBaseline(hydrated);
           setSelectedId(hydrated[0]?.instanceId ?? null);
         } else {
@@ -211,6 +214,9 @@ export function usePlaylistEditor({ playlistId }: UsePlaylistEditorOptions = {})
     try {
       const payload: SavePlaylistPayload = {
         name: playlistName,
+        displayName: display.name,
+        displayWidth: display.w,
+        displayHeight: display.h,
         items: items.map((it, i) => ({
           mediaId: it.mediaId,
           position: i,
@@ -232,7 +238,7 @@ export function usePlaylistEditor({ playlistId }: UsePlaylistEditorOptions = {})
     } finally {
       setSaving(false);
     }
-  }, [playlistName, items, currentPlaylistId, router, setBaseline]);
+  }, [playlistName, display.name, display.w, display.h, items, currentPlaylistId, router, setBaseline]);
 
   const publish = useCallback(async () => {
     setPublishModalOpen(true);
