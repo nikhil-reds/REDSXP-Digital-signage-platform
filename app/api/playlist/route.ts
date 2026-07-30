@@ -44,6 +44,11 @@ const normalizePlaylistItemPosition = (position: unknown) => {
   return ["center", "top", "bottom", "left", "right"].includes(String(position)) ? String(position) : "center";
 };
 
+const normalizeDisplayDimension = (value: unknown, fallback: number) => {
+  const dimension = Number(value);
+  return Number.isFinite(dimension) && dimension > 0 ? Math.round(dimension) : fallback;
+};
+
 export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
@@ -103,6 +108,9 @@ export async function POST(request: Request) {
         data: {
           name: body.name,
           description: body.description || null,
+          displayName: typeof body.displayName === "string" && body.displayName.trim() ? body.displayName.trim() : "Landscape 16:9",
+          displayWidth: normalizeDisplayDimension(body.displayWidth, 1920),
+          displayHeight: normalizeDisplayDimension(body.displayHeight, 1080),
           tenantId: resolvedTenantId,
         },
       });
