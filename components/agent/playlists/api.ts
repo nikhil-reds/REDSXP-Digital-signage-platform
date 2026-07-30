@@ -41,6 +41,9 @@ interface RawPlaylist {
   id: string;
   name: string;
   description: string | null;
+  displayName?: string | null;
+  displayWidth?: number | null;
+  displayHeight?: number | null;
   updatedAt: string;
   playlistItems: RawPlaylistItem[];
 }
@@ -88,6 +91,9 @@ function mapPlaylistToSummary(p: RawPlaylist): PlaylistSummary {
 export interface PlaylistDetail {
   id: string;
   name: string;
+  displayName: string;
+  displayWidth: number;
+  displayHeight: number;
   items: { mediaId: string; position: number; durationSec: number; fit: MediaFit; positionMode: MediaPosition }[];
 }
 
@@ -95,6 +101,9 @@ function toPlaylistDetail(p: RawPlaylist): PlaylistDetail {
   return {
     id: p.id,
     name: p.name,
+    displayName: p.displayName ?? "Landscape 16:9",
+    displayWidth: p.displayWidth ?? 1920,
+    displayHeight: p.displayHeight ?? 1080,
     items: p.playlistItems
       .slice()
       .sort((a, b) => a.position - b.position)
@@ -110,6 +119,9 @@ function toPlaylistDetail(p: RawPlaylist): PlaylistDetail {
 
 export interface SavePlaylistPayload {
   name: string;
+  displayName: string;
+  displayWidth: number;
+  displayHeight: number;
   items: { mediaId: string; position: number; durationSec: number; fit: MediaFit; objectPosition: MediaPosition }[];
 }
 
