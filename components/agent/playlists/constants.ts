@@ -1,4 +1,4 @@
-import { DeviceProfile, DisplayProfile } from "./types";
+import { DeviceProfile, DisplayProfile, PlaylistZone } from "./types";
 
 export const DISPLAY_PRESETS: DisplayProfile[] = [
   { name: "Landscape 16:9", w: 1920, h: 1080 },
@@ -34,7 +34,35 @@ export const CLIP_TYPE_COLORS: Record<string, string> = {
   HTML5: "linear-gradient(180deg, #2F5FD4, #1E44A8)",
 };
 
-export const LOCKED_TRACKS = [{ name: "Audio" }, { name: "Zones" }, { name: "Widgets" }];
+export const LOCKED_TRACKS = [{ name: "Audio" }, { name: "Widgets" }];
+
+export const DEFAULT_ZONE_ID = "full-screen";
+
+export const PLAYLIST_ZONES: PlaylistZone[] = [
+  { id: DEFAULT_ZONE_ID, name: "Full Screen", x: 0, y: 0, w: 100, h: 100, color: "#2859D9" },
+  { id: "top-banner", name: "Top Banner", x: 0, y: 0, w: 100, h: 22, color: "#0F9F6E" },
+  { id: "bottom-banner", name: "Bottom Banner", x: 0, y: 78, w: 100, h: 22, color: "#D97706" },
+  { id: "left-panel", name: "Left Panel", x: 0, y: 0, w: 32, h: 100, color: "#7C3AED" },
+  { id: "center-panel", name: "Center Panel", x: 32, y: 0, w: 36, h: 100, color: "#2563EB" },
+  { id: "right-panel", name: "Right Panel", x: 68, y: 0, w: 32, h: 100, color: "#DB2777" },
+  { id: "main-area", name: "Main Area", x: 32, y: 0, w: 68, h: 100, color: "#0891B2" },
+  { id: "middle-left", name: "Middle Left", x: 0, y: 22, w: 32, h: 56, color: "#2563EB" },
+  { id: "middle", name: "Middle", x: 32, y: 22, w: 36, h: 56, color: "#16A34A" },
+  { id: "middle-right", name: "Middle Right", x: 68, y: 22, w: 32, h: 56, color: "#EA580C" },
+  { id: "left-top", name: "Left Top", x: 0, y: 0, w: 32, h: 33.333, color: "#4F46E5" },
+  { id: "left-center", name: "Left Center", x: 0, y: 33.333, w: 32, h: 33.334, color: "#7C3AED" },
+  { id: "left-bottom", name: "Left Bottom", x: 0, y: 66.667, w: 32, h: 33.333, color: "#9333EA" },
+  { id: "center-top", name: "Center Top", x: 32, y: 0, w: 36, h: 33.333, color: "#0284C7" },
+  { id: "center-bottom", name: "Center Bottom", x: 32, y: 66.667, w: 36, h: 33.333, color: "#0D9488" },
+  { id: "right-top", name: "Right Top", x: 68, y: 0, w: 32, h: 33.333, color: "#BE185D" },
+  { id: "right-center", name: "Right Center", x: 68, y: 33.333, w: 32, h: 33.334, color: "#DB2777" },
+  { id: "right-bottom", name: "Right Bottom", x: 68, y: 66.667, w: 32, h: 33.333, color: "#E11D48" },
+  { id: "main-area-left", name: "Main Area Left", x: 32, y: 0, w: 34, h: 100, color: "#0891B2" },
+  { id: "main-area-right", name: "Main Area Right", x: 66, y: 0, w: 34, h: 100, color: "#0E7490" },
+];
+
+export const INITIAL_GRID_COLUMNS = 3;
+export const INITIAL_GRID_ROWS = 3;
 
 export const INITIAL_DISPLAY: DisplayProfile = { name: "Landscape 16:9", w: 1920, h: 1080 };
 export const INITIAL_DEVICE = "BrightSign XC4055";

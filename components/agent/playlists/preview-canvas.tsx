@@ -4,6 +4,26 @@ import React, { useEffect, useRef, useState } from "react";
 import { Pause, Play, RotateCcw, Volume2, VolumeX } from "lucide-react";
 import { ClipType, MediaFit, MediaPosition } from "./types";
 
+interface PreviewZone {
+  id: string;
+  name: string;
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+  color: string;
+}
+
+interface ActivePreviewClip {
+  key: string;
+  type: ClipType;
+  src: string;
+  fit: MediaFit;
+  position: MediaPosition;
+  name: string;
+  zone: PreviewZone;
+}
+
 interface PreviewCanvasProps {
   displayName: string;
   displayRes: string;
@@ -15,11 +35,11 @@ interface PreviewCanvasProps {
   warning: boolean;
   warningText: string;
   currentClipKey: string;
-  currentClipType: ClipType | null;
-  currentClipSrc: string | null;
-  currentClipFit: MediaFit;
-  currentClipPosition: MediaPosition;
   currentClipName: string;
+  currentClipZone: PreviewZone;
+  activeClips: ActivePreviewClip[];
+  zones: PreviewZone[];
+  showLayoutGuides: boolean;
   clipProgressPct: string;
   playing: boolean;
   onPlayPause: () => void;
@@ -45,11 +65,11 @@ export default function PreviewCanvas({
   warning,
   warningText,
   currentClipKey,
-  currentClipType,
-  currentClipSrc,
-  currentClipFit,
-  currentClipPosition,
   currentClipName,
+  currentClipZone,
+  activeClips,
+  zones,
+  showLayoutGuides,
   clipProgressPct,
   playing,
   onPlayPause,
@@ -63,22 +83,23 @@ export default function PreviewCanvas({
   onToggleSafeAction,
   onToggleSafeBleed,
 }: PreviewCanvasProps) {
-  const videoRef = useRef<HTMLVideoElement>(null);
+  const videoRefs = useRef(new Map<string, HTMLVideoElement>());
   const [muted, setMuted] = useState(true);
+  const hasVideo = activeClips.some((clip) => clip.type === "Video");
 
   // Imperatively drive the real <video> element's playback from the `playing` state —
   // it remounts (via `key={currentClipKey}`) on every clip change, so this also re-applies
   // the current play/pause state to whichever clip just became active.
   useEffect(() => {
-    const el = videoRef.current;
-    if (!el) return;
-    el.muted = muted;
-    if (playing) {
-      el.play().catch(() => {});
-    } else {
-      el.pause();
-    }
-  }, [playing, currentClipKey, muted]);
+    videoRefs.current.forEach((el) => {
+      el.muted = muted;
+      if (playing) {
+        el.play().catch(() => {});
+      } else {
+        el.pause();
+      }
+    });
+  }, [playing, currentClipKey, muted, activeClips]);
 
   return (
     <main className="flex-1 flex flex-col items-center justify-center gap-3 min-h-0 min-w-0 px-6 py-4 bg-[#F6F7F9] dark:bg-[#090D14]">
@@ -92,35 +113,44 @@ export default function PreviewCanvas({
           height: !landscape ? "calc(100% - 60px)" : undefined,
         }}
       >
-        {currentClipSrc ? (
-          currentClipType === "Video" ? (
-            <video
-              key={currentClipKey}
-              ref={videoRef}
-              src={currentClipSrc}
-              loop
-              muted={muted}
-              playsInline
-              className="absolute inset-0 w-full h-full bg-black"
-              style={{ objectFit: currentClipFit, objectPosition: currentClipPosition }}
-            />
-          ) : currentClipType === "Image" ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              key={currentClipKey}
-              src={currentClipSrc}
-              alt={currentClipName}
-              className="absolute inset-0 w-full h-full bg-black"
-              style={{ objectFit: currentClipFit, objectPosition: currentClipPosition }}
-            />
-          ) : (
-            <iframe
-              key={currentClipKey}
-              src={currentClipSrc}
-              title={currentClipName}
-              className="absolute inset-0 w-full h-full border-0 bg-white"
-            />
-          )
+        {activeClips.length > 0 ? (
+          activeClips.map((clip) => (
+            <div
+              key={clip.key}
+              className="absolute overflow-hidden bg-black"
+              style={{
+                left: `${clip.zone.x}%`,
+                top: `${clip.zone.y}%`,
+                width: `${clip.zone.w}%`,
+                height: `${clip.zone.h}%`,
+              }}
+            >
+              {clip.type === "Video" ? (
+                <video
+                  ref={(el) => {
+                    if (el) videoRefs.current.set(clip.key, el);
+                    else videoRefs.current.delete(clip.key);
+                  }}
+                  src={clip.src}
+                  loop
+                  muted={muted}
+                  playsInline
+                  className="absolute inset-0 w-full h-full bg-black"
+                  style={{ objectFit: clip.fit, objectPosition: clip.position }}
+                />
+              ) : clip.type === "Image" ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={clip.src}
+                  alt={clip.name}
+                  className="absolute inset-0 w-full h-full bg-black"
+                  style={{ objectFit: clip.fit, objectPosition: clip.position }}
+                />
+              ) : (
+                <iframe src={clip.src} title={clip.name} className="absolute inset-0 w-full h-full border-0 bg-white" />
+              )}
+            </div>
+          ))
         ) : (
           <>
             <div className="absolute inset-0 opacity-90 transition-colors duration-300" style={{ background: thumb }} />
@@ -139,6 +169,36 @@ export default function PreviewCanvas({
             </div>
           </>
         )}
+
+        {showLayoutGuides && zones.map((zone) => {
+          const active = zone.id === currentClipZone.id;
+          const showLabel = active || !zone.id.startsWith("grid-");
+          return (
+            <div
+              key={zone.id}
+              className="absolute pointer-events-none"
+              style={{
+                left: `${zone.x}%`,
+                top: `${zone.y}%`,
+                width: `${zone.w}%`,
+                height: `${zone.h}%`,
+                border: `1px ${active ? "solid" : "dashed"} ${zone.color}`,
+                boxShadow: active ? `inset 0 0 0 1px ${zone.color}` : "none",
+                opacity: active ? 0.9 : 0.35,
+              }}
+            >
+              {showLabel && (
+                <span
+                  className="absolute left-1 top-1 max-w-[calc(100%-8px)] rounded px-1 py-0.5 text-[8px] font-bold text-white leading-none whitespace-nowrap overflow-hidden text-ellipsis"
+                  style={{ background: zone.color, letterSpacing: 0 }}
+                  title={zone.name}
+                >
+                  {zone.name}
+                </span>
+              )}
+            </div>
+          );
+        })}
 
         {safeActionOn && (
           <div className="absolute inset-[5%] border border-dashed border-[#6F96FF]/80 pointer-events-none">
@@ -194,7 +254,7 @@ export default function PreviewCanvas({
         </button>
         <button
           onClick={() => setMuted((v) => !v)}
-          disabled={currentClipType !== "Video"}
+          disabled={!hasVideo}
           title={muted ? "Unmute video" : "Mute video"}
           aria-label={muted ? "Unmute video" : "Mute video"}
           className="w-8 h-8 rounded-full border border-[#E2E6EC] dark:border-[#283243] bg-white dark:bg-[#111722] text-zinc-450 flex items-center justify-center hover:bg-[#F6F7F9] dark:hover:bg-[#18202E] hover:text-zinc-700 dark:hover:text-zinc-200 cursor-pointer transition-colors disabled:opacity-35 disabled:cursor-not-allowed disabled:hover:text-zinc-450 disabled:hover:bg-white dark:disabled:hover:bg-[#111722]"
