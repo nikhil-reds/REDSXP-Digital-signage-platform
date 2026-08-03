@@ -4,6 +4,17 @@ export type MediaFit = "cover" | "contain" | "fill" | "none" | "scale-down";
 export type MediaPosition = "center" | "top" | "bottom" | "left" | "right";
 export type ViewMode = "grid" | "list";
 export type CompatLevel = "ok" | "warn";
+export type PlaylistLayoutMode = "zone" | "custom-grid";
+
+export interface PlaylistZone {
+  id: string;
+  name: string;
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+  color: string;
+}
 
 export interface PlaylistClip {
   /** Client-only synthetic key for React keys/selection/drag — NOT sent to the API. */
@@ -27,6 +38,8 @@ export interface PlaylistClip {
   fit: MediaFit;
   /** Editor-only convenience, not persisted. */
   position: MediaPosition;
+  /** Display zone assignment. */
+  zoneId: string;
 }
 
 export type MediaStatus = "Ready" | "Transcoding" | "Failed";
