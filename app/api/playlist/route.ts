@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { uploadToS3 } from "@/lib/s3";
+import { enqueuePlaylistRenderJob } from "@/lib/playlist-render-queue";
 
 type SerializableMedia = Record<string, unknown> & {
   sizeBytes: bigint | number | string;
@@ -44,9 +45,31 @@ const normalizePlaylistItemPosition = (position: unknown) => {
   return ["center", "top", "bottom", "left", "right"].includes(String(position)) ? String(position) : "center";
 };
 
+const normalizePlaylistItemZone = (zoneId: unknown) => {
+  return typeof zoneId === "string" && zoneId.trim() ? zoneId.trim() : "full-screen";
+};
+
 const normalizeDisplayDimension = (value: unknown, fallback: number) => {
   const dimension = Number(value);
   return Number.isFinite(dimension) && dimension > 0 ? Math.round(dimension) : fallback;
+};
+
+const normalizeLayoutMode = (value: unknown) => {
+  return value === "custom-grid" ? "custom-grid" : "zone";
+};
+
+const normalizeGridSize = (value: unknown) => {
+  const size = Number(value);
+  return Number.isFinite(size) ? Math.max(1, Math.min(6, Math.round(size))) : 3;
+};
+
+const calculatePlaylistDuration = (items: Array<{ durationSec?: unknown; zoneId?: unknown }>) => {
+  const totals = new Map<string, number>();
+  for (const item of items) {
+    const zoneId = normalizePlaylistItemZone(item.zoneId);
+    totals.set(zoneId, (totals.get(zoneId) || 0) + normalizePlaylistItemDuration(item.durationSec));
+  }
+  return Math.max(0, ...Array.from(totals.values()));
 };
 
 export async function GET(request: Request) {
@@ -111,6 +134,10 @@ export async function POST(request: Request) {
           displayName: typeof body.displayName === "string" && body.displayName.trim() ? body.displayName.trim() : "Landscape 16:9",
           displayWidth: normalizeDisplayDimension(body.displayWidth, 1920),
           displayHeight: normalizeDisplayDimension(body.displayHeight, 1080),
+          layoutMode: normalizeLayoutMode(body.layoutMode),
+          gridRows: normalizeGridSize(body.gridRows),
+          gridColumns: normalizeGridSize(body.gridColumns),
+          zonesJson: Array.isArray(body.zones) ? body.zones : undefined,
           tenantId: resolvedTenantId,
         },
       });
@@ -125,6 +152,7 @@ export async function POST(request: Request) {
               durationSec: normalizePlaylistItemDuration(item.durationSec),
               fit: normalizePlaylistItemFit(item.fit),
               objectPosition: normalizePlaylistItemPosition(item.objectPosition),
+              zoneId: normalizePlaylistItemZone(item.zoneId),
             },
           });
         }
@@ -162,6 +190,17 @@ export async function POST(request: Request) {
       "application/json",
       playlistBucket
     );
+
+    if (body.publish === true) {
+      await enqueuePlaylistRenderJob({
+        playlistId: fullPlaylist.id,
+        tenantId: fullPlaylist.tenantId,
+        displayWidth: fullPlaylist.displayWidth,
+        displayHeight: fullPlaylist.displayHeight,
+        durationSec: calculatePlaylistDuration(body.items || []),
+        sourceHash: fullPlaylist.updatedAt.getTime().toString(),
+      });
+    }
 
     return NextResponse.json(serializedPlaylist, { status: 201 });
   } catch (error) {
