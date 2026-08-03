@@ -38,6 +38,7 @@ model Tenant {
   subscriptions      Subscription[]
   payments           Payment[]
   invoices           Invoice[]
+  tickets            Ticket[]
 
   @@map("tenants")
 }
@@ -59,6 +60,8 @@ model User {
   auditLogs           AuditLog[]
   sessions            Session[]
   passwordResetTokens PasswordResetToken[]
+  assignedTickets     Ticket[]             @relation("TicketAssignedToUser")
+  tickets             Ticket[]             @relation("TicketCreatedByUser")
 
   @@map("users")
 }
@@ -172,12 +175,19 @@ model MediaCategory {
 }
 
 model Playlist {
-  id          String   @id @default(uuid())
-  tenantId    String   @map("tenant_id")
-  name        String
-  description String?
-  createdAt   DateTime @default(now()) @map("created_at")
-  updatedAt   DateTime @updatedAt @map("updated_at")
+  id            String   @id @default(uuid())
+  tenantId      String   @map("tenant_id")
+  name          String
+  description   String?
+  displayName   String   @default("Landscape 16:9") @map("display_name")
+  displayWidth  Int      @default(1920) @map("display_width")
+  displayHeight Int      @default(1080) @map("display_height")
+  layoutMode    String   @default("zone") @map("layout_mode")
+  gridRows      Int      @default(3) @map("grid_rows")
+  gridColumns   Int      @default(3) @map("grid_columns")
+  zonesJson     Json?    @map("zones_json")
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
 
   tenant        Tenant             @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   categories    PlaylistCategory[] @relation("PlaylistToCategory")
@@ -206,13 +216,16 @@ model PlaylistCategory {
 }
 
 model PlaylistItem {
-  id          String   @id @default(uuid())
-  playlistId  String   @map("playlist_id")
-  mediaId     String   @map("media_id")
-  position    Int
-  durationSec Int      @map("duration_sec")
-  createdAt   DateTime @default(now()) @map("created_at")
-  updatedAt   DateTime @updatedAt @map("updated_at")
+  id             String   @id @default(uuid())
+  playlistId     String   @map("playlist_id")
+  mediaId        String   @map("media_id")
+  position       Int
+  durationSec    Int      @map("duration_sec")
+  fit            String   @default("scale-down")
+  objectPosition String   @default("center") @map("object_position")
+  zoneId         String   @default("full-screen") @map("zone_id")
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
 
   playlist Playlist @relation(fields: [playlistId], references: [id], onDelete: Cascade)
   media    Media    @relation(fields: [mediaId], references: [id], onDelete: Cascade)
@@ -398,6 +411,55 @@ model Invoice {
   @@map("invoices")
 }
 
+model PlayerMediaSync {
+  mediaId      String    @id @map("media_id")
+  localPath    String?   @map("local_path")
+  syncStatus   String    @default("pending") @map("sync_status") @db.VarChar(20)
+  syncError    String?   @map("sync_error")
+  syncAttempts Int       @default(0) @map("sync_attempts")
+  syncedAt     DateTime? @map("synced_at") @db.Timestamptz(6)
+  createdAt    DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt    DateTime  @default(now()) @map("updated_at") @db.Timestamptz(6)
+
+  @@map("player_media_sync")
+}
+
+model PlayerPlaylistRender {
+  playlistId     String    @id @map("playlist_id")
+  sourceHash     String?   @map("source_hash")
+  renderStatus   String    @default("pending") @map("render_status") @db.VarChar(20)
+  renderError    String?   @map("render_error")
+  renderAttempts Int       @default(0) @map("render_attempts")
+  outputPath     String?   @map("output_path")
+  durationSec    Int?      @map("duration_sec")
+  renderedAt     DateTime? @map("rendered_at") @db.Timestamptz(6)
+  createdAt      DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt      DateTime  @default(now()) @map("updated_at") @db.Timestamptz(6)
+  s3Key          String?   @map("s3_key")
+  s3Url          String?   @map("s3_url")
+
+  @@map("player_playlist_render")
+}
+
+model Ticket {
+  id           String         @id
+  tenantId     String         @map("tenant_id")
+  userId       String?        @map("user_id")
+  assignedToId String?        @map("assigned_to_id")
+  title        String
+  description  String?
+  status       TicketStatus   @default(OPEN)
+  priority     TicketPriority @default(MEDIUM)
+  createdAt    DateTime       @default(now()) @map("created_at")
+  updatedAt    DateTime       @map("updated_at")
+
+  assignedTo User?  @relation("TicketAssignedToUser", fields: [assignedToId], references: [id])
+  tenant     Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  user       User?  @relation("TicketCreatedByUser", fields: [userId], references: [id])
+
+  @@map("tickets")
+}
+
 // ═══════════════════════════════════════
 // 5. ENUMS (STATUSES)
 // ═══════════════════════════════════════
@@ -454,4 +516,18 @@ enum AlertSeverity {
   MEDIUM
   HIGH
   CRITICAL
+}
+
+enum TicketPriority {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
+
+enum TicketStatus {
+  OPEN
+  IN_PROGRESS
+  RESOLVED
+  CLOSED
 }

@@ -1,7 +1,10 @@
 "use client";
 
 import React from "react";
-import { CompatResult, Fit, Transition } from "./types";
+import { CompatResult, MediaFit, MediaPosition, PlaylistLayoutMode, Transition } from "./types";
+
+const FIT_OPTIONS: MediaFit[] = ["cover", "contain", "fill", "none", "scale-down"];
+const POSITION_OPTIONS: MediaPosition[] = ["center", "top", "bottom", "left", "right"];
 
 interface PlaylistInspectorProps {
   displayName: string;
@@ -12,6 +15,12 @@ interface PlaylistInspectorProps {
   deployCompat: string;
   deployCompatWarn: boolean;
   onOpenDisplayConfig: () => void;
+  layoutMode: PlaylistLayoutMode;
+  onLayoutModeChange: (mode: PlaylistLayoutMode) => void;
+  gridRows: number;
+  gridColumns: number;
+  onGridRowsChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
+  onGridColumnsChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
 
   hasSelection: boolean;
   selName: string;
@@ -25,9 +34,13 @@ interface PlaylistInspectorProps {
   onDurationChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
   onTransDurChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
   onTransitionChange: (e: React.ChangeEvent<HTMLSelectElement>) => void;
-  selFit: Fit;
-  onFitContain: () => void;
-  onFitCover: () => void;
+  selFit: MediaFit;
+  selPosition: MediaPosition;
+  onFitChange: (e: React.ChangeEvent<HTMLSelectElement>) => void;
+  onPositionChange: (e: React.ChangeEvent<HTMLSelectElement>) => void;
+  zoneOptions: { id: string; name: string; color: string }[];
+  selZoneId: string;
+  onZoneChange: (e: React.ChangeEvent<HTMLSelectElement>) => void;
 
   fallback: string;
   fallbackOptions: string[];
@@ -43,6 +56,12 @@ export default function PlaylistInspector({
   deployCompat,
   deployCompatWarn,
   onOpenDisplayConfig,
+  layoutMode,
+  onLayoutModeChange,
+  gridRows,
+  gridColumns,
+  onGridRowsChange,
+  onGridColumnsChange,
   hasSelection,
   selName,
   selType,
@@ -56,8 +75,12 @@ export default function PlaylistInspector({
   onTransDurChange,
   onTransitionChange,
   selFit,
-  onFitContain,
-  onFitCover,
+  selPosition,
+  onFitChange,
+  onPositionChange,
+  zoneOptions,
+  selZoneId,
+  onZoneChange,
   fallback,
   fallbackOptions,
   onFallbackChange,
@@ -98,6 +121,56 @@ export default function PlaylistInspector({
           >
             Configure Display…
           </button>
+          <div className="grid grid-cols-2 gap-1 rounded-md border border-[#E2E6EC] dark:border-[#283243] bg-[#F6F7F9] dark:bg-[#0D1320] p-1">
+            <button
+              type="button"
+              onClick={() => onLayoutModeChange("zone")}
+              className={`h-7 rounded text-[11px] font-bold cursor-pointer transition-colors ${
+                layoutMode === "zone"
+                  ? "bg-white dark:bg-[#111722] text-[#2859D9] dark:text-[#6F96FF] shadow-sm"
+                  : "text-zinc-450 hover:text-zinc-900 dark:hover:text-zinc-100"
+              }`}
+            >
+              Zone
+            </button>
+            <button
+              type="button"
+              onClick={() => onLayoutModeChange("custom-grid")}
+              className={`h-7 rounded text-[11px] font-bold cursor-pointer transition-colors ${
+                layoutMode === "custom-grid"
+                  ? "bg-white dark:bg-[#111722] text-[#2859D9] dark:text-[#6F96FF] shadow-sm"
+                  : "text-zinc-450 hover:text-zinc-900 dark:hover:text-zinc-100"
+              }`}
+            >
+              Custom Grid
+            </button>
+          </div>
+          {layoutMode === "custom-grid" && (
+            <div className="grid grid-cols-2 gap-2.5">
+              <label className="flex flex-col gap-1 text-[10.5px] font-semibold text-zinc-450">
+                Grid Rows
+                <input
+                  type="number"
+                  min={1}
+                  max={6}
+                  value={gridRows}
+                  onChange={onGridRowsChange}
+                  className="w-full box-border h-[30px] px-2 rounded-md border border-[#E2E6EC] dark:border-[#283243] bg-[#F6F7F9] dark:bg-[#0D1320] text-zinc-900 dark:text-zinc-100 font-mono text-xs font-bold focus:outline-none focus:border-[#2859D9] dark:focus:border-[#6F96FF]"
+                />
+              </label>
+              <label className="flex flex-col gap-1 text-[10.5px] font-semibold text-zinc-450">
+                Grid Columns
+                <input
+                  type="number"
+                  min={1}
+                  max={6}
+                  value={gridColumns}
+                  onChange={onGridColumnsChange}
+                  className="w-full box-border h-[30px] px-2 rounded-md border border-[#E2E6EC] dark:border-[#283243] bg-[#F6F7F9] dark:bg-[#0D1320] text-zinc-900 dark:text-zinc-100 font-mono text-xs font-bold focus:outline-none focus:border-[#2859D9] dark:focus:border-[#6F96FF]"
+                />
+              </label>
+            </div>
+          )}
         </section>
 
         <div className="h-px bg-[#E2E6EC] dark:bg-[#283243]" />
@@ -163,6 +236,21 @@ export default function PlaylistInspector({
             </div>
 
             <label className="flex flex-col gap-1 text-[10.5px] font-semibold text-zinc-450">
+              Zone
+              <select
+                value={selZoneId}
+                onChange={onZoneChange}
+                className="h-[30px] px-2 rounded-md border border-[#E2E6EC] dark:border-[#283243] bg-[#F6F7F9] dark:bg-[#0D1320] text-zinc-900 dark:text-zinc-100 text-xs font-medium cursor-pointer focus:outline-none focus:border-[#2859D9] dark:focus:border-[#6F96FF]"
+              >
+                {zoneOptions.map((zone) => (
+                  <option key={zone.id} value={zone.id}>
+                    {zone.name}
+                  </option>
+                ))}
+              </select>
+            </label>
+
+            <label className="flex flex-col gap-1 text-[10.5px] font-semibold text-zinc-450">
               Transition In
               <select
                 value={selTransition}
@@ -175,30 +263,35 @@ export default function PlaylistInspector({
               </select>
             </label>
 
-            <div className="flex flex-col gap-1">
-              <span className="text-[10.5px] font-semibold text-zinc-450">Scaling</span>
-              <div className="grid grid-cols-2 border border-[#E2E6EC] dark:border-[#283243] rounded-lg overflow-hidden">
-                <button
-                  onClick={onFitContain}
-                  className={`h-7 text-[11.5px] font-semibold cursor-pointer transition-colors ${
-                    selFit === "Fit"
-                      ? "bg-[#2859D9] dark:bg-[#6F96FF] text-white dark:text-[#111722]"
-                      : "bg-white dark:bg-[#111722] text-zinc-450"
-                  }`}
+            <div className="grid grid-cols-2 gap-2.5">
+              <label className="flex flex-col gap-1 text-[10.5px] font-semibold text-zinc-450">
+                Fit
+                <select
+                  value={selFit}
+                  onChange={onFitChange}
+                  className="h-[30px] px-2 rounded-md border border-[#E2E6EC] dark:border-[#283243] bg-[#F6F7F9] dark:bg-[#0D1320] text-zinc-900 dark:text-zinc-100 text-xs font-medium cursor-pointer focus:outline-none focus:border-[#2859D9] dark:focus:border-[#6F96FF]"
                 >
-                  Fit
-                </button>
-                <button
-                  onClick={onFitCover}
-                  className={`h-7 border-l border-[#E2E6EC] dark:border-[#283243] text-[11.5px] font-semibold cursor-pointer transition-colors ${
-                    selFit === "Fill"
-                      ? "bg-[#2859D9] dark:bg-[#6F96FF] text-white dark:text-[#111722]"
-                      : "bg-white dark:bg-[#111722] text-zinc-450"
-                  }`}
+                  {FIT_OPTIONS.map((option) => (
+                    <option key={option} value={option}>
+                      {option}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label className="flex flex-col gap-1 text-[10.5px] font-semibold text-zinc-450">
+                Position
+                <select
+                  value={selPosition}
+                  onChange={onPositionChange}
+                  className="h-[30px] px-2 rounded-md border border-[#E2E6EC] dark:border-[#283243] bg-[#F6F7F9] dark:bg-[#0D1320] text-zinc-900 dark:text-zinc-100 text-xs font-medium cursor-pointer focus:outline-none focus:border-[#2859D9] dark:focus:border-[#6F96FF]"
                 >
-                  Fill
-                </button>
-              </div>
+                  {POSITION_OPTIONS.map((option) => (
+                    <option key={option} value={option}>
+                      {option}
+                    </option>
+                  ))}
+                </select>
+              </label>
             </div>
           </section>
         ) : (

@@ -13,6 +13,7 @@ interface ClipRenderData {
   isHtml: boolean;
   left: number;
   width: number;
+  laneIndex: number;
   bg: string;
   selected: boolean;
   warning: boolean;
@@ -30,6 +31,7 @@ interface ClipRenderData {
 interface TransMarkerData {
   key: string;
   left: number;
+  laneIndex: number;
   tooltip: string;
   onClick: (e: React.MouseEvent) => void;
 }
@@ -46,6 +48,13 @@ interface OverviewBlockData {
   opacity: number;
 }
 
+interface ZoneLaneData {
+  id: string;
+  name: string;
+  color: string;
+  active: boolean;
+}
+
 interface PlaylistTimelineProps {
   itemCount: number;
   totalLabel: string;
@@ -60,10 +69,12 @@ interface PlaylistTimelineProps {
   playheadLeft: number;
   onRulerClick: (e: React.MouseEvent<HTMLDivElement>) => void;
   onLaneClick: (e: React.MouseEvent<HTMLDivElement>) => void;
+  zoneLanes: ZoneLaneData[];
   lockedTracks: { name: string }[];
   overviewBlocks: OverviewBlockData[];
   selActionsVisible: boolean;
   selActionsLeft: number;
+  selActionsTop: number;
   onSelLeft: (e: React.MouseEvent) => void;
   onSelRight: (e: React.MouseEvent) => void;
   onSelDuplicate: (e: React.MouseEvent) => void;
@@ -84,25 +95,34 @@ export default function PlaylistTimeline({
   playheadLeft,
   onRulerClick,
   onLaneClick,
+  zoneLanes,
   lockedTracks,
   overviewBlocks,
   selActionsVisible,
   selActionsLeft,
+  selActionsTop,
   onSelLeft,
   onSelRight,
   onSelDuplicate,
   onSelDelete,
 }: PlaylistTimelineProps) {
+  const zoneLaneHeight = 54;
+  const lockedTrackHeight = 24;
+  const rulerHeight = 26;
+  const zoneLaneAreaHeight = Math.max(zoneLaneHeight, zoneLanes.length * zoneLaneHeight);
+  const tracksHeight = zoneLaneAreaHeight + lockedTracks.length * lockedTrackHeight;
+  const trackContentHeight = rulerHeight + tracksHeight;
+
   return (
-    <div className="h-[300px] flex flex-col bg-white dark:bg-[#111722] border-t border-[#E2E6EC] dark:border-[#283243] min-h-0 font-sans">
-      <div className="flex items-center justify-between px-3.5 py-2 border-b border-[#E2E6EC] dark:border-[#283243] shrink-0">
-        <div className="flex items-center gap-3">
+    <div className="h-[300px] max-h-[42vh] min-h-[220px] flex flex-col bg-white dark:bg-[#111722] border-t border-[#E2E6EC] dark:border-[#283243] font-sans">
+      <div className="flex flex-wrap items-center justify-between gap-2 px-3.5 py-2 border-b border-[#E2E6EC] dark:border-[#283243] shrink-0">
+        <div className="flex items-center gap-3 min-w-0">
           <span className="text-xs font-bold text-zinc-900 dark:text-zinc-100">Timeline</span>
-          <span className="font-mono text-[11px] text-zinc-450">
+          <span className="font-mono text-[11px] text-zinc-450 truncate">
             {itemCount} clips · {totalLabel} total loop
           </span>
         </div>
-        <div className="flex items-center gap-2.5">
+        <div className="flex items-center gap-2.5 shrink-0">
           <span className="inline-flex items-center gap-1 text-[10.5px] font-semibold text-zinc-450">Snap on</span>
           <div className="flex items-center gap-1.5">
             <button
@@ -130,30 +150,40 @@ export default function PlaylistTimeline({
         </div>
       </div>
 
-      <div className="flex-1 grid grid-cols-[96px_1fr] min-h-0">
-        <div className="border-r border-[#E2E6EC] dark:border-[#283243] flex flex-col pt-[26px]">
-          <div className="h-[84px] flex items-center px-2.5 text-[10.5px] font-bold text-zinc-900 dark:text-zinc-100">
-            <span className="inline-flex items-center gap-1.5">
-              <Film className="w-3 h-3" />
-              Video
-            </span>
+      <div className="flex-1 min-h-0 overflow-y-auto">
+        <div className="grid grid-cols-[96px_1fr] min-h-full">
+          <div className="sticky left-0 z-20 border-r border-[#E2E6EC] dark:border-[#283243] bg-white dark:bg-[#111722]">
+            <div style={{ height: `${rulerHeight}px` }} />
+            {zoneLanes.map((zone) => (
+              <div
+                key={zone.id}
+                className="flex items-center px-2.5 text-[10.5px] font-bold text-zinc-900 dark:text-zinc-100 border-b border-[#E2E6EC] dark:border-[#283243]"
+                style={{ height: `${zoneLaneHeight}px` }}
+              >
+                <span className="inline-flex items-center gap-1.5 min-w-0">
+                  <span className="w-2 h-2 rounded-full shrink-0" style={{ background: zone.color }} />
+                  <span className="truncate">{zone.name}</span>
+                </span>
+              </div>
+            ))}
+            {lockedTracks.map((t) => (
+              <div
+                key={t.name}
+                className="flex items-center justify-between px-2.5 text-[10px] font-semibold text-zinc-450 opacity-45 border-b border-[#E2E6EC] dark:border-[#283243]"
+                style={{ height: `${lockedTrackHeight}px` }}
+              >
+                <span className="truncate">{t.name}</span>
+                <Lock className="w-2.5 h-2.5 shrink-0" />
+              </div>
+            ))}
           </div>
-          {lockedTracks.map((t) => (
-            <div
-              key={t.name}
-              className="h-[26px] flex items-center justify-between px-2.5 text-[10px] font-semibold text-zinc-450 opacity-45"
-            >
-              {t.name}
-              <Lock className="w-2.5 h-2.5" />
-            </div>
-          ))}
-        </div>
 
-        <div className="overflow-x-auto overflow-y-hidden relative">
-          <div className="relative h-full" style={{ width: `${timelineWidth}px`, minWidth: "100%" }}>
+          <div className="overflow-x-auto overflow-y-hidden relative min-w-0">
+            <div className="relative" style={{ width: `${timelineWidth}px`, minWidth: "100%", height: `${trackContentHeight}px` }}>
             <div
               onClick={onRulerClick}
-              className="relative h-[26px] border-b border-[#E2E6EC] dark:border-[#283243] cursor-pointer bg-white dark:bg-[#111722]"
+              className="sticky top-0 z-[7] relative border-b border-[#E2E6EC] dark:border-[#283243] cursor-pointer bg-white dark:bg-[#111722]"
+              style={{ height: `${rulerHeight}px` }}
             >
               {ticks.map((tk, i) => (
                 <div key={i} className="absolute top-0 bottom-0 flex flex-col justify-end" style={{ left: `${tk.left}px` }}>
@@ -165,8 +195,20 @@ export default function PlaylistTimeline({
 
             <div
               onClick={onLaneClick}
-              className="relative h-[84px] bg-[#F6F7F9] dark:bg-[#0D1320] border-b border-[#E2E6EC] dark:border-[#283243]"
+              className="relative bg-[#F6F7F9] dark:bg-[#0D1320] border-b border-[#E2E6EC] dark:border-[#283243]"
+              style={{ height: `${zoneLaneAreaHeight}px` }}
             >
+              {zoneLanes.map((zone, i) => (
+                <div
+                  key={zone.id}
+                  className="absolute left-0 right-0 border-b border-[#E2E6EC] dark:border-[#283243]"
+                  style={{
+                    top: `${i * zoneLaneHeight}px`,
+                    height: `${zoneLaneHeight}px`,
+                    background: i % 2 ? "rgba(120,130,145,0.04)" : "transparent",
+                  }}
+                />
+              ))}
               {clips.map((c) => {
                 const Icon = c.isVideo ? Film : c.isHtml ? Code : ImageIcon;
                 return (
@@ -175,7 +217,7 @@ export default function PlaylistTimeline({
                     onPointerDown={c.onPointerDown}
                     onClick={c.onClick}
                     title={c.tooltip}
-                    className={`absolute top-2.5 h-16 rounded-lg box-border overflow-hidden cursor-grab flex flex-col justify-center gap-0.5 px-2.5 border-[1.5px] hover:brightness-110 ${
+                    className={`absolute h-9 rounded-lg box-border overflow-hidden cursor-grab flex flex-col justify-center gap-0.5 px-2.5 border-[1.5px] hover:brightness-110 ${
                       c.selected
                         ? "border-[#2859D9] dark:border-[#6F96FF] ring-2 ring-[#2859D9]/30 dark:ring-[#6F96FF]/30"
                         : c.warning
@@ -184,6 +226,7 @@ export default function PlaylistTimeline({
                     } ${c.dragging ? "shadow-lg" : ""}`}
                     style={{
                       left: `${c.left}px`,
+                      top: `${c.laneIndex * zoneLaneHeight + 8}px`,
                       width: `${c.width}px`,
                       background: c.bg,
                       zIndex: c.dragging ? 20 : c.selected ? 5 : 2,
@@ -221,8 +264,8 @@ export default function PlaylistTimeline({
                   key={tm.key}
                   onClick={tm.onClick}
                   title={tm.tooltip}
-                  className="absolute top-[30px] w-5 h-5 -ml-2.5 rounded-full border-[1.5px] border-[#E2E6EC] dark:border-[#283243] bg-white dark:bg-[#111722] text-zinc-450 cursor-pointer z-[6] flex items-center justify-center p-0 shadow-sm hover:border-[#2859D9] dark:hover:border-[#6F96FF] hover:text-[#2859D9] dark:hover:text-[#6F96FF] hover:scale-125 transition-transform"
-                  style={{ left: `${tm.left}px` }}
+                  className="absolute w-5 h-5 -ml-2.5 rounded-full border-[1.5px] border-[#E2E6EC] dark:border-[#283243] bg-white dark:bg-[#111722] text-zinc-450 cursor-pointer z-[6] flex items-center justify-center p-0 shadow-sm hover:border-[#2859D9] dark:hover:border-[#6F96FF] hover:text-[#2859D9] dark:hover:text-[#6F96FF] hover:scale-125 transition-transform"
+                  style={{ left: `${tm.left}px`, top: `${tm.laneIndex * zoneLaneHeight + 17}px` }}
                 >
                   <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor">
                     <polygon points="4,5 11,12 4,19" />
@@ -234,7 +277,7 @@ export default function PlaylistTimeline({
               {selActionsVisible && (
                 <div
                   className="absolute -top-0.5 z-[8] flex gap-0.5 bg-white dark:bg-[#111722] border border-[#E2E6EC] dark:border-[#283243] rounded-md p-0.5 shadow-md"
-                  style={{ left: `${selActionsLeft}px` }}
+                  style={{ left: `${selActionsLeft}px`, top: `${selActionsTop}px` }}
                 >
                   <button
                     onClick={onSelLeft}
@@ -271,8 +314,9 @@ export default function PlaylistTimeline({
             {lockedTracks.map((t) => (
               <div
                 key={t.name}
-                className="h-[26px] border-b border-[#E2E6EC] dark:border-[#283243] opacity-60"
+                className="border-b border-[#E2E6EC] dark:border-[#283243] opacity-60"
                 style={{
+                  height: `${lockedTrackHeight}px`,
                   background:
                     "repeating-linear-gradient(45deg, transparent, transparent 8px, rgba(120,130,145,0.08) 8px, rgba(120,130,145,0.08) 16px)",
                 }}
@@ -285,6 +329,7 @@ export default function PlaylistTimeline({
             >
               <div className="absolute -left-px top-0 bottom-0 w-0.5 bg-red-500" />
               <div className="absolute -left-[5.5px] top-0 w-0 h-0 border-l-[6px] border-l-transparent border-r-[6px] border-r-transparent border-t-[8px] border-t-red-500" />
+            </div>
             </div>
           </div>
         </div>

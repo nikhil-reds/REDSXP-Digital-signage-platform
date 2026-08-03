@@ -1,21 +1,25 @@
 "use client";
 
 import React from "react";
-import { AlertTriangle, X, ShieldCheck } from "lucide-react";
+import { AlertTriangle, Pencil, X, ShieldCheck } from "lucide-react";
 import { ScheduleSummary } from "./api";
 import { formatDays } from "./schedule-calendar";
 
 interface ConflictDialogProps {
   onClose: () => void;
+  onEditSchedule: (schedule: ScheduleSummary) => void;
   campaign1: ScheduleSummary;
   campaign2: ScheduleSummary;
 }
 
-export default function ConflictDialog({ onClose, campaign1, campaign2 }: ConflictDialogProps) {
+export default function ConflictDialog({ onClose, onEditSchedule, campaign1, campaign2 }: ConflictDialogProps) {
   const winner = campaign2.priority > campaign1.priority ? campaign2 : campaign1;
   const loser = campaign2.priority > campaign1.priority ? campaign1 : campaign2;
 
   const sharedDays = campaign1.daysOfWeek.filter((d) => campaign2.daysOfWeek.includes(d));
+  const handleEditSchedule = (schedule: ScheduleSummary) => {
+    onEditSchedule(schedule);
+  };
 
   return (
     <div className="fixed inset-0 bg-black/55 dark:bg-black/80 flex items-center justify-center z-50 animate-fadeIn font-sans">
@@ -54,30 +58,52 @@ export default function ConflictDialog({ onClose, campaign1, campaign2 }: Confli
           <div className="space-y-2">
             {/* Overlap Item 1 */}
             <div className="p-3 border border-zinc-250 dark:border-zinc-800 rounded-lg flex justify-between items-center gap-3">
-              <div>
+              <div className="min-w-0">
                 <span className="text-[9px] font-bold uppercase tracking-wider text-zinc-400">Campaign A</span>
-                <span className="block font-bold text-zinc-850 dark:text-zinc-200 mt-0.5">{campaign1.name}</span>
+                <span className="block font-bold text-zinc-850 dark:text-zinc-200 mt-0.5 truncate">{campaign1.name}</span>
                 <span className="text-[9px] text-zinc-400">
                   {campaign1.dailyStartTime} - {campaign1.dailyEndTime}
                 </span>
               </div>
-              <span className="text-[9px] px-2 py-0.5 bg-zinc-100 dark:bg-zinc-800 text-zinc-650 rounded-sm font-bold font-mono">
-                Priority {campaign1.priority}
-              </span>
+              <div className="flex items-center gap-2 shrink-0">
+                <span className="text-[9px] px-2 py-0.5 bg-zinc-100 dark:bg-zinc-800 text-zinc-650 rounded-sm font-bold font-mono">
+                  Priority {campaign1.priority}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => handleEditSchedule(campaign1)}
+                  title={`Edit ${campaign1.name}`}
+                  aria-label={`Edit ${campaign1.name}`}
+                  className="p-1.5 rounded-lg text-zinc-400 hover:text-[#2859D9] dark:hover:text-[#6F96FF] hover:bg-[#F6F7F9] dark:hover:bg-zinc-800 transition-colors cursor-pointer"
+                >
+                  <Pencil className="w-3.5 h-3.5" />
+                </button>
+              </div>
             </div>
 
             {/* Overlap Item 2 */}
             <div className="p-3 border border-zinc-250 dark:border-zinc-800 rounded-lg flex justify-between items-center gap-3">
-              <div>
+              <div className="min-w-0">
                 <span className="text-[9px] font-bold uppercase tracking-wider text-zinc-400">Campaign B</span>
-                <span className="block font-bold text-zinc-850 dark:text-zinc-200 mt-0.5">{campaign2.name}</span>
+                <span className="block font-bold text-zinc-850 dark:text-zinc-200 mt-0.5 truncate">{campaign2.name}</span>
                 <span className="text-[9px] text-zinc-400">
                   {campaign2.dailyStartTime} - {campaign2.dailyEndTime}
                 </span>
               </div>
-              <span className="text-[9px] px-2 py-0.5 bg-zinc-100 dark:bg-zinc-800 text-zinc-650 rounded-sm font-bold font-mono">
-                Priority {campaign2.priority}
-              </span>
+              <div className="flex items-center gap-2 shrink-0">
+                <span className="text-[9px] px-2 py-0.5 bg-zinc-100 dark:bg-zinc-800 text-zinc-650 rounded-sm font-bold font-mono">
+                  Priority {campaign2.priority}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => handleEditSchedule(campaign2)}
+                  title={`Edit ${campaign2.name}`}
+                  aria-label={`Edit ${campaign2.name}`}
+                  className="p-1.5 rounded-lg text-zinc-400 hover:text-[#2859D9] dark:hover:text-[#6F96FF] hover:bg-[#F6F7F9] dark:hover:bg-zinc-800 transition-colors cursor-pointer"
+                >
+                  <Pencil className="w-3.5 h-3.5" />
+                </button>
+              </div>
             </div>
           </div>
 
@@ -105,15 +131,6 @@ export default function ConflictDialog({ onClose, campaign1, campaign2 }: Confli
             className="flex-1 py-2 border border-[#E2E6EC] dark:border-[#283243] text-xs font-bold rounded-lg text-zinc-650 dark:text-zinc-350 hover:bg-[#F6F7F9] dark:hover:bg-zinc-800 transition-colors cursor-pointer"
           >
             Close Dialog
-          </button>
-          <button
-            onClick={() => {
-              alert("Priority adjustment console is locked by admin permissions.");
-              onClose();
-            }}
-            className="flex-1 py-2 bg-[#2859D9] dark:bg-[#6F96FF] text-white dark:text-[#111722] text-xs font-bold rounded-lg hover:opacity-90 transition-opacity cursor-pointer shadow-sm"
-          >
-            Adjust Priorities
           </button>
         </div>
 

@@ -56,7 +56,7 @@ export default function TimePicker({ value, onChange, label }: TimePickerProps) 
   };
 
   const setMinute = (m: number) => {
-    commit(hh, m);
+    commit(hh, Math.max(0, Math.min(59, m)));
   };
 
   const setPeriod = (p: "AM" | "PM") => {
@@ -177,6 +177,19 @@ export default function TimePicker({ value, onChange, label }: TimePickerProps) 
               );
             })}
           </div>
+
+          <label className="mt-3 flex items-center justify-between gap-3 text-[10px] font-bold uppercase tracking-wider text-zinc-400 dark:text-zinc-500">
+            Minute
+            <input
+              type="number"
+              min={0}
+              max={59}
+              step={1}
+              value={minute}
+              onChange={(e) => setMinute(parseInt(e.target.value, 10) || 0)}
+              className="w-20 px-2 py-1 bg-[#F6F7F9] dark:bg-[#171F2C]/50 border border-[#E2E6EC] dark:border-[#283243] rounded-lg text-xs text-zinc-800 dark:text-zinc-200 focus:outline-none font-mono"
+            />
+          </label>
 
           <button
             type="button"

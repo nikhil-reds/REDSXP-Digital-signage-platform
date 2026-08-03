@@ -50,6 +50,7 @@ export async function GET(request: Request) {
 export async function POST(request: Request) {
   try {
     const body = await request.json();
+    const durationSec = Number(body.durationSec);
     
     // In a real app, tenantId comes from session. For now, fallback to the first tenant or create one.
     let resolvedTenantId = body.tenantId;
@@ -82,7 +83,7 @@ export async function POST(request: Request) {
         s3Key: body.s3Key,
         cdnUrl: body.cdnUrl,
         sizeBytes: body.sizeBytes ? BigInt(body.sizeBytes) : BigInt(0),
-        durationSec: body.durationSec || null,
+        durationSec: Number.isFinite(durationSec) && durationSec > 0 ? Math.ceil(durationSec) : null,
         width: body.width || null,
         height: body.height || null,
         status: body.status || "READY",

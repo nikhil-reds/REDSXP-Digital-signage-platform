@@ -1,4 +1,4 @@
-import { CompatResult, DisplayProfile, Fit } from "./types";
+import { CompatResult, DisplayProfile, MediaFit } from "./types";
 
 export function gcd(a: number, b: number): number {
   return b ? gcd(b, a % b) : a;
@@ -23,7 +23,7 @@ interface CompatAsset {
   type: string;
   w: number;
   h: number;
-  fit?: Fit;
+  fit?: MediaFit;
 }
 
 export function getCompatibility(asset: CompatAsset, disp: DisplayProfile): CompatResult {
@@ -87,7 +87,7 @@ export function getCompatibility(asset: CompatAsset, disp: DisplayProfile): Comp
       short: "PORTRAIT",
       label: "Portrait asset in Landscape playlist",
       tip: `This asset is ${asset.w}×${asset.h} and will be ${
-        asset.fit === "Fill" ? "center-cropped" : "letterboxed with black bars"
+        asset.fit === "cover" ? "cropped" : "fit within the display"
       } on a ${disp.w}×${disp.h} display.`,
     };
   }
@@ -98,7 +98,7 @@ export function getCompatibility(asset: CompatAsset, disp: DisplayProfile): Comp
     short: "AR MISMATCH",
     label: "Aspect Ratio Mismatch",
     tip: `${aspectRatioLabel(asset.w, asset.h)} asset on a ${aspectRatioLabel(disp.w, disp.h)} display — expect ${
-      asset.fit === "Fill" ? "cropping" : "black bars"
+      asset.fit === "cover" ? "cropping" : "empty space or stretching depending on fit mode"
     }.`,
   };
 }
