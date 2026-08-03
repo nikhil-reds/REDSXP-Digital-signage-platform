@@ -15,12 +15,20 @@ export async function POST(request: Request) {
 
   const user = await prisma.user.findUnique({
     where: { email },
-    include: { role: true, tenant: true },
+    include: {
+      tenant: true,
+      role: {
+        include: { permissions: true },
+      },
+    },
   });
 
   if (!user || user.status !== "ACTIVE" || !(await bcrypt.compare(password, user.passwordHash))) {
     return apiError("Invalid email or password.", 401);
   }
+
+  const isSystemScope = user.role.scope === "SYSTEM" || user.role.name === "SUPER_ADMIN";
+  const permissions = user.role.permissions.map((p) => p.key);
 
   const response = NextResponse.json({
     success: true,
@@ -32,9 +40,11 @@ export async function POST(request: Request) {
         firstName: user.firstName,
         lastName: user.lastName,
         role: user.role.name,
+        roleScope: user.role.scope,
+        permissions,
         tenant: { id: user.tenant.id, name: user.tenant.name, slug: user.tenant.slug },
       },
-      redirectTo: user.role.name === "ADMIN" ? "/admin" : "/agent",
+      redirectTo: isSystemScope ? "/admin" : "/agent",
     },
   });
 
