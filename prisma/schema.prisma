@@ -182,6 +182,10 @@ model Playlist {
   displayName   String   @default("Landscape 16:9") @map("display_name")
   displayWidth  Int      @default(1920) @map("display_width")
   displayHeight Int      @default(1080) @map("display_height")
+  layoutMode    String   @default("zone") @map("layout_mode")
+  gridRows      Int      @default(3) @map("grid_rows")
+  gridColumns   Int      @default(3) @map("grid_columns")
+  zonesJson     Json?    @map("zones_json")
   createdAt     DateTime @default(now()) @map("created_at")
   updatedAt     DateTime @updatedAt @map("updated_at")
 
@@ -219,6 +223,7 @@ model PlaylistItem {
   durationSec    Int      @map("duration_sec")
   fit            String   @default("scale-down")
   objectPosition String   @default("center") @map("object_position")
+  zoneId         String   @default("full-screen") @map("zone_id")
   createdAt      DateTime @default(now()) @map("created_at")
   updatedAt      DateTime @updatedAt @map("updated_at")
 

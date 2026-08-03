@@ -6,22 +6,38 @@ import {
   createPlaylist,
   fetchMediaLibrary,
   fetchPlaylist,
+  fetchPlaylistRenderStatus,
   updatePlaylist,
   DEFAULT_IMAGE_DURATION_SEC,
   type SavePlaylistPayload,
+  type PlaylistRenderStatus,
 } from "./api";
 import {
   CLIP_TYPE_COLORS,
+  DEFAULT_ZONE_ID,
   DEVICE_PROFILES,
   DISPLAY_PRESETS,
   FALLBACK_OPTIONS,
   INITIAL_DEVICE,
   INITIAL_DISPLAY,
   INITIAL_FALLBACK,
+  INITIAL_GRID_COLUMNS,
+  INITIAL_GRID_ROWS,
   LOCKED_TRACKS,
+  PLAYLIST_ZONES,
 } from "./constants";
 import { aspectRatioLabel, formatDuration, getCompatibility } from "./utils";
-import { DisplayConfigTab, DisplayProfile, LibraryAsset, MediaFit, MediaPosition, PlaylistClip, Transition, ViewMode } from "./types";
+import {
+  DisplayConfigTab,
+  DisplayProfile,
+  LibraryAsset,
+  MediaFit,
+  MediaPosition,
+  PlaylistClip,
+  PlaylistLayoutMode,
+  Transition,
+  ViewMode,
+} from "./types";
 
 const PAD = 12;
 
@@ -80,12 +96,17 @@ export function usePlaylistEditor({ playlistId }: UsePlaylistEditorOptions = {})
   const [device, setDevice] = useState(INITIAL_DEVICE);
   const [displayConfigOpen, setDisplayConfigOpen] = useState(false);
   const [publishModalOpen, setPublishModalOpen] = useState(false);
+  const [publishRenderStatus, setPublishRenderStatus] = useState<PlaylistRenderStatus | null>(null);
   const [configTab, setConfigTab] = useState<DisplayConfigTab>("presets");
   const [customW, setCustomW] = useState(1920);
   const [customH, setCustomH] = useState(1080);
   const [safeTitle, setSafeTitle] = useState(false);
   const [safeAction, setSafeAction] = useState(false);
   const [safeBleed, setSafeBleed] = useState(false);
+  const [gridRows, setGridRows] = useState(INITIAL_GRID_ROWS);
+  const [gridColumns, setGridColumns] = useState(INITIAL_GRID_COLUMNS);
+  const [layoutMode, setLayoutMode] = useState<PlaylistLayoutMode>("zone");
+  const [layoutGuidesTouched, setLayoutGuidesTouched] = useState(false);
 
   const dragCtx = useRef<{ id: string; startX: number } | null>(null);
   const resizeCtx = useRef<{ id: string; startX: number; startDuration: number } | null>(null);
@@ -147,10 +168,14 @@ export function usePlaylistEditor({ playlistId }: UsePlaylistEditorOptions = {})
               src: asset?.src ?? "",
               fit: item.fit,
               position: item.positionMode,
+              zoneId: item.zoneId,
             };
           });
           setPlaylistName(detail.name);
           setDisplayState({ name: detail.displayName, w: detail.displayWidth, h: detail.displayHeight });
+          setLayoutMode(detail.layoutMode);
+          setGridRows(detail.gridRows);
+          setGridColumns(detail.gridColumns);
           setCustomW(detail.displayWidth);
           setCustomH(detail.displayHeight);
           setBaseline(hydrated);
@@ -208,7 +233,28 @@ export function usePlaylistEditor({ playlistId }: UsePlaylistEditorOptions = {})
     setDirty(true);
   }, [history, histIdx]);
 
-  const save = useCallback(async () => {
+  const gridZones = useMemo(() => {
+    const rows = Math.max(1, Math.min(6, gridRows));
+    const columns = Math.max(1, Math.min(6, gridColumns));
+    const zones = [];
+    for (let row = 0; row < rows; row++) {
+      for (let col = 0; col < columns; col++) {
+        zones.push({
+          id: `grid-${row + 1}-${col + 1}`,
+          name: `Grid ${row + 1}-${col + 1}`,
+          x: (col * 100) / columns,
+          y: (row * 100) / rows,
+          w: 100 / columns,
+          h: 100 / rows,
+          color: ["#60A5FA", "#34D399", "#F59E0B", "#F472B6", "#A78BFA", "#22D3EE"][(row + col) % 6],
+        });
+      }
+    }
+    return zones;
+  }, [gridColumns, gridRows]);
+  const allZones = useMemo(() => [...PLAYLIST_ZONES, ...gridZones], [gridZones]);
+
+  const save = useCallback(async (publishRender = false) => {
     setSaving(true);
     setSaveError(null);
     try {
@@ -217,32 +263,46 @@ export function usePlaylistEditor({ playlistId }: UsePlaylistEditorOptions = {})
         displayName: display.name,
         displayWidth: display.w,
         displayHeight: display.h,
+        layoutMode,
+        gridRows,
+        gridColumns,
+        zones: allZones,
+        publish: publishRender,
         items: items.map((it, i) => ({
           mediaId: it.mediaId,
           position: i,
           durationSec: it.duration,
           fit: it.fit,
           objectPosition: it.position,
+          zoneId: it.zoneId,
         })),
       };
       if (currentPlaylistId) {
         await updatePlaylist(currentPlaylistId, payload);
+        setBaseline(items);
+        return currentPlaylistId;
       } else {
         const created = await createPlaylist(payload);
         setCurrentPlaylistId(created.id);
         router.replace(`/agent/playlists/create-playlist?id=${created.id}`);
+        setBaseline(items);
+        return created.id;
       }
-      setBaseline(items);
     } catch (err) {
       setSaveError(err instanceof Error ? err.message : "Failed to save playlist");
+      return null;
     } finally {
       setSaving(false);
     }
-  }, [playlistName, display.name, display.w, display.h, items, currentPlaylistId, router, setBaseline]);
+  }, [allZones, playlistName, display.name, display.w, display.h, layoutMode, gridRows, gridColumns, items, currentPlaylistId, router, setBaseline]);
 
   const publish = useCallback(async () => {
     setPublishModalOpen(true);
-    await save();
+    setPublishRenderStatus(null);
+    const savedPlaylistId = await save(true);
+    if (!savedPlaylistId) return;
+    const status = await fetchPlaylistRenderStatus(savedPlaylistId).catch(() => null);
+    setPublishRenderStatus(status);
   }, [save]);
 
   const closePublishModal = useCallback(() => setPublishModalOpen(false), []);
@@ -252,16 +312,25 @@ export function usePlaylistEditor({ playlistId }: UsePlaylistEditorOptions = {})
     router.push("/agent/playlists");
   }, [router]);
 
+  const getZoneLoopDuration = useCallback((clips: PlaylistClip[]) => {
+    const totals = new Map<string, number>();
+    for (const clip of clips) {
+      const zoneId = clip.zoneId || DEFAULT_ZONE_ID;
+      totals.set(zoneId, (totals.get(zoneId) || 0) + clip.duration);
+    }
+    return Math.max(1, ...Array.from(totals.values()));
+  }, []);
+
   const play = useCallback(() => {
     if (timerRef.current) return;
     timerRef.current = setInterval(() => {
       setTime((t) => {
-        const total = items.reduce((a, it) => a + it.duration, 0) || 1;
+        const total = getZoneLoopDuration(items);
         return (t + 0.08) % total;
       });
     }, 80);
     setPlaying(true);
-  }, [items]);
+  }, [getZoneLoopDuration, items]);
 
   const pause = useCallback(() => {
     if (timerRef.current) clearInterval(timerRef.current);
@@ -384,40 +453,94 @@ export function usePlaylistEditor({ playlistId }: UsePlaylistEditorOptions = {})
     };
   }, []);
 
-  const total = items.reduce((a, it) => a + it.duration, 0);
+  const selectableZones = layoutMode === "custom-grid" ? gridZones : PLAYLIST_ZONES;
+  const zoneById = useMemo(() => new Map(allZones.map((zone) => [zone.id, zone])), [allZones]);
+  const laneStarts = useMemo(() => {
+    const totals = new Map<string, number>();
+    const starts = new Map<string, number>();
+    for (const it of items) {
+      const zoneId = it.zoneId || DEFAULT_ZONE_ID;
+      const start = totals.get(zoneId) || 0;
+      starts.set(it.instanceId, start);
+      totals.set(zoneId, start + it.duration);
+    }
+    return { starts, totals };
+  }, [items]);
+  const total = Math.max(0, ...Array.from(laneStarts.totals.values()));
   const sel = items.find((it) => it.instanceId === selectedId) || null;
   const dispLandscape = display.w >= display.h;
 
-  const starts = useMemo(() => {
-    const out: number[] = [];
-    let acc = 0;
-    for (const it of items) {
-      out.push(acc);
-      acc += it.duration;
+  const activePreviewClips = useMemo(() => {
+    const clips = [];
+    for (const zone of allZones) {
+      const laneItems = items.filter((it) => (it.zoneId || DEFAULT_ZONE_ID) === zone.id);
+      const laneTotal = laneItems.reduce((sum, it) => sum + it.duration, 0);
+      if (!laneTotal) continue;
+      const laneTime = time % laneTotal;
+      let acc = 0;
+      let active: PlaylistClip | undefined;
+      for (const it of laneItems) {
+        if (laneTime >= acc && laneTime < acc + it.duration) {
+          active = it;
+          break;
+        }
+        acc += it.duration;
+      }
+      if (!active?.src) continue;
+      clips.push({
+        key: active.instanceId,
+        type: active.type,
+        src: active.src,
+        fit: active.fit,
+        position: active.position,
+        name: active.name,
+        zone,
+      });
     }
-    return out;
-  }, [items]);
+    return clips;
+  }, [allZones, items, time]);
 
-  let curIdx = 0;
-  for (let i = 0; i < items.length; i++) {
-    if (time >= starts[i] && time < starts[i] + items[i].duration) {
-      curIdx = i;
-      break;
-    }
-  }
-  const cur = items[curIdx] || null;
-  const clipProgress = cur ? (time - starts[curIdx]) / cur.duration : 0;
+  const currentClipId = sel?.instanceId || activePreviewClips[0]?.key || null;
+  const cur = currentClipId ? items.find((it) => it.instanceId === currentClipId) || null : null;
+  const curStart = cur ? laneStarts.starts.get(cur.instanceId) || 0 : 0;
+  const curLaneTotal = cur ? laneStarts.totals.get(cur.zoneId || DEFAULT_ZONE_ID) || cur.duration : 0;
+  const curLaneTime = curLaneTotal ? time % curLaneTotal : time;
+  const clipProgress = cur ? (curLaneTime - curStart) / cur.duration : 0;
   const curCompat = cur ? getCompatibility(cur, display) : null;
   const selCompat = sel ? getCompatibility(sel, display) : null;
-  const selIdx = sel ? items.indexOf(sel) : -1;
+  const currentZone = zoneById.get(cur?.zoneId || DEFAULT_ZONE_ID) || allZones[0];
+  const gridChanged = gridRows !== INITIAL_GRID_ROWS || gridColumns !== INITIAL_GRID_COLUMNS;
+  const hasNonDefaultZone = items.some((it) => (it.zoneId || DEFAULT_ZONE_ID) !== DEFAULT_ZONE_ID);
+  const showLayoutGuides = layoutGuidesTouched || gridChanged || hasNonDefaultZone;
+  const zoneLaneIds = useMemo(() => {
+    const used = new Set(items.map((it) => it.zoneId || DEFAULT_ZONE_ID));
+    used.add(sel?.zoneId || DEFAULT_ZONE_ID);
+    return allZones.filter((zone) => used.has(zone.id)).map((zone) => zone.id);
+  }, [allZones, items, sel]);
+  const zoneLanes = useMemo(
+    () =>
+      zoneLaneIds.map((id) => {
+        const zone = zoneById.get(id) || allZones[0];
+        return {
+          id: zone.id,
+          name: zone.name,
+          color: zone.color,
+          active: items.some((it) => (it.zoneId || DEFAULT_ZONE_ID) === zone.id),
+        };
+      }),
+    [allZones, items, zoneById, zoneLaneIds]
+  );
+  const zoneLaneIndexById = useMemo(() => new Map(zoneLaneIds.map((id, i) => [id, i])), [zoneLaneIds]);
+  const selectedLaneIndex = sel ? zoneLaneIndexById.get(sel.zoneId || DEFAULT_ZONE_ID) ?? 0 : 0;
 
   const clips = useMemo(
     () =>
-      items.map((it, i) => {
+      items.map((it) => {
         const selected = it.instanceId === selectedId;
         const c = getCompatibility(it, display);
         const warning = c.level === "warn";
         const dragging = drag && drag.id === it.instanceId;
+        const zoneId = it.zoneId || DEFAULT_ZONE_ID;
         return {
           clip: it,
           name: it.name,
@@ -425,8 +548,9 @@ export function usePlaylistEditor({ playlistId }: UsePlaylistEditorOptions = {})
           isVideo: it.type === "Video",
           isImage: it.type === "Image",
           isHtml: it.type === "HTML5",
-          left: PAD + starts[i] * zoom,
+          left: PAD + (laneStarts.starts.get(it.instanceId) || 0) * zoom,
           width: Math.max(46, it.duration * zoom - 3),
+          laneIndex: zoneLaneIndexById.get(zoneId) ?? 0,
           bg: CLIP_TYPE_COLORS[it.type] || CLIP_TYPE_COLORS.Image,
           selected,
           warning,
@@ -451,16 +575,23 @@ export function usePlaylistEditor({ playlistId }: UsePlaylistEditorOptions = {})
           },
         };
       }),
-    [items, selectedId, display, drag, starts, zoom]
+    [items, selectedId, display, drag, laneStarts.starts, zoom, zoneLaneIndexById]
   );
 
   const transMarkers = useMemo(
-    () =>
-      items.slice(1).map((it, k) => {
-        const i = k + 1;
-        return {
+    () => {
+      const seenByZone = new Set<string>();
+      const markers = [];
+      for (const it of items) {
+        const zoneId = it.zoneId || DEFAULT_ZONE_ID;
+        if (!seenByZone.has(zoneId)) {
+          seenByZone.add(zoneId);
+          continue;
+        }
+        markers.push({
           key: it.instanceId,
-          left: PAD + starts[i] * zoom,
+          left: PAD + (laneStarts.starts.get(it.instanceId) || 0) * zoom,
+          laneIndex: zoneLaneIndexById.get(zoneId) ?? 0,
           tooltip: `Transition: ${it.transition}${it.transition === "Cut" ? "" : ` (${it.transDur}s)`} — click to cycle`,
           onClick: (e: React.MouseEvent) => {
             e.stopPropagation();
@@ -471,9 +602,11 @@ export function usePlaylistEditor({ playlistId }: UsePlaylistEditorOptions = {})
             );
             commit(nextItems);
           },
-        };
-      }),
-    [items, starts, zoom, commit]
+        });
+      }
+      return markers;
+    },
+    [items, laneStarts.starts, zoom, commit, zoneLaneIndexById]
   );
 
   const ticks = useMemo(() => {
@@ -527,6 +660,7 @@ export function usePlaylistEditor({ playlistId }: UsePlaylistEditorOptions = {})
                   src: m.src,
                   fit: "scale-down",
                   position: "center",
+                  zoneId: DEFAULT_ZONE_ID,
                 },
               ]);
               setSelectedId(newInstanceId);
@@ -546,7 +680,7 @@ export function usePlaylistEditor({ playlistId }: UsePlaylistEditorOptions = {})
   const overviewBlocks = items.map((it) => ({
     key: it.instanceId,
     widthPct: total ? (it.duration / total) * 100 : 0,
-    bg: it.type === "Image" ? "#D97C1E" : it.type === "Video" ? "#7A5236" : "#2F5FD4",
+    bg: zoneById.get(it.zoneId || DEFAULT_ZONE_ID)?.color || (it.type === "Image" ? "#D97C1E" : it.type === "Video" ? "#7A5236" : "#2F5FD4"),
     opacity: it.instanceId === selectedId ? 1 : 0.55,
   }));
 
@@ -719,11 +853,11 @@ export function usePlaylistEditor({ playlistId }: UsePlaylistEditorOptions = {})
       warning: !!(curCompat && curCompat.level === "warn"),
       warningText: curCompat ? curCompat.label : "",
       currentClipKey: cur ? cur.instanceId : "empty",
-      currentClipType: cur ? cur.type : null,
-      currentClipSrc: cur?.src || null,
-      currentClipFit: cur ? cur.fit : "scale-down",
-      currentClipPosition: cur ? cur.position : "center",
       currentClipName: cur ? cur.name : "No clips",
+      currentClipZone: currentZone,
+      activeClips: activePreviewClips,
+      zones: layoutMode === "custom-grid" ? gridZones : PLAYLIST_ZONES.filter((zone) => zone.id !== DEFAULT_ZONE_ID),
+      showLayoutGuides,
       clipProgressPct: (clipProgress * 100).toFixed(1),
       playing,
       onPlayPause: () => (playing ? pause() : play()),
@@ -747,6 +881,28 @@ export function usePlaylistEditor({ playlistId }: UsePlaylistEditorOptions = {})
       deployCompat: anyWarn ? "⚠ Warnings in loop" : "✓ Fully Supported",
       deployCompatWarn: anyWarn,
       onOpenDisplayConfig: () => setDisplayConfigOpen(true),
+      layoutMode,
+      onLayoutModeChange: (mode: PlaylistLayoutMode) => {
+        setLayoutMode(mode);
+        setLayoutGuidesTouched(true);
+        const options = mode === "custom-grid" ? gridZones : PLAYLIST_ZONES;
+        if (sel && !options.some((zone) => zone.id === (sel.zoneId || DEFAULT_ZONE_ID))) {
+          updateSelected("zoneId", options[0]?.id || DEFAULT_ZONE_ID);
+        }
+        setDirty(true);
+      },
+      gridRows,
+      gridColumns,
+      onGridRowsChange: (e: React.ChangeEvent<HTMLInputElement>) => {
+        setGridRows(Math.max(1, Math.min(6, Number(e.target.value) || 1)));
+        setLayoutGuidesTouched(true);
+        setDirty(true);
+      },
+      onGridColumnsChange: (e: React.ChangeEvent<HTMLInputElement>) => {
+        setGridColumns(Math.max(1, Math.min(6, Number(e.target.value) || 1)));
+        setLayoutGuidesTouched(true);
+        setDirty(true);
+      },
       hasSelection: !!sel,
       selName: sel ? sel.name : "",
       selType: sel ? sel.type : "",
@@ -767,6 +923,15 @@ export function usePlaylistEditor({ playlistId }: UsePlaylistEditorOptions = {})
       onFitChange: (e: React.ChangeEvent<HTMLSelectElement>) => updateSelected("fit", e.target.value as MediaFit),
       onPositionChange: (e: React.ChangeEvent<HTMLSelectElement>) =>
         updateSelected("position", e.target.value as MediaPosition),
+      zoneOptions: selectableZones.map((zone) => ({ id: zone.id, name: zone.name, color: zone.color })),
+      selZoneId:
+        sel && selectableZones.some((zone) => zone.id === (sel.zoneId || DEFAULT_ZONE_ID))
+          ? sel.zoneId || DEFAULT_ZONE_ID
+          : selectableZones[0]?.id || DEFAULT_ZONE_ID,
+      onZoneChange: (e: React.ChangeEvent<HTMLSelectElement>) => {
+        setLayoutGuidesTouched(true);
+        updateSelected("zoneId", e.target.value);
+      },
       fallback,
       fallbackOptions: FALLBACK_OPTIONS,
       onFallbackChange: (e: React.ChangeEvent<HTMLSelectElement>) => {
@@ -792,10 +957,12 @@ export function usePlaylistEditor({ playlistId }: UsePlaylistEditorOptions = {})
         seek(e);
         setSelectedId(null);
       },
+      zoneLanes,
       lockedTracks: LOCKED_TRACKS,
       overviewBlocks,
       selActionsVisible: !!sel && !drag,
-      selActionsLeft: sel ? PAD + starts[selIdx] * zoom + 4 : 0,
+      selActionsLeft: sel ? PAD + (laneStarts.starts.get(sel.instanceId) || 0) * zoom + 4 : 0,
+      selActionsTop: selectedLaneIndex * 54 + 2,
       onSelLeft: (e: React.MouseEvent) => {
         e.stopPropagation();
         moveSelected(-1);
@@ -848,6 +1015,8 @@ export function usePlaylistEditor({ playlistId }: UsePlaylistEditorOptions = {})
       displayName: display.name,
       displayRes: `${display.w} × ${display.h}`,
       deviceName: device,
+      renderStatus: publishRenderStatus?.renderStatus ?? null,
+      renderUrl: publishRenderStatus?.s3Url ?? publishRenderStatus?.outputPath ?? null,
     },
   };
 }
