@@ -4,12 +4,13 @@ import { apiError, isEmail, readJson } from "@/lib/api";
 import { requireAdmin } from "@/lib/admin-auth";
 import { normalizeEmail } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { PERMISSIONS } from "@/lib/rbac";
 import type { Prisma } from "@/app/generated/prisma/client";
 
 const PAGE_SIZE = 10;
 
 export async function GET(request: NextRequest) {
-  const auth = await requireAdmin(request);
+  const auth = await requireAdmin(request, PERMISSIONS.ADMIN_USERS_READ);
   if (auth.response) return auth.response;
 
   const search = request.nextUrl.searchParams.get("search")?.trim() || "";
@@ -22,7 +23,7 @@ export async function GET(request: NextRequest) {
   }
 
   const where: Prisma.UserWhereInput = {
-    role: { name: "ADMIN" },
+    role: { scope: "SYSTEM" },
     ...(status !== "ALL" ? { status: status as "ACTIVE" | "INACTIVE" | "SUSPENDED" } : {}),
     ...(search
       ? {
@@ -48,33 +49,32 @@ export async function GET(request: NextRequest) {
         lastName: true,
         status: true,
         createdAt: true,
-        role: { select: { name: true } },
-        sessions: { orderBy: { createdAt: "desc" }, take: 1, select: { createdAt: true } },
+        role: { select: { id: true, name: true, isSystem: true } },
       },
     }),
     prisma.user.count({ where }),
-    prisma.user.count({ where: { role: { name: "ADMIN" }, status: "ACTIVE" } }),
-    prisma.user.count({
-      where: { role: { name: "ADMIN" }, status: { in: ["INACTIVE", "SUSPENDED"] } },
-    }),
+    prisma.user.count({ where: { ...where, status: "ACTIVE" } }),
+    prisma.user.count({ where: { ...where, status: "INACTIVE" } }),
   ]);
 
   return NextResponse.json({
     success: true,
     data: {
-      users: users.map(({ sessions, ...user }) => ({
-        ...user,
-        lastLoginAt: sessions[0]?.createdAt ?? null,
-        isCurrentUser: user.id === auth.admin.id,
-      })),
-      pagination: { page, pageSize: PAGE_SIZE, total, totalPages: Math.max(1, Math.ceil(total / PAGE_SIZE)) },
-      summary: { total: active + inactive, active, inactive },
+      users,
+      pagination: {
+        page,
+        pageSize: PAGE_SIZE,
+        total,
+        totalPages: Math.ceil(total / PAGE_SIZE),
+      },
+      summary: { total, active, inactive },
+      counts: { total, active, inactive },
     },
   });
 }
 
 export async function POST(request: NextRequest) {
-  const auth = await requireAdmin(request);
+  const auth = await requireAdmin(request, PERMISSIONS.ADMIN_USERS_WRITE);
   if (auth.response) return auth.response;
 
   const body = await readJson(request);
@@ -82,13 +82,12 @@ export async function POST(request: NextRequest) {
   const lastName = typeof body?.lastName === "string" ? body.lastName.trim() : "";
   const email = typeof body?.email === "string" ? normalizeEmail(body.email) : "";
   const password = typeof body?.password === "string" ? body.password : "";
+  const roleId = typeof body?.roleId === "string" ? body.roleId.trim() : "";
+
   const errors = [
-    ...(!firstName ? ["First name is required."] : []),
-    ...(!lastName ? ["Last name is required."] : []),
+    ...(!firstName || !lastName ? ["First and last name are required."] : []),
     ...(!isEmail(email) ? ["A valid email address is required."] : []),
-    ...(password.length < 12 || !/[a-z]/.test(password) || !/[A-Z]/.test(password) || !/\d/.test(password) || !/[^A-Za-z0-9]/.test(password)
-      ? ["Password must be at least 12 characters with uppercase, lowercase, number, and symbol."]
-      : []),
+    ...(password.length < 8 ? ["Password must be at least 8 characters."] : []),
   ];
   if (errors.length) return apiError("Validation failed.", 422, errors);
 
@@ -96,29 +95,54 @@ export async function POST(request: NextRequest) {
     return apiError("An account with this email already exists.", 409);
   }
 
+  // Determine system role to assign
+  let assignedRole = roleId
+    ? await prisma.role.findFirst({ where: { id: roleId, scope: "SYSTEM" } })
+    : await prisma.role.findFirst({ where: { tenantId: null, name: "SUPER_ADMIN", scope: "SYSTEM" } });
+
+  if (!assignedRole) {
+    assignedRole = await prisma.role.findFirst({ where: { scope: "SYSTEM" } });
+  }
+
+  if (!assignedRole) {
+    return apiError("No platform administrator role found. Run seed script first.", 500);
+  }
+
   const passwordHash = await bcrypt.hash(password, 12);
   const user = await prisma.$transaction(async (tx) => {
-    const role = await tx.role.upsert({
-      where: { name: "ADMIN" },
-      update: {},
-      create: { name: "ADMIN", description: "Rubenius platform administrator" },
-    });
     const created = await tx.user.create({
-      data: { firstName, lastName, email, passwordHash, tenantId: auth.admin.tenantId, roleId: role.id },
-      select: { id: true, email: true, firstName: true, lastName: true, status: true, createdAt: true },
+      data: {
+        firstName,
+        lastName,
+        email,
+        passwordHash,
+        tenantId: auth.admin.tenantId,
+        roleId: assignedRole.id,
+      },
+      select: {
+        id: true,
+        email: true,
+        firstName: true,
+        lastName: true,
+        status: true,
+        createdAt: true,
+        role: { select: { id: true, name: true, isSystem: true } },
+      },
     });
+
     await tx.auditLog.create({
       data: {
         tenantId: auth.admin.tenantId,
         userId: auth.admin.id,
         action: "ADMIN_USER_CREATED",
-        description: `Created administrator ${email}`,
+        description: `Created administrator ${email} with role ${assignedRole.name}`,
         ipAddress: request.headers.get("x-forwarded-for")?.split(",")[0]?.trim(),
         userAgent: request.headers.get("user-agent"),
       },
     });
+
     return created;
   });
 
-  return NextResponse.json({ success: true, message: "Administrator created successfully.", data: { user } }, { status: 201 });
+  return NextResponse.json({ success: true, message: "Administrator user created.", data: user }, { status: 201 });
 }
