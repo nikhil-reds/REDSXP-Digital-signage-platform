@@ -1,0 +1,229 @@
+import bcrypt from "bcryptjs";
+import { PrismaPg } from "@prisma/adapter-pg";
+import { PrismaClient, RoleScope, TenantStatus, UserStatus } from "../app/generated/prisma/client";
+
+import fs from "node:fs";
+import path from "node:path";
+
+function loadEnv() {
+  if (!process.env.DATABASE_URL) {
+    const envPath = path.resolve(__dirname, "../.env");
+    if (fs.existsSync(envPath)) {
+      const content = fs.readFileSync(envPath, "utf-8");
+      for (const line of content.split("\n")) {
+        const trimmed = line.trim();
+        if (trimmed && !trimmed.startsWith("#") && trimmed.includes("=")) {
+          const [key, ...valParts] = trimmed.split("=");
+          const value = valParts.join("=").replace(/^["']|["']$/g, "");
+          if (key && !process.env[key.trim()]) {
+            process.env[key.trim()] = value;
+          }
+        }
+      }
+    }
+  }
+}
+
+loadEnv();
+
+function createPrismaClient() {
+  const connectionString = process.env.DATABASE_URL;
+  if (!connectionString) {
+    throw new Error("DATABASE_URL environment variable is required.");
+  }
+  return new PrismaClient({ adapter: new PrismaPg({ connectionString }) });
+}
+
+const prisma = createPrismaClient();
+
+export const SYSTEM_PERMISSIONS = [
+  { key: "admin:tenants:read", name: "Read Tenants", resource: "tenants", action: "read", description: "View workspace tenants and organization metadata" },
+  { key: "admin:tenants:write", name: "Manage Tenants", resource: "tenants", action: "write", description: "Create, update, or suspend workspace tenants" },
+  { key: "admin:tenants:delete", name: "Delete Tenants", resource: "tenants", action: "delete", description: "Delete workspace tenants" },
+
+  { key: "admin:plans:read", name: "Read Plans", resource: "plans", action: "read", description: "View subscription plans and quota limits" },
+  { key: "admin:plans:write", name: "Manage Plans", resource: "plans", action: "write", description: "Create and modify subscription plans" },
+
+  { key: "admin:billing:read", name: "Read System Billing", resource: "billing", action: "read", description: "View system-wide revenue, payments, and invoices" },
+  { key: "admin:billing:write", name: "Manage System Billing", resource: "billing", action: "write", description: "Modify billing records and payment gateways" },
+
+  { key: "admin:users:read", name: "Read System Users", resource: "users", action: "read", description: "View platform users across all tenants" },
+  { key: "admin:users:write", name: "Manage System Users", resource: "users", action: "write", description: "Create and edit platform administrators" },
+
+  { key: "admin:roles:read", name: "Read Admin Roles", resource: "roles", action: "read", description: "View platform administrator roles and permissions" },
+  { key: "admin:roles:write", name: "Manage Admin Roles", resource: "roles", action: "write", description: "Create and edit custom platform administrator roles" },
+
+  { key: "admin:audit:read", name: "Read System Audit Logs", resource: "audit", action: "read", description: "View system audit logs across all tenants" },
+];
+
+export const TENANT_PERMISSIONS = [
+  { key: "media:read", name: "Read Media", resource: "media", action: "read", description: "View media library assets" },
+  { key: "media:create", name: "Upload Media", resource: "media", action: "create", description: "Upload new media assets" },
+  { key: "media:update", name: "Update Media", resource: "media", action: "update", description: "Edit media asset details" },
+  { key: "media:delete", name: "Delete Media", resource: "media", action: "delete", description: "Delete media assets" },
+
+  { key: "playlist:read", name: "Read Playlists", resource: "playlist", action: "read", description: "View playlist content" },
+  { key: "playlist:create", name: "Create Playlist", resource: "playlist", action: "create", description: "Create new content playlists" },
+  { key: "playlist:update", name: "Update Playlist", resource: "playlist", action: "update", description: "Edit playlists and reorder items" },
+  { key: "playlist:delete", name: "Delete Playlist", resource: "playlist", action: "delete", description: "Delete playlists" },
+
+  { key: "schedule:read", name: "Read Schedules", resource: "schedule", action: "read", description: "View playlist calendars and schedules" },
+  { key: "schedule:create", name: "Create Schedule", resource: "schedule", action: "create", description: "Create calendar schedules" },
+  { key: "schedule:update", name: "Update Schedule", resource: "schedule", action: "update", description: "Edit calendar schedule timing and priority" },
+  { key: "schedule:delete", name: "Delete Schedule", resource: "schedule", action: "delete", description: "Remove calendar schedules" },
+
+  { key: "device:read", name: "Read Devices", resource: "device", action: "read", description: "View digital signage display devices" },
+  { key: "device:create", name: "Register Device", resource: "device", action: "create", description: "Register new signage devices" },
+  { key: "device:update", name: "Update Device", resource: "device", action: "update", description: "Modify device settings and assigned playlists" },
+  { key: "device:delete", name: "Unregister Device", resource: "device", action: "delete", description: "Delete signage display devices" },
+  { key: "device:reboot", name: "Reboot Device", resource: "device", action: "reboot", description: "Send remote reboot command to devices" },
+
+  { key: "tenant:users:read", name: "Read Workspace Users", resource: "users", action: "read", description: "View workspace team members" },
+  { key: "tenant:users:create", name: "Invite Workspace Users", resource: "users", action: "create", description: "Invite new team members" },
+  { key: "tenant:users:update", name: "Update Workspace Users", resource: "users", action: "update", description: "Edit team member details and roles" },
+  { key: "tenant:users:delete", name: "Remove Workspace Users", resource: "users", action: "delete", description: "Remove team members from workspace" },
+
+  { key: "tenant:roles:read", name: "Read Custom Roles", resource: "roles", action: "read", description: "View workspace custom roles" },
+  { key: "tenant:roles:create", name: "Create Custom Roles", resource: "roles", action: "create", description: "Create new workspace custom roles" },
+  { key: "tenant:roles:update", name: "Update Custom Roles", resource: "roles", action: "update", description: "Modify permissions of custom roles" },
+  { key: "tenant:roles:delete", name: "Delete Custom Roles", resource: "roles", action: "delete", description: "Delete unassigned custom roles" },
+
+  { key: "tenant:audit:read", name: "Read Workspace Audit Logs", resource: "audit", action: "read", description: "View activity audit logs for this workspace" },
+];
+
+export async function main() {
+  console.log("🌱 Starting RBAC seed process...");
+
+  // 1. Seed SYSTEM Scope Permissions
+  for (const perm of SYSTEM_PERMISSIONS) {
+    await prisma.permission.upsert({
+      where: { key: perm.key },
+      update: { name: perm.name, resource: perm.resource, action: perm.action, description: perm.description, scope: RoleScope.SYSTEM },
+      create: { ...perm, scope: RoleScope.SYSTEM },
+    });
+  }
+
+  // 2. Seed TENANT Scope Permissions
+  for (const perm of TENANT_PERMISSIONS) {
+    await prisma.permission.upsert({
+      where: { key: perm.key },
+      update: { name: perm.name, resource: perm.resource, action: perm.action, description: perm.description, scope: RoleScope.TENANT },
+      create: { ...perm, scope: RoleScope.TENANT },
+    });
+  }
+
+  console.log("✅ Seeded permissions (SYSTEM & TENANT).");
+
+  // 3. Seed Default SUPER_ADMIN Role (System Scope)
+  const systemPerms = await prisma.permission.findMany({ where: { scope: RoleScope.SYSTEM } });
+  
+  let superAdminRole = await prisma.role.findFirst({
+    where: { tenantId: null, name: "SUPER_ADMIN" },
+  });
+
+  if (superAdminRole) {
+    superAdminRole = await prisma.role.update({
+      where: { id: superAdminRole.id },
+      data: {
+        scope: RoleScope.SYSTEM,
+        isSystem: true,
+        description: "Full Platform Super Administrator access",
+        permissions: { set: systemPerms.map((p) => ({ id: p.id })) },
+      },
+    });
+  } else {
+    superAdminRole = await prisma.role.create({
+      data: {
+        name: "SUPER_ADMIN",
+        tenantId: null,
+        scope: RoleScope.SYSTEM,
+        isSystem: true,
+        description: "Full Platform Super Administrator access",
+        permissions: { connect: systemPerms.map((p) => ({ id: p.id })) },
+      },
+    });
+  }
+
+  console.log(`✅ Seeded SUPER_ADMIN role (${superAdminRole.id}).`);
+
+  // 4. Seed Template AGENT_ADMIN Role (Tenant Scope template)
+  const tenantPerms = await prisma.permission.findMany({ where: { scope: RoleScope.TENANT } });
+  
+  let agentAdminRole = await prisma.role.findFirst({
+    where: { tenantId: null, name: "AGENT_ADMIN" },
+  });
+
+  if (agentAdminRole) {
+    agentAdminRole = await prisma.role.update({
+      where: { id: agentAdminRole.id },
+      data: {
+        scope: RoleScope.TENANT,
+        isSystem: true,
+        description: "Workspace Administrator default role template",
+        permissions: { set: tenantPerms.map((p) => ({ id: p.id })) },
+      },
+    });
+  } else {
+    agentAdminRole = await prisma.role.create({
+      data: {
+        name: "AGENT_ADMIN",
+        tenantId: null,
+        scope: RoleScope.TENANT,
+        isSystem: true,
+        description: "Workspace Administrator default role template",
+        permissions: { connect: tenantPerms.map((p) => ({ id: p.id })) },
+      },
+    });
+  }
+
+  console.log(`✅ Seeded AGENT_ADMIN role template (${agentAdminRole.id}).`);
+
+  // 5. Seed System Admin Tenant & Super Admin User
+  const systemTenant = await prisma.tenant.upsert({
+    where: { slug: "system-admin" },
+    update: { name: "REDS System Administration", status: TenantStatus.ACTIVE },
+    create: {
+      name: "REDS System Administration",
+      slug: "system-admin",
+      status: TenantStatus.ACTIVE,
+      primaryColor: "#0F172A",
+    },
+  });
+
+  const superAdminEmail = "superadmin@redsxp.com";
+  const defaultPassword = "SuperAdmin@123456";
+  const passwordHash = await bcrypt.hash(defaultPassword, 12);
+
+  const superAdminUser = await prisma.user.upsert({
+    where: { email: superAdminEmail },
+    update: {
+      roleId: superAdminRole.id,
+      tenantId: systemTenant.id,
+      passwordHash,
+      status: UserStatus.ACTIVE,
+    },
+    create: {
+      email: superAdminEmail,
+      firstName: "Super",
+      lastName: "Admin",
+      passwordHash,
+      roleId: superAdminRole.id,
+      tenantId: systemTenant.id,
+      status: UserStatus.ACTIVE,
+    },
+  });
+
+  console.log(`✅ Seeded Super Admin User (${superAdminUser.email}).`);
+  console.log("🎉 RBAC Seeding completed successfully!");
+}
+
+if (require.main === module) {
+  main()
+    .catch((e) => {
+      console.error("❌ Seeding failed:", e);
+      process.exit(1);
+    })
+    .finally(async () => {
+      await prisma.$disconnect();
+    });
+}
