@@ -1,5 +1,5 @@
-import { CLIP_TYPE_COLORS } from "./constants";
-import { ClipType, LibraryAsset, MediaFit, MediaPosition, MediaStatus, PlaylistSummary } from "./types";
+import { CLIP_TYPE_COLORS, DEFAULT_ZONE_ID } from "./constants";
+import { ClipType, LibraryAsset, MediaFit, MediaPosition, MediaStatus, PlaylistLayoutMode, PlaylistSummary, PlaylistZone } from "./types";
 
 export const DEFAULT_IMAGE_DURATION_SEC = 10;
 
@@ -35,6 +35,7 @@ interface RawPlaylistItem {
   durationSec: number;
   fit?: MediaFit | null;
   objectPosition?: MediaPosition | null;
+  zoneId?: string | null;
 }
 
 interface RawPlaylist {
@@ -44,6 +45,10 @@ interface RawPlaylist {
   displayName?: string | null;
   displayWidth?: number | null;
   displayHeight?: number | null;
+  layoutMode?: PlaylistLayoutMode | null;
+  gridRows?: number | null;
+  gridColumns?: number | null;
+  zonesJson?: PlaylistZone[] | null;
   updatedAt: string;
   playlistItems: RawPlaylistItem[];
 }
@@ -94,7 +99,11 @@ export interface PlaylistDetail {
   displayName: string;
   displayWidth: number;
   displayHeight: number;
-  items: { mediaId: string; position: number; durationSec: number; fit: MediaFit; positionMode: MediaPosition }[];
+  layoutMode: PlaylistLayoutMode;
+  gridRows: number;
+  gridColumns: number;
+  zones: PlaylistZone[];
+  items: { mediaId: string; position: number; durationSec: number; fit: MediaFit; positionMode: MediaPosition; zoneId: string }[];
 }
 
 function toPlaylistDetail(p: RawPlaylist): PlaylistDetail {
@@ -104,6 +113,10 @@ function toPlaylistDetail(p: RawPlaylist): PlaylistDetail {
     displayName: p.displayName ?? "Landscape 16:9",
     displayWidth: p.displayWidth ?? 1920,
     displayHeight: p.displayHeight ?? 1080,
+    layoutMode: p.layoutMode === "custom-grid" ? "custom-grid" : "zone",
+    gridRows: p.gridRows ?? 3,
+    gridColumns: p.gridColumns ?? 3,
+    zones: Array.isArray(p.zonesJson) ? p.zonesJson : [],
     items: p.playlistItems
       .slice()
       .sort((a, b) => a.position - b.position)
@@ -113,6 +126,7 @@ function toPlaylistDetail(p: RawPlaylist): PlaylistDetail {
         durationSec: it.durationSec,
         fit: it.fit ?? "scale-down",
         positionMode: it.objectPosition ?? "center",
+        zoneId: it.zoneId ?? DEFAULT_ZONE_ID,
       })),
   };
 }
@@ -122,7 +136,24 @@ export interface SavePlaylistPayload {
   displayName: string;
   displayWidth: number;
   displayHeight: number;
-  items: { mediaId: string; position: number; durationSec: number; fit: MediaFit; objectPosition: MediaPosition }[];
+  layoutMode: PlaylistLayoutMode;
+  gridRows: number;
+  gridColumns: number;
+  zones: PlaylistZone[];
+  publish?: boolean;
+  items: { mediaId: string; position: number; durationSec: number; fit: MediaFit; objectPosition: MediaPosition; zoneId: string }[];
+}
+
+export interface PlaylistRenderStatus {
+  playlistId: string;
+  renderStatus: string;
+  renderError: string | null;
+  renderAttempts: number;
+  outputPath: string | null;
+  s3Url: string | null;
+  durationSec: number | null;
+  renderedAt: string | null;
+  updatedAt: string | null;
 }
 
 export async function fetchMediaLibrary(): Promise<LibraryAsset[]> {
@@ -154,6 +185,10 @@ export async function updatePlaylist(id: string, payload: SavePlaylistPayload): 
     body: JSON.stringify(payload),
   });
   return toPlaylistDetail(raw);
+}
+
+export async function fetchPlaylistRenderStatus(id: string): Promise<PlaylistRenderStatus> {
+  return request<PlaylistRenderStatus>(`/api/playlist/${id}/render-status`);
 }
 
 export async function deletePlaylist(id: string): Promise<void> {
