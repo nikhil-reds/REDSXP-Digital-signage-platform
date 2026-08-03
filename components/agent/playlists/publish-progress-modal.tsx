@@ -16,6 +16,8 @@ interface PublishProgressModalProps {
   displayName: string;
   displayRes: string;
   deviceName: string;
+  renderStatus: string | null;
+  renderUrl: string | null;
 }
 
 export default function PublishProgressModal({
@@ -31,6 +33,8 @@ export default function PublishProgressModal({
   displayName,
   displayRes,
   deviceName,
+  renderStatus,
+  renderUrl,
 }: PublishProgressModalProps) {
   if (!open) return null;
 
@@ -89,6 +93,14 @@ export default function PublishProgressModal({
           </span>
           <span className="text-zinc-450">Output</span>
           <span className="font-semibold">{deviceName}</span>
+          <span className="text-zinc-450">Render</span>
+          <span className="font-semibold capitalize">{renderStatus?.replaceAll("_", " ") ?? "Queued"}</span>
+          {renderUrl && (
+            <>
+              <span className="text-zinc-450">Video</span>
+              <span className="font-mono truncate">{renderUrl}</span>
+            </>
+          )}
         </div>
 
         <div className="flex gap-2 w-full">
