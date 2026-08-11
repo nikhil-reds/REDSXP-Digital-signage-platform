@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { Film, Image as ImageIcon, Code, AlertCircle, RefreshCw, Archive, CheckCircle2 } from "lucide-react";
+import { Film, Image as ImageIcon, Code, AlertCircle, RefreshCw } from "lucide-react";
 
 export interface MediaAsset {
   id: string;
@@ -17,6 +17,8 @@ export interface MediaAsset {
   date: string;
   usedInPlaylists: string[];
   cdnUrl?: string; // Real S3 URL
+  sourceType?: "upload" | "external_url";
+  externalUrl?: string | null;
 }
 
 interface MediaGridProps {
@@ -30,9 +32,9 @@ export default function MediaGrid({ assets, onSelectMedia }: MediaGridProps) {
       {assets.map((asset) => {
         const isVideo = asset.type === "Video";
         const isHtml = asset.type === "HTML5";
-        const isReady = asset.status === "Ready";
         const isProcessing = asset.status === "Transcoding" || asset.status === "Uploading";
         const isFailed = asset.status === "Failed";
+        const isExternalLink = asset.sourceType === "external_url";
 
         // Determine aspect ratio for representation
         const isPortrait = asset.dimensions?.startsWith("1080") || asset.dimensions?.startsWith("2160");
@@ -61,7 +63,7 @@ export default function MediaGrid({ assets, onSelectMedia }: MediaGridProps) {
 
               {/* Badges */}
               <span className="absolute top-1 left-1 text-[6px] bg-zinc-900/80 text-white dark:bg-white/80 dark:text-zinc-950 font-bold px-1 py-0.2 rounded-sm uppercase tracking-wide">
-                {asset.type}
+                {isExternalLink ? "HTML LINK" : asset.type}
               </span>
 
               {asset.duration && (
@@ -107,7 +109,7 @@ export default function MediaGrid({ assets, onSelectMedia }: MediaGridProps) {
               </span>
               <div className="flex justify-between items-center text-[6px] text-zinc-400 dark:text-zinc-550 font-semibold">
                 <span className="truncate">{asset.dimensions}</span>
-                <span>{asset.size}</span>
+                <span className="shrink-0">{asset.size}</span>
               </div>
             </div>
 
