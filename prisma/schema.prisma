@@ -129,6 +129,8 @@ model Media {
   filename    String
   s3Key       String      @map("s3_key")
   cdnUrl      String      @map("cdn_url")
+  sourceType  String      @default("upload") @map("source_type")
+  externalUrl String?     @map("external_url")
   sizeBytes   BigInt      @map("size_bytes")
   durationSec Int?        @map("duration_sec")
   width       Int?
