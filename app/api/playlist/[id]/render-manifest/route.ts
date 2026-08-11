@@ -48,6 +48,8 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
           durationSec: item.media.durationSec,
           cdnUrl: item.media.cdnUrl,
           s3Key: item.media.s3Key,
+          sourceType: item.media.sourceType,
+          externalUrl: item.media.externalUrl,
           type: item.media.mediaType?.name ?? "image",
         },
       })),
