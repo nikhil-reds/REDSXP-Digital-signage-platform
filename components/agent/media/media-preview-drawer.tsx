@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
-import { X, Film, Image as ImageIcon, Code, Trash, AlertTriangle, HelpCircle, HardDrive, Calendar } from "lucide-react";
+import { X, Film, Image as ImageIcon, Code, Trash, AlertTriangle, HardDrive, ExternalLink } from "lucide-react";
 import { MediaAsset } from "./media-grid";
 
 interface MediaPreviewDrawerProps {
@@ -16,6 +16,7 @@ export default function MediaPreviewDrawer({ asset, onClose, onDeleteAsset }: Me
   const isVideo = asset.type === "Video";
   const isHtml = asset.type === "HTML5";
   const isUsed = asset.usedInPlaylists.length > 0;
+  const isExternalLink = asset.sourceType === "external_url";
 
   const handleDeleteTrigger = () => {
     if (isUsed) {
@@ -40,7 +41,7 @@ export default function MediaPreviewDrawer({ asset, onClose, onDeleteAsset }: Me
             </h2>
             <div className="mt-1">
               <span className="text-[9px] px-1.5 py-0.5 rounded-sm font-bold bg-[#F6F7F9] dark:bg-[#171F2C] border border-[#E2E6EC] dark:border-[#283243] text-zinc-500 uppercase">
-                {asset.type}
+                {isExternalLink ? "HTML Link" : asset.type}
               </span>
             </div>
           </div>
@@ -63,8 +64,17 @@ export default function MediaPreviewDrawer({ asset, onClose, onDeleteAsset }: Me
           <video src={asset.cdnUrl} className="absolute inset-0 w-full h-full object-contain" controls />
         )}
 
-        {/* Fallback Icons if no URL or if HTML */}
-        {(!asset.cdnUrl || isHtml) && (
+        {asset.cdnUrl && isHtml && isExternalLink && (
+          <iframe
+            src={asset.cdnUrl}
+            title={asset.name}
+            className="absolute inset-0 w-full h-full bg-white"
+            sandbox="allow-scripts allow-same-origin allow-forms allow-popups"
+          />
+        )}
+
+        {/* Fallback Icons if no URL or uploaded HTML package */}
+        {(!asset.cdnUrl || (isHtml && !isExternalLink)) && (
           <>
             {isVideo ? (
               <Film className="w-12 h-12 text-[#2859D9]/40" />
@@ -74,11 +84,24 @@ export default function MediaPreviewDrawer({ asset, onClose, onDeleteAsset }: Me
               <ImageIcon className="w-12 h-12 text-emerald-500/40" />
             )}
             <span className="absolute bottom-2 left-2 text-[9px] font-bold text-zinc-400 bg-white/80 dark:bg-zinc-950/80 px-1.5 py-0.5 rounded border border-[#E2E6EC] dark:border-[#283243]">
-              File Preview Slot
+              {isHtml ? "HTML Package" : "File Preview Slot"}
             </span>
           </>
         )}
       </div>
+      {isExternalLink && asset.cdnUrl && (
+        <div className="px-4 pb-4 border-b border-[#E2E6EC] dark:border-[#283243]">
+          <a
+            href={asset.cdnUrl}
+            target="_blank"
+            rel="noreferrer"
+            className="mt-3 w-full py-2 text-xs font-bold rounded-lg border border-[#E2E6EC] dark:border-[#283243] text-[#2859D9] dark:text-[#6F96FF] flex items-center justify-center gap-1.5 hover:bg-[#F6F7F9] dark:hover:bg-[#171F2C] transition-colors"
+          >
+            <ExternalLink className="w-3.5 h-3.5" />
+            <span>Open HTML Link</span>
+          </a>
+        </div>
+      )}
 
       {/* Detailed Metadata parameters */}
       <div className="p-4 border-b border-[#E2E6EC] dark:border-[#283243] space-y-3.5 text-xs">
@@ -88,7 +111,7 @@ export default function MediaPreviewDrawer({ asset, onClose, onDeleteAsset }: Me
         
         <div className="grid grid-cols-2 gap-y-3.5 gap-x-4">
           <div>
-            <span className="block text-[9px] uppercase font-bold text-zinc-400 dark:text-zinc-500">File size</span>
+            <span className="block text-[9px] uppercase font-bold text-zinc-400 dark:text-zinc-500">{isExternalLink ? "Source" : "File size"}</span>
             <span className="font-semibold text-zinc-800 dark:text-zinc-200 mt-0.5 block font-mono">{asset.size}</span>
           </div>
           <div>
