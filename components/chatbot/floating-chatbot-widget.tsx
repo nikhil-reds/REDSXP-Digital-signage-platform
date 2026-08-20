@@ -3,20 +3,32 @@
 import React, { useState, useEffect } from "react";
 import { MessageSquare, X, Send, Sparkles, Bot, User, Mic, MicOff, Volume2, ArrowLeft } from "lucide-react";
 
+type Card = { title: string; subtitle?: string; badge?: string; href?: string };
+
+type ChatMsg = {
+  id: string;
+  sender: "bot" | "user";
+  text: string;
+  time: string;
+  cards?: Card[];
+  isError?: boolean;
+};
+
 export default function FloatingChatbotWidget() {
   const [isOpen, setIsOpen] = useState(false);
   const [isVoiceActive, setIsVoiceActive] = useState(false);
   const [isListening, setIsListening] = useState(true);
   const [transcript, setTranscript] = useState("Listening to your voice command...");
-  const [messages, setMessages] = useState([
+  const [messages, setMessages] = useState<ChatMsg[]>([
     {
       id: "1",
       sender: "bot",
-      text: "Hello! How can I assist you with your Digital Signage platform today?",
+      text: "Hello! Ask me about screens, schedules, playlists, media, or alerts — I can look things up for you.",
       time: "Just now"
     }
   ]);
   const [inputVal, setInputVal] = useState("");
+  const [isSending, setIsSending] = useState(false);
 
   // Simulated voice recognition cycle when voice mode is active
   useEffect(() => {
@@ -43,28 +55,34 @@ export default function FloatingChatbotWidget() {
     };
   }, [isVoiceActive]);
 
-  const handleSend = (e?: React.FormEvent) => {
+  const handleSend = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
-    if (!inputVal.trim()) return;
+    if (!inputVal.trim() || isSending) return;
 
-    const userMsg = {
+    const userMsg: ChatMsg = {
       id: Date.now().toString(),
       sender: "user",
       text: inputVal.trim(),
       time: "Just now"
     };
 
-    setMessages((prev) => [...prev, userMsg]);
-    const currentText = inputVal;
+    const nextMessages = [...messages, userMsg];
+    setMessages(nextMessages);
     setInputVal("");
+    setIsSending(true);
 
-    setTimeout(() => {
-      let reply = "I'm here to help with screen status, playlist schedules, or hardware support!";
-      const lower = currentText.toLowerCase();
-      if (lower.includes("screen") || lower.includes("display") || lower.includes("offline")) {
-        reply = "You can check active screen telemetry or file a hardware ticket in the Support section.";
-      } else if (lower.includes("playlist") || lower.includes("media")) {
-        reply = "Playlists can be scheduled under the Playlists tab in your agent dashboard.";
+    try {
+      const res = await fetch("/api/agent/assistant", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          messages: nextMessages.map((m) => ({ role: m.sender === "bot" ? "assistant" : "user", text: m.text })),
+        }),
+      });
+      const json = await res.json();
+
+      if (!res.ok || !json.success) {
+        throw new Error(json?.message || "The assistant is unavailable right now.");
       }
 
       setMessages((prev) => [
@@ -72,11 +90,25 @@ export default function FloatingChatbotWidget() {
         {
           id: (Date.now() + 1).toString(),
           sender: "bot",
-          text: reply,
+          text: json.data.reply,
+          cards: json.data.cards,
           time: "Just now"
         }
       ]);
-    }, 700);
+    } catch (error) {
+      setMessages((prev) => [
+        ...prev,
+        {
+          id: (Date.now() + 1).toString(),
+          sender: "bot",
+          text: error instanceof Error ? error.message : "Something went wrong. Please try again.",
+          time: "Just now",
+          isError: true
+        }
+      ]);
+    } finally {
+      setIsSending(false);
+    }
   };
 
   const handleQuickChip = (text: string) => {
@@ -252,13 +284,51 @@ export default function FloatingChatbotWidget() {
                       <div className="flex flex-col">
                         <div
                           className={`p-3 rounded-2xl leading-relaxed text-xs ${
-                            isBot
+                            msg.isError
+                              ? "bg-red-50 dark:bg-red-950/40 text-red-700 dark:text-red-300 border border-red-200 dark:border-red-900 rounded-tl-xs"
+                              : isBot
                               ? "bg-white dark:bg-[#171F2C] text-slate-800 dark:text-slate-100 border border-[#E5E8F2] dark:border-[#283243] rounded-tl-xs shadow-2xs"
                               : "bg-[#7A66F6] text-white rounded-tr-xs shadow-xs"
                           }`}
                         >
                           {msg.text}
                         </div>
+                        {msg.cards && msg.cards.length > 0 && (
+                          <div className="flex flex-col gap-1.5 mt-1.5">
+                            {msg.cards.slice(0, 6).map((card, idx) => {
+                              const content = (
+                                <>
+                                  <div className="flex items-center justify-between gap-2">
+                                    <span className="text-[11px] font-medium text-slate-700 dark:text-slate-200 truncate">
+                                      {card.title}
+                                    </span>
+                                    {card.badge && (
+                                      <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-[#7A66F6]/10 text-[#7A66F6] font-mono shrink-0">
+                                        {card.badge}
+                                      </span>
+                                    )}
+                                  </div>
+                                  {card.subtitle && (
+                                    <p className="text-[10px] text-slate-500 dark:text-slate-400 mt-0.5 truncate">
+                                      {card.subtitle}
+                                    </p>
+                                  )}
+                                </>
+                              );
+                              const cls =
+                                "block p-2 rounded-lg bg-white dark:bg-[#171F2C] border border-[#E5E8F2] dark:border-[#283243] shadow-2xs";
+                              return card.href ? (
+                                <a key={idx} href={card.href} className={`${cls} hover:border-[#7A66F6] transition-colors`}>
+                                  {content}
+                                </a>
+                              ) : (
+                                <div key={idx} className={cls}>
+                                  {content}
+                                </div>
+                              );
+                            })}
+                          </div>
+                        )}
                         <span
                           className={`text-[9px] text-slate-400 mt-1 font-mono ${
                             isBot ? "text-left" : "text-right"
@@ -270,6 +340,18 @@ export default function FloatingChatbotWidget() {
                     </div>
                   );
                 })}
+                {isSending && (
+                  <div className="flex items-center gap-2.5 max-w-[85%] mr-auto">
+                    <div className="w-7 h-7 rounded-full shrink-0 flex items-center justify-center bg-[#7A66F6]/15 text-[#7A66F6] border border-[#7A66F6]/20">
+                      <Bot className="w-3.5 h-3.5" />
+                    </div>
+                    <div className="p-3 rounded-2xl rounded-tl-xs bg-white dark:bg-[#171F2C] border border-[#E5E8F2] dark:border-[#283243] shadow-2xs flex gap-1">
+                      <span className="w-1.5 h-1.5 rounded-full bg-slate-300 dark:bg-slate-600 animate-bounce [animation-delay:-0.2s]" />
+                      <span className="w-1.5 h-1.5 rounded-full bg-slate-300 dark:bg-slate-600 animate-bounce [animation-delay:-0.1s]" />
+                      <span className="w-1.5 h-1.5 rounded-full bg-slate-300 dark:bg-slate-600 animate-bounce" />
+                    </div>
+                  </div>
+                )}
               </div>
 
               {/* Bottom Chat Input Form */}
@@ -283,7 +365,8 @@ export default function FloatingChatbotWidget() {
                     placeholder="Type your message..."
                     value={inputVal}
                     onChange={(e) => setInputVal(e.target.value)}
-                    className="w-full pl-3.5 pr-9 py-2.5 bg-[#F6F7FB] dark:bg-[#171F2C] border border-[#E2E5F0] dark:border-[#283243] rounded-xl text-xs text-slate-800 dark:text-slate-100 placeholder-slate-400 focus:outline-none focus:border-[#7A66F6] transition-colors"
+                    disabled={isSending}
+                    className="w-full pl-3.5 pr-9 py-2.5 bg-[#F6F7FB] dark:bg-[#171F2C] border border-[#E2E5F0] dark:border-[#283243] rounded-xl text-xs text-slate-800 dark:text-slate-100 placeholder-slate-400 focus:outline-none focus:border-[#7A66F6] transition-colors disabled:opacity-60"
                   />
                   <button
                     type="button"
@@ -296,7 +379,7 @@ export default function FloatingChatbotWidget() {
                 </div>
                 <button
                   type="submit"
-                  disabled={!inputVal.trim()}
+                  disabled={!inputVal.trim() || isSending}
                   className="p-2.5 bg-[#7A66F6] hover:bg-[#6853f3] disabled:opacity-40 text-white rounded-xl transition-all cursor-pointer shadow-xs active:scale-95 shrink-0"
                 >
                   <Send className="w-4 h-4" />
