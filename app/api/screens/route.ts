@@ -38,6 +38,9 @@ export function serializeDevice(device: {
   lastSeen: Date | null;
   alertsCount: number;
   alertsSeverity: AlertSeverity;
+  installId: string | null;
+  platform: "LINUX" | "WINDOWS" | null;
+  playerRegistrationId: string | null;
   group: { name: string } | null;
   playlist: { name: string } | null;
 }) {
@@ -54,6 +57,9 @@ export function serializeDevice(device: {
     heartbeat: formatHeartbeat(device.lastSeen),
     alertsCount: device.alertsCount,
     alertsSeverity: SEVERITY_LABEL[device.alertsSeverity],
+    installId: device.installId,
+    platform: device.platform,
+    playerRegistrationId: device.playerRegistrationId,
   };
 }
 

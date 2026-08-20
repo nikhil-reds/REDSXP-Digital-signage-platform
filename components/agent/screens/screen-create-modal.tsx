@@ -1,22 +1,26 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import { X, Monitor } from "lucide-react";
+import { Cpu, Monitor, X } from "lucide-react";
 import { fetchScreenGroups } from "@/components/agent/screen-groups/api";
 import { ScreenGroup } from "@/components/agent/screen-groups/groups-grid";
-import { CreateScreenPayload } from "./api";
+import { CreateScreenPayload, PlayerRegistration, fetchInstalledPlayers } from "./api";
 
 interface ScreenCreateModalProps {
   onClose: () => void;
   onCreate: (payload: CreateScreenPayload) => Promise<void>;
+  onClaimPlayer: (registrationId: string, payload: { name: string; location?: string; groupId?: string }) => Promise<void>;
 }
 
-export default function ScreenCreateModal({ onClose, onCreate }: ScreenCreateModalProps) {
+export default function ScreenCreateModal({ onClose, onCreate, onClaimPlayer }: ScreenCreateModalProps) {
+  const [mode, setMode] = useState<"manual" | "registered">("registered");
   const [name, setName] = useState("");
   const [model, setModel] = useState("");
   const [location, setLocation] = useState("");
   const [groupId, setGroupId] = useState("");
   const [groups, setGroups] = useState<ScreenGroup[]>([]);
+  const [players, setPlayers] = useState<PlayerRegistration[]>([]);
+  const [selectedPlayerId, setSelectedPlayerId] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -24,6 +28,13 @@ export default function ScreenCreateModal({ onClose, onCreate }: ScreenCreateMod
     fetchScreenGroups()
       .then(setGroups)
       .catch(() => setGroups([]));
+    fetchInstalledPlayers()
+      .then((installedPlayers) => {
+        setPlayers(installedPlayers);
+        setSelectedPlayerId(installedPlayers[0]?.id ?? "");
+        if (installedPlayers.length === 0) setMode("manual");
+      })
+      .catch(() => setPlayers([]));
   }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -31,12 +42,21 @@ export default function ScreenCreateModal({ onClose, onCreate }: ScreenCreateMod
     setIsSubmitting(true);
     setError(null);
     try {
-      await onCreate({
-        name,
-        model,
-        location: location || undefined,
-        groupId: groupId || undefined,
-      });
+      if (mode === "registered") {
+        if (!selectedPlayerId) throw new Error("Choose an installed player.");
+        await onClaimPlayer(selectedPlayerId, {
+          name,
+          location: location || undefined,
+          groupId: groupId || undefined,
+        });
+      } else {
+        await onCreate({
+          name,
+          model,
+          location: location || undefined,
+          groupId: groupId || undefined,
+        });
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to create screen");
       setIsSubmitting(false);
@@ -62,6 +82,57 @@ export default function ScreenCreateModal({ onClose, onCreate }: ScreenCreateMod
         </div>
 
         <form onSubmit={handleSubmit} className="p-5 space-y-4 text-xs">
+          <div className="grid grid-cols-2 gap-2 rounded-lg bg-[#F6F7F9] dark:bg-[#171F2C]/50 p-1">
+            <button
+              type="button"
+              onClick={() => setMode("registered")}
+              disabled={players.length === 0}
+              className={`px-3 py-2 rounded-md text-[11px] font-bold transition-colors cursor-pointer disabled:cursor-not-allowed disabled:opacity-50 ${
+                mode === "registered"
+                  ? "bg-white dark:bg-[#111722] text-[#2859D9] dark:text-[#6F96FF] shadow-xs"
+                  : "text-zinc-500 dark:text-zinc-400"
+              }`}
+            >
+              Registered Player
+            </button>
+            <button
+              type="button"
+              onClick={() => setMode("manual")}
+              className={`px-3 py-2 rounded-md text-[11px] font-bold transition-colors cursor-pointer ${
+                mode === "manual"
+                  ? "bg-white dark:bg-[#111722] text-[#2859D9] dark:text-[#6F96FF] shadow-xs"
+                  : "text-zinc-500 dark:text-zinc-400"
+              }`}
+            >
+              Manual Screen
+            </button>
+          </div>
+
+          {mode === "registered" && (
+            <div className="flex flex-col gap-1.5">
+              <label className="text-[10px] font-bold uppercase tracking-wider text-zinc-400 dark:text-zinc-500">
+                Installed Player
+              </label>
+              <select
+                value={selectedPlayerId}
+                onChange={(e) => setSelectedPlayerId(e.target.value)}
+                className="w-full px-3 py-2 bg-[#F6F7F9] dark:bg-[#171F2C]/50 border border-[#E2E6EC] dark:border-[#283243] rounded-lg text-xs text-zinc-700 dark:text-zinc-300 font-bold focus:outline-none cursor-pointer"
+                required
+              >
+                {players.map((player) => (
+                  <option key={player.id} value={player.id}>
+                    {player.hostname || "Unnamed device"} · {player.platform === "LINUX" ? "Linux" : "Windows"} ·{" "}
+                    {player.installId?.slice(0, 12) || "No install ID"}
+                  </option>
+                ))}
+              </select>
+              <div className="flex items-center gap-1.5 text-[11px] text-zinc-400 dark:text-zinc-500">
+                <Cpu className="w-3 h-3" />
+                <span>{players.length} installed player{players.length === 1 ? "" : "s"} ready to add.</span>
+              </div>
+            </div>
+          )}
+
           <div className="flex flex-col gap-1.5">
             <label className="text-[10px] font-bold uppercase tracking-wider text-zinc-400 dark:text-zinc-500">
               Screen Name
@@ -85,9 +156,10 @@ export default function ScreenCreateModal({ onClose, onCreate }: ScreenCreateMod
                 type="text"
                 value={model}
                 onChange={(e) => setModel(e.target.value)}
-                placeholder="e.g. XD1035"
+                placeholder={mode === "registered" ? "From installed player" : "e.g. XD1035"}
                 className="w-full px-3 py-2 bg-[#F6F7F9] dark:bg-[#171F2C]/50 border border-[#E2E6EC] dark:border-[#283243] rounded-lg text-xs text-[#18202B] dark:text-[#F2F5F8] focus:outline-none"
-                required
+                required={mode === "manual"}
+                disabled={mode === "registered"}
               />
             </div>
             <div className="flex flex-col gap-1.5">
@@ -137,7 +209,7 @@ export default function ScreenCreateModal({ onClose, onCreate }: ScreenCreateMod
               disabled={isSubmitting}
               className="px-4 py-2 bg-[#2859D9] dark:bg-[#6F96FF] text-white dark:text-[#111722] text-xs font-bold rounded-lg hover:opacity-90 transition-opacity cursor-pointer disabled:opacity-60"
             >
-              {isSubmitting ? "Adding..." : "Add Screen"}
+              {isSubmitting ? "Adding..." : mode === "registered" ? "Add Player" : "Add Screen"}
             </button>
           </div>
         </form>

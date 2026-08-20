@@ -1,0 +1,18 @@
+{
+  "name": "Rubenius Windows Player",
+  "version": "1.0.0",
+  "platform": "WINDOWS",
+  "registrationId": "__REGISTRATION_ID__",
+  "installToken": "__INSTALL_TOKEN__",
+  "apiBaseUrl": "__API_BASE_URL__",
+  "installEndpoint": "__INSTALL_ENDPOINT__",
+  "installIdStorageKey": "RubeniusPlayerInstallId",
+  "registerPayloadTemplate": {
+    "registrationId": "__REGISTRATION_ID__",
+    "installToken": "__INSTALL_TOKEN__",
+    "installId": "GENERATE_AND_PERSIST_UNIQUE_DEVICE_ID",
+    "hostname": "WINDOWS_HOSTNAME",
+    "osVersion": "WINDOWS_VERSION",
+    "appVersion": "1.0.0"
+  }
+}

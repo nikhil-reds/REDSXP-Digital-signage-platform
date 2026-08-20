@@ -84,6 +84,7 @@ export default function MediaTable({ assets, onSelectMedia }: MediaTableProps) {
             {assets.map((asset) => {
               const isSelected = selectedIds.includes(asset.id);
               const Icon = asset.type === "Video" ? Film : asset.type === "HTML5" ? Code : ImageIcon;
+              const isExternalLink = asset.sourceType === "external_url";
               return (
                 <tr
                   key={asset.id}
@@ -106,7 +107,7 @@ export default function MediaTable({ assets, onSelectMedia }: MediaTableProps) {
                   </td>
                   
                   <td className="p-3.5 text-zinc-450 uppercase text-[9px] font-bold tracking-wide">
-                    {asset.type}
+                    {isExternalLink ? "HTML Link" : asset.type}
                   </td>
                   <td className="p-3.5 text-zinc-500 font-mono text-[10px]">
                     {asset.dimensions}

@@ -29,6 +29,9 @@ export interface ScreenDevice {
   heartbeat: string;
   alertsCount: number;
   alertsSeverity?: "critical" | "high" | "medium" | "none";
+  installId?: string | null;
+  platform?: "LINUX" | "WINDOWS" | null;
+  playerRegistrationId?: string | null;
 }
 
 interface ScreensTableProps {

@@ -28,6 +28,7 @@ model Tenant {
   users              User[]
   devices            Device[]
   deviceGroups       DeviceGroup[]
+  playerRegistrations PlayerRegistration[]
   media              Media[]
   mediaCategories    MediaCategory[]
   playlists          Playlist[]
@@ -62,6 +63,7 @@ model User {
   passwordResetTokens PasswordResetToken[]
   assignedTickets     Ticket[]             @relation("TicketAssignedToUser")
   tickets             Ticket[]             @relation("TicketCreatedByUser")
+  playerRegistrations PlayerRegistration[]
 
   @@map("users")
 }
@@ -129,6 +131,8 @@ model Media {
   filename    String
   s3Key       String      @map("s3_key")
   cdnUrl      String      @map("cdn_url")
+  sourceType  String      @default("upload") @map("source_type")
+  externalUrl String?     @map("external_url")
   sizeBytes   BigInt      @map("size_bytes")
   durationSec Int?        @map("duration_sec")
   width       Int?
@@ -268,10 +272,14 @@ model Device {
   storagePercent  Int?          @map("storage_percent")
   alertsCount     Int           @default(0) @map("alerts_count")
   alertsSeverity  AlertSeverity @default(NONE) @map("alerts_severity")
+  installId       String?       @unique @map("install_id")
+  platform        PlayerPlatform?
   createdAt       DateTime      @default(now()) @map("created_at")
   updatedAt       DateTime      @updatedAt @map("updated_at")
 
   currentPlaylistId String?      @map("current_playlist_id")
+  playerRegistrationId String?   @unique @map("player_registration_id")
+  playerRegistration   PlayerRegistration? @relation(fields: [playerRegistrationId], references: [id], onDelete: SetNull)
   playlist          Playlist?    @relation(fields: [currentPlaylistId], references: [id], onDelete: SetNull)
   groupId           String?      @map("group_id")
   group             DeviceGroup? @relation(fields: [groupId], references: [id], onDelete: SetNull)
@@ -280,6 +288,36 @@ model Device {
   calendars         Calendar[]   @relation("CalendarToDevice")
 
   @@map("devices")
+}
+
+model PlayerRegistration {
+  id                String                   @id @default(uuid())
+  tenantId          String                   @map("tenant_id")
+  agentUserId       String?                  @map("agent_user_id")
+  platform          PlayerPlatform
+  downloadTokenHash String                   @unique @map("download_token_hash")
+  installTokenHash  String                   @unique @map("install_token_hash")
+  installId         String?                  @unique @map("install_id")
+  deviceId          String?                  @unique @map("device_id")
+  hostname          String?
+  osVersion         String?                  @map("os_version")
+  appVersion        String?                  @map("app_version")
+  ipAddress         String?                  @map("ip_address")
+  status            PlayerRegistrationStatus @default(DOWNLOADED)
+  expiresAt         DateTime                 @map("expires_at")
+  downloadedAt      DateTime                 @default(now()) @map("downloaded_at")
+  installedAt       DateTime?                @map("installed_at")
+  claimedAt         DateTime?                @map("claimed_at")
+  createdAt         DateTime                 @default(now()) @map("created_at")
+  updatedAt         DateTime                 @updatedAt @map("updated_at")
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  agentUser User? @relation(fields: [agentUserId], references: [id], onDelete: SetNull)
+  device Device?
+
+  @@index([tenantId, status])
+  @@index([agentUserId])
+  @@map("player_registrations")
 }
 
 model DeviceGroup {
@@ -516,6 +554,18 @@ enum AlertSeverity {
   MEDIUM
   HIGH
   CRITICAL
+}
+
+enum PlayerPlatform {
+  LINUX
+  WINDOWS
+}
+
+enum PlayerRegistrationStatus {
+  DOWNLOADED
+  INSTALLED
+  CLAIMED
+  EXPIRED
 }
 
 enum TicketPriority {
