@@ -1,6 +1,7 @@
 import React from "react";
 import AdminSidebar from "@/components/layout/admin-sidebar";
 import AdminNavbar from "@/components/layout/admin-navbar";
+import FloatingChatbotWidget from "@/components/chatbot/floating-chatbot-widget";
 
 interface AdminLayoutProps {
   children: React.ReactNode;
@@ -8,7 +9,7 @@ interface AdminLayoutProps {
 
 export default function AdminLayout({ children }: AdminLayoutProps) {
   return (
-    <div className="flex h-screen overflow-hidden bg-zinc-50 dark:bg-zinc-950">
+    <div className="flex h-screen overflow-hidden bg-zinc-50 dark:bg-zinc-950 relative">
       <AdminSidebar />
       <div className="flex-1 flex flex-col min-w-0">
         <AdminNavbar />
@@ -16,6 +17,8 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
           {children}
         </main>
       </div>
+      <FloatingChatbotWidget />
     </div>
   );
 }
+
