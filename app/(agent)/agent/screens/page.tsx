@@ -6,18 +6,20 @@ import {
   Monitor,
   Map,
   Plus,
+  Download,
   Activity,
   Layers,
   MapPin,
   Cpu,
   ShieldAlert,
-  ChevronDown
+  ChevronDown,
+  X
 } from "lucide-react";
 import ScreensTable, { ScreenDevice } from "@/components/agent/screens/screens-table";
 import ScreensMap from "@/components/agent/screens/screens-map";
 import ScreensDetailDrawer from "@/components/agent/screens/screens-detail-drawer";
 import ScreenCreateModal from "@/components/agent/screens/screen-create-modal";
-import { createScreen, fetchScreens } from "@/components/agent/screens/api";
+import { claimPlayerRegistration, createPlayerDownload, createScreen, fetchScreens } from "@/components/agent/screens/api";
 
 function uniqueSorted(values: (string | undefined)[]): string[] {
   return Array.from(new Set(values.filter((v): v is string => Boolean(v)))).sort();
@@ -29,6 +31,8 @@ export default function AgentScreensPage() {
   const [viewMode, setViewMode] = useState<"table" | "map">("table");
   const [selectedScreen, setSelectedScreen] = useState<ScreenDevice | null>(null);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [isDownloadModalOpen, setIsDownloadModalOpen] = useState(false);
+  const [downloadError, setDownloadError] = useState<string | null>(null);
 
   // Filters State
   const [search, setSearch] = useState("");
@@ -53,6 +57,26 @@ export default function AgentScreensPage() {
     const created = await createScreen(payload);
     setScreens((prev) => [created, ...prev]);
     setIsCreateModalOpen(false);
+  };
+
+  const handleClaimPlayer: React.ComponentProps<typeof ScreenCreateModal>["onClaimPlayer"] = async (
+    registrationId,
+    payload,
+  ) => {
+    const created = await claimPlayerRegistration(registrationId, payload);
+    setScreens((prev) => [created, ...prev.filter((screen) => screen.id !== created.id)]);
+    setIsCreateModalOpen(false);
+  };
+
+  const handleDownloadPlayer = async (platform: "LINUX" | "WINDOWS") => {
+    setDownloadError(null);
+    try {
+      const download = await createPlayerDownload(platform);
+      window.location.href = download.downloadUrl;
+      setIsDownloadModalOpen(false);
+    } catch (err) {
+      setDownloadError(err instanceof Error ? err.message : "Failed to prepare player download");
+    }
   };
 
   // Filter application
@@ -118,6 +142,17 @@ export default function AgentScreensPage() {
               </button>
             </div>
 
+            <button
+              onClick={() => {
+                setDownloadError(null);
+                setIsDownloadModalOpen(true);
+              }}
+              className="flex items-center gap-1.5 border border-[#E2E6EC] dark:border-[#283243] bg-white dark:bg-[#111722] text-[#18202B] dark:text-[#F2F5F8] px-3.5 py-1.5 rounded-lg text-xs font-bold hover:bg-[#F6F7F9] dark:hover:bg-[#171F2C] transition-colors shadow-sm cursor-pointer"
+            >
+              <Download className="w-3.5 h-3.5" />
+              <span>Player</span>
+            </button>
+
             {/* Add Screen action */}
             <button
               onClick={() => setIsCreateModalOpen(true)}
@@ -128,6 +163,12 @@ export default function AgentScreensPage() {
             </button>
           </div>
         </div>
+
+        {downloadError && (
+          <div className="rounded-lg border border-red-200 dark:border-red-900/40 bg-red-50 dark:bg-red-950/20 px-3 py-2 text-xs font-semibold text-red-700 dark:text-red-300">
+            {downloadError}
+          </div>
+        )}
 
         {/* Advanced Filters Panel */}
         <div className="p-4 bg-white dark:bg-[#111722] border border-[#E2E6EC] dark:border-[#283243] rounded-xl space-y-3 shrink-0">
@@ -271,7 +312,60 @@ export default function AgentScreensPage() {
       )}
 
       {isCreateModalOpen && (
-        <ScreenCreateModal onClose={() => setIsCreateModalOpen(false)} onCreate={handleCreateScreen} />
+        <ScreenCreateModal
+          onClose={() => setIsCreateModalOpen(false)}
+          onCreate={handleCreateScreen}
+          onClaimPlayer={handleClaimPlayer}
+        />
+      )}
+
+      {isDownloadModalOpen && (
+        <div className="fixed inset-0 bg-black/55 dark:bg-black/80 flex items-center justify-center z-50 animate-fadeIn font-sans">
+          <div className="bg-white dark:bg-[#111722] border border-[#E2E6EC] dark:border-[#283243] rounded-xl w-[460px] max-w-[calc(100vw-32px)] shadow-2xl overflow-hidden">
+            <div className="p-5 border-b border-[#E2E6EC] dark:border-[#283243] flex justify-between items-center bg-[#F6F7F9]/50 dark:bg-[#171F2C]/20">
+              <div className="flex items-center gap-2.5">
+                <div className="p-1.5 bg-blue-50 dark:bg-blue-950/20 text-[#2859D9] dark:text-[#6F96FF] rounded-lg">
+                  <Download className="w-4 h-4" />
+                </div>
+                <h3 className="font-bold text-sm text-[#18202B] dark:text-[#F2F5F8]">Download Player</h3>
+              </div>
+              <button
+                onClick={() => setIsDownloadModalOpen(false)}
+                className="p-1 rounded-lg text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-50 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="p-5 space-y-3">
+              <button
+                onClick={() => handleDownloadPlayer("LINUX")}
+                className="w-full flex items-center justify-between gap-3 rounded-lg border border-[#E2E6EC] dark:border-[#283243] bg-[#F6F7F9] dark:bg-[#171F2C]/50 px-4 py-3 text-left hover:border-[#2859D9] dark:hover:border-[#6F96FF] transition-colors cursor-pointer"
+              >
+                <div>
+                  <p className="text-sm font-bold text-[#18202B] dark:text-[#F2F5F8]">Linux Player</p>
+                  <p className="text-[11px] text-[#657080] dark:text-[#9AA7B7]">Download shell bootstrap from public player package.</p>
+                </div>
+                <Download className="w-4 h-4 text-[#2859D9] dark:text-[#6F96FF] shrink-0" />
+              </button>
+
+              <button
+                onClick={() => handleDownloadPlayer("WINDOWS")}
+                className="w-full flex items-center justify-between gap-3 rounded-lg border border-[#E2E6EC] dark:border-[#283243] bg-[#F6F7F9] dark:bg-[#171F2C]/50 px-4 py-3 text-left hover:border-[#2859D9] dark:hover:border-[#6F96FF] transition-colors cursor-pointer"
+              >
+                <div>
+                  <p className="text-sm font-bold text-[#18202B] dark:text-[#F2F5F8]">Windows Player</p>
+                  <p className="text-[11px] text-[#657080] dark:text-[#9AA7B7]">Download Windows bootstrap config from public player package.</p>
+                </div>
+                <Download className="w-4 h-4 text-[#2859D9] dark:text-[#6F96FF] shrink-0" />
+              </button>
+
+              {downloadError && (
+                <p className="text-[11px] font-semibold text-red-500">{downloadError}</p>
+              )}
+            </div>
+          </div>
+        </div>
       )}
 
     </div>
