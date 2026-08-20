@@ -20,6 +20,23 @@ export interface CreateScreenPayload {
   groupId?: string;
 }
 
+export interface PlayerRegistration {
+  id: string;
+  platform: "LINUX" | "WINDOWS";
+  status: "DOWNLOADED" | "INSTALLED" | "CLAIMED" | "EXPIRED";
+  installId: string | null;
+  hostname: string | null;
+  osVersion: string | null;
+  appVersion: string | null;
+  ipAddress: string | null;
+  deviceId: string | null;
+  deviceName: string | null;
+  installedAt: string | null;
+  claimedAt: string | null;
+  downloadedAt: string;
+  registeredBy: string | null;
+}
+
 export interface UpdateScreenPayload {
   name?: string;
   location?: string;
@@ -43,6 +60,44 @@ export async function fetchScreen(id: string): Promise<ScreenDevice> {
 
 export async function createScreen(payload: CreateScreenPayload): Promise<ScreenDevice> {
   return request<ScreenDevice>("/api/screens", { method: "POST", body: JSON.stringify(payload) });
+}
+
+export async function createPlayerDownload(platform: "LINUX" | "WINDOWS"): Promise<{
+  id: string;
+  platform: "LINUX" | "WINDOWS";
+  label: string;
+  expiresAt: string;
+  downloadUrl: string;
+}> {
+  const response = await request<{
+    success: boolean;
+    data: {
+      id: string;
+      platform: "LINUX" | "WINDOWS";
+      label: string;
+      expiresAt: string;
+      downloadUrl: string;
+    };
+  }>("/api/player-downloads", { method: "POST", body: JSON.stringify({ platform }) });
+  return response.data;
+}
+
+export async function fetchInstalledPlayers(): Promise<PlayerRegistration[]> {
+  const response = await request<{ success: boolean; data: PlayerRegistration[] }>(
+    "/api/player-registrations?status=INSTALLED",
+  );
+  return response.data;
+}
+
+export async function claimPlayerRegistration(
+  id: string,
+  payload: { name: string; location?: string; groupId?: string },
+): Promise<ScreenDevice> {
+  const response = await request<{ success: boolean; data: ScreenDevice }>(
+    `/api/player-registrations/${id}/claim`,
+    { method: "PATCH", body: JSON.stringify(payload) },
+  );
+  return response.data;
 }
 
 export async function updateScreen(id: string, payload: UpdateScreenPayload): Promise<ScreenDevice> {
