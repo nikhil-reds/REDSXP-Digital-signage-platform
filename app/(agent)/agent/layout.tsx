@@ -1,6 +1,7 @@
 import React from "react";
 import AgentSidebar from "@/components/layout/agent-sidebar";
 import AgentNavbar from "@/components/layout/agent-navbar";
+import FloatingChatbotWidget from "@/components/chatbot/floating-chatbot-widget";
 
 interface AgentLayoutProps {
   children: React.ReactNode;
@@ -8,7 +9,7 @@ interface AgentLayoutProps {
 
 export default function AgentLayout({ children }: AgentLayoutProps) {
   return (
-    <div className="flex h-screen overflow-hidden bg-[#F6F7F9] dark:bg-[#090D14]">
+    <div className="flex h-screen overflow-hidden bg-[#F6F7F9] dark:bg-[#090D14] relative">
       <AgentSidebar />
       <div className="flex-1 flex flex-col min-w-0">
         <AgentNavbar />
@@ -16,6 +17,8 @@ export default function AgentLayout({ children }: AgentLayoutProps) {
           {children}
         </main>
       </div>
+      <FloatingChatbotWidget />
     </div>
   );
 }
+
