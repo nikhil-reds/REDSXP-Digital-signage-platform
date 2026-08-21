@@ -39,7 +39,11 @@ export async function POST(request: NextRequest) {
     const result = await runAssistant(history, auth.agent.tenantId);
     return NextResponse.json({ success: true, data: result });
   } catch (error) {
-    console.error("CMS Assistant error", error);
+    console.error(
+      "CMS Assistant error:",
+      error instanceof Error ? error.message : error,
+      error instanceof Error && error.cause ? { cause: error.cause } : "",
+    );
     return apiError("The assistant is unavailable right now. Please try again.", 502);
   }
 }
