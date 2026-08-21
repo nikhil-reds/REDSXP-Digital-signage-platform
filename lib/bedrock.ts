@@ -3,11 +3,21 @@ import {
   ConverseCommand,
   type ContentBlock,
   type Message,
+  type Tool,
 } from "@aws-sdk/client-bedrock-runtime";
 import { ASSISTANT_TOOLS, executeAssistantTool, type AssistantToolName } from "@/lib/assistant-tools";
 
-const REGION = process.env.BEDROCK_REGION ?? process.env.AWS_REGION ?? "us-east-1";
-const MODEL_ID = process.env.BEDROCK_MODEL_ID ?? "anthropic.claude-3-5-sonnet-20241022-v2:0";
+// Bedrock region is deliberately independent of AWS_REGION: that one points at the
+// S3 asset bucket (ap-south-1), where only end-of-life Claude models are reachable.
+// This must be a region where the chosen model is enabled for the account.
+const REGION = process.env.BEDROCK_REGION ?? "us-east-1";
+
+// Claude models on Bedrock are only invocable through a cross-region inference
+// profile, so the ID carries a geo prefix ("us." / "eu." / "apac."). A bare
+// "anthropic.*" ID fails with: "Invocation of model ID ... with on-demand
+// throughput isn't supported. Retry your request with the ID or ARN of an
+// inference profile that contains this model."
+const MODEL_ID = process.env.BEDROCK_MODEL_ID ?? "amazon.nova-micro-v1:0";
 
 let client: BedrockRuntimeClient | null = null;
 
@@ -41,24 +51,54 @@ export type AssistantReply = {
 const MAX_TOOL_ROUNDS = 4;
 
 export async function runAssistant(history: ChatMessage[], tenantId: string): Promise<AssistantReply> {
-  const messages: Message[] = history.map((m) => ({
-    role: m.role,
-    content: [{ text: m.text }],
-  }));
+  // Bedrock Converse API strictly requires that messages start with a 'user' message.
+  let startIdx = 0;
+  while (startIdx < history.length && history[startIdx].role !== "user") {
+    startIdx++;
+  }
+  const userFirstHistory = history.slice(startIdx);
+  if (userFirstHistory.length === 0) {
+    return { reply: "Please ask a question to get started.", cards: [] };
+  }
+
+  // Merge consecutive messages with the same role to maintain strict user/assistant alternation required by Bedrock.
+  const messages: Message[] = [];
+  for (const m of userFirstHistory) {
+    const lastMsg = messages[messages.length - 1];
+    if (lastMsg && lastMsg.role === m.role) {
+      if (Array.isArray(lastMsg.content)) {
+        lastMsg.content.push({ text: m.text });
+      }
+    } else {
+      messages.push({
+        role: m.role,
+        content: [{ text: m.text }],
+      });
+    }
+  }
 
   const allCards: AssistantReply["cards"] = [];
   const bedrock = getClient();
 
   for (let round = 0; round < MAX_TOOL_ROUNDS; round++) {
-    const response = await bedrock.send(
-      new ConverseCommand({
-        modelId: MODEL_ID,
-        system: [{ text: SYSTEM_PROMPT }],
-        messages,
-        toolConfig: { tools: ASSISTANT_TOOLS as never },
-        inferenceConfig: { maxTokens: 1024, temperature: 0.2 },
-      }),
-    );
+    let response;
+    try {
+      response = await bedrock.send(
+        new ConverseCommand({
+          modelId: MODEL_ID,
+          system: [{ text: SYSTEM_PROMPT }],
+          messages,
+          toolConfig: { tools: ASSISTANT_TOOLS as unknown as Tool[] },
+          inferenceConfig: { maxTokens: 1024, temperature: 0.2 },
+        }),
+      );
+    } catch (error) {
+      // Bedrock's own message is the only thing that identifies a bad model ID,
+      // a region without model access, or a malformed tool schema. Keep it.
+      const name = error instanceof Error ? error.name : "UnknownError";
+      const message = error instanceof Error ? error.message : String(error);
+      throw new Error(`Bedrock Converse failed (model=${MODEL_ID}, region=${REGION}): ${name}: ${message}`);
+    }
 
     const output = response.output?.message;
     if (!output) break;
@@ -83,10 +123,15 @@ export async function runAssistant(history: ChatMessage[], tenantId: string): Pr
           tenantId,
         );
         allCards.push(...result.cards);
+        const jsonContent =
+          typeof result.data === "object" && result.data !== null && !Array.isArray(result.data)
+            ? (result.data as Record<string, unknown>)
+            : { items: result.data };
+
         toolResultContent.push({
           toolResult: {
             toolUseId,
-            content: [{ json: result.data as Record<string, unknown> }],
+            content: [{ json: jsonContent }],
           },
         } as ContentBlock);
       } catch (error) {
@@ -101,6 +146,7 @@ export async function runAssistant(history: ChatMessage[], tenantId: string): Pr
       }
     }
 
+    if (toolResultContent.length === 0) break;
     messages.push({ role: "user", content: toolResultContent });
   }
 
