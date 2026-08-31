@@ -4,6 +4,7 @@ import React, { useState } from "react";
 import { Download } from "lucide-react";
 import DevicesList from "@/components/admin/devices/devices-list";
 import DeviceDetail from "@/components/admin/devices/device-detail";
+import { Button } from "@/components/ui";
 
 interface Device {
   id: string;
@@ -59,23 +60,23 @@ export default function DevicesInventoryPage() {
   const [selectedDevice, setSelectedDevice] = useState<Device | null>(initialDevices[3]); // Select Hyderabad pharmacy by default as in the screenshot
 
   return (
-    <div className="flex h-[calc(100vh-4rem)] overflow-hidden bg-zinc-50 dark:bg-zinc-950 font-sans">
+    <div className="flex h-[calc(100vh-4rem)] overflow-hidden bg-app-canvas font-sans text-app-text">
       {/* Main content view */}
       <div className="flex-1 flex flex-col p-6 overflow-hidden min-w-0">
         {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-5">
           <div className="flex flex-col gap-0.5">
-            <h1 className="text-xl font-bold text-zinc-900 dark:text-zinc-50 tracking-tight">
+            <h1 className="text-page-title font-bold tracking-tight text-app-text">
               Device Inventory
             </h1>
-            <p className="text-xs text-zinc-500 dark:text-zinc-400">
+            <p className="text-caption text-app-muted">
               4,862 total · 4,517 online · 96 delayed · 249 offline
             </p>
           </div>
-          <button className="flex items-center gap-1.5 bg-zinc-950 text-white dark:bg-zinc-50 dark:text-zinc-950 px-3.5 py-1.5 rounded-lg text-xs font-semibold hover:opacity-90 transition-opacity shadow-sm cursor-pointer self-start sm:self-auto">
+          <Button className="self-start sm:self-auto">
             <Download className="w-3.5 h-3.5" />
             <span>Export CSV</span>
-          </button>
+          </Button>
         </div>
 
         {/* Devices list component */}
