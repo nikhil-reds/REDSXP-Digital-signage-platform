@@ -68,34 +68,34 @@ export default function TenantsTable({ tenants, onAddTenantClick }: TenantsTable
   };
 
   return (
-    <div className="flex-1 flex flex-col min-w-0 bg-white dark:bg-zinc-900 border border-zinc-200/80 dark:border-zinc-800/80 rounded-xl overflow-hidden shadow-xs">
+    <div className="flex min-w-0 flex-1 flex-col overflow-hidden rounded-xl border border-app-border bg-app-surface shadow-xs">
       {/* Header section with title and Add button */}
-      <div className="p-4 border-b border-zinc-150 dark:border-zinc-800 flex justify-between items-center gap-4">
+      <div className="flex items-center justify-between gap-4 border-b border-app-border p-4">
         <div>
-          <h2 className="text-base font-bold text-zinc-900 dark:text-zinc-50">Tenant Management</h2>
-          <p className="text-xs text-zinc-450 dark:text-zinc-400 mt-0.5">
+          <h2 className="text-title font-bold text-app-text">Tenant Management</h2>
+          <p className="mt-0.5 text-caption text-app-muted">
             186 active tenants · 23 on trial
           </p>
         </div>
         <button
           onClick={onAddTenantClick}
-          className="flex items-center gap-1.5 bg-blue-600 text-white dark:bg-blue-500 hover:opacity-90 px-3.5 py-1.5 rounded-lg text-xs font-semibold shadow-xs transition-opacity cursor-pointer"
+          className="flex cursor-pointer items-center gap-1.5 rounded-lg bg-app-accent px-3.5 py-1.5 text-caption font-semibold text-app-accent-on shadow-xs transition-colors hover:bg-app-accent-hover"
         >
           <span>+ Add Tenant</span>
         </button>
       </div>
 
       {/* Toolbar / Filters */}
-      <div className="p-4 bg-zinc-50/50 dark:bg-zinc-900/50 border-b border-zinc-150 dark:border-zinc-800 flex flex-wrap gap-3 items-center justify-between">
+      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-app-border bg-app-surface-alt p-4">
         <div className="flex items-center gap-2 flex-1 min-w-[200px] max-w-xs">
           <div className="relative w-full">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-zinc-400" />
+            <Search className="absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-app-muted" />
             <input
               type="text"
               placeholder="Search by name, domain, owner..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="w-full pl-8.5 pr-3 py-1.5 bg-white dark:bg-zinc-950 border border-zinc-200/80 dark:border-zinc-800/85 rounded-lg text-xs text-zinc-900 dark:text-zinc-100 placeholder-zinc-400 focus:outline-none focus:ring-1 focus:ring-zinc-950 dark:focus:ring-zinc-50"
+              className="w-full rounded-lg border border-app-border bg-app-surface py-1.5 pl-8.5 pr-3 text-caption text-app-text placeholder:text-app-muted focus:outline-none focus:ring-2 focus:ring-app-accent-text"
             />
           </div>
         </div>
@@ -106,7 +106,7 @@ export default function TenantsTable({ tenants, onAddTenantClick }: TenantsTable
             <select
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value)}
-              className="pl-3 pr-8 py-1.5 border border-zinc-200 dark:border-zinc-850 rounded-lg bg-white dark:bg-zinc-950 text-xs text-zinc-700 dark:text-zinc-300 font-medium focus:outline-none appearance-none cursor-pointer"
+              className="cursor-pointer appearance-none rounded-lg border border-app-border bg-app-surface py-1.5 pl-3 pr-8 text-caption font-medium text-app-text focus:outline-none focus:ring-2 focus:ring-app-accent-text"
             >
               <option value="All">Status: All</option>
               <option value="Active">Active</option>
@@ -114,7 +114,7 @@ export default function TenantsTable({ tenants, onAddTenantClick }: TenantsTable
               <option value="Past Due">Past Due</option>
               <option value="Suspended">Suspended</option>
             </select>
-            <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 w-3 h-3 text-zinc-400 pointer-events-none" />
+            <ChevronDown className="pointer-events-none absolute right-2.5 top-1/2 h-3 w-3 -translate-y-1/2 text-app-muted" />
           </div>
 
           {/* Plan Filter */}
@@ -122,25 +122,25 @@ export default function TenantsTable({ tenants, onAddTenantClick }: TenantsTable
             <select
               value={planFilter}
               onChange={(e) => setPlanFilter(e.target.value)}
-              className="pl-3 pr-8 py-1.5 border border-zinc-200 dark:border-zinc-850 rounded-lg bg-white dark:bg-zinc-950 text-xs text-zinc-700 dark:text-zinc-300 font-medium focus:outline-none appearance-none cursor-pointer"
+              className="cursor-pointer appearance-none rounded-lg border border-app-border bg-app-surface py-1.5 pl-3 pr-8 text-caption font-medium text-app-text focus:outline-none focus:ring-2 focus:ring-app-accent-text"
             >
               <option value="All">Plan: All</option>
               <option value="Enterprise">Enterprise</option>
               <option value="Business">Business</option>
               <option value="Growth">Growth</option>
             </select>
-            <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 w-3 h-3 text-zinc-400 pointer-events-none" />
+            <ChevronDown className="pointer-events-none absolute right-2.5 top-1/2 h-3 w-3 -translate-y-1/2 text-app-muted" />
           </div>
 
           {/* Columns Config */}
-          <button className="flex items-center gap-1 px-3 py-1.5 border border-zinc-200 dark:border-zinc-800 rounded-lg bg-white dark:bg-zinc-950 text-xs text-zinc-700 dark:text-zinc-300 font-semibold shadow-xs hover:bg-zinc-50 dark:hover:bg-zinc-900 transition-colors cursor-pointer">
-            <LayoutGrid className="w-3.5 h-3.5 text-zinc-500" />
+          <button className="flex cursor-pointer items-center gap-1 rounded-lg border border-app-border bg-app-surface px-3 py-1.5 text-caption font-semibold text-app-text shadow-xs transition-colors hover:bg-app-surface-alt">
+            <LayoutGrid className="h-3.5 w-3.5 text-app-muted" />
             <span>Columns</span>
           </button>
 
           {/* Export CSV */}
-          <button className="flex items-center gap-1 px-3 py-1.5 border border-zinc-200 dark:border-zinc-800 rounded-lg bg-white dark:bg-zinc-950 text-xs text-zinc-700 dark:text-zinc-300 font-semibold shadow-xs hover:bg-zinc-50 dark:hover:bg-zinc-900 transition-colors cursor-pointer">
-            <Download className="w-3.5 h-3.5 text-zinc-500" />
+          <button className="flex cursor-pointer items-center gap-1 rounded-lg border border-app-border bg-app-surface px-3 py-1.5 text-caption font-semibold text-app-text shadow-xs transition-colors hover:bg-app-surface-alt">
+            <Download className="h-3.5 w-3.5 text-app-muted" />
             <span>Export CSV</span>
           </button>
         </div>
@@ -148,27 +148,27 @@ export default function TenantsTable({ tenants, onAddTenantClick }: TenantsTable
 
       {/* Tenants Table */}
       <div className="overflow-x-auto">
-        <table className="w-full text-left text-xs border-collapse">
+        <table className="w-full border-collapse text-left text-caption">
           <thead>
-            <tr className="bg-zinc-50/50 dark:bg-zinc-800/40 text-zinc-450 dark:text-zinc-500 font-bold border-b border-zinc-150 dark:border-zinc-800/80 select-none">
+            <tr className="select-none border-b border-app-border bg-app-surface-alt font-bold text-app-muted">
               <th className="p-3.5 w-10 text-center">
                 <input
                   type="checkbox"
                   checked={filteredTenants.length > 0 && selectedIds.length === filteredTenants.length}
                   onChange={toggleSelectAll}
-                  className="rounded border-zinc-300 dark:border-zinc-750 accent-zinc-950 dark:accent-zinc-50 w-3.5 h-3.5 cursor-pointer"
+                  className="h-3.5 w-3.5 cursor-pointer rounded border-app-border accent-app-accent-text"
                 />
               </th>
               <th className="p-3.5 font-bold">
-                <span className="flex items-center gap-1 cursor-pointer hover:text-zinc-800 dark:hover:text-zinc-200">
-                  Tenant <ArrowUpDown className="w-3 h-3 text-zinc-400" />
+                <span className="flex cursor-pointer items-center gap-1 hover:text-app-text">
+                  Tenant <ArrowUpDown className="h-3 w-3 text-app-muted" />
                 </span>
               </th>
               <th className="p-3.5 font-bold">Status</th>
               <th className="p-3.5 font-bold">Plan</th>
               <th className="p-3.5 font-bold">
-                <span className="flex items-center gap-1 justify-end cursor-pointer hover:text-zinc-800 dark:hover:text-zinc-200">
-                  MRR <ArrowUpDown className="w-3 h-3 text-zinc-400" />
+                <span className="flex cursor-pointer items-center justify-end gap-1 hover:text-app-text">
+                  MRR <ArrowUpDown className="h-3 w-3 text-app-muted" />
                 </span>
               </th>
               <th className="p-3.5 font-bold text-center">Screens</th>
@@ -176,7 +176,7 @@ export default function TenantsTable({ tenants, onAddTenantClick }: TenantsTable
               <th className="p-3.5 font-bold">Custom Domain</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-zinc-100 dark:divide-zinc-850">
+          <tbody className="divide-y divide-app-border">
             {filteredTenants.map((tenant) => {
               const isSelected = selectedIds.includes(tenant.id);
               const storageInfo = formatStorage(tenant.storageUsed, tenant.storageTotal);
@@ -184,8 +184,8 @@ export default function TenantsTable({ tenants, onAddTenantClick }: TenantsTable
               return (
                 <tr
                   key={tenant.id}
-                  className={`hover:bg-zinc-50/30 dark:hover:bg-zinc-900/20 transition-colors ${
-                    isSelected ? "bg-blue-50/10 dark:bg-blue-950/5" : ""
+                  className={`transition-colors hover:bg-app-surface-alt ${
+                    isSelected ? "bg-app-accent-surface" : ""
                   }`}
                 >
                   <td className="p-3.5 text-center">
@@ -193,63 +193,63 @@ export default function TenantsTable({ tenants, onAddTenantClick }: TenantsTable
                       type="checkbox"
                       checked={isSelected}
                       onChange={() => toggleSelect(tenant.id)}
-                      className="rounded border-zinc-300 dark:border-zinc-750 accent-zinc-950 dark:accent-zinc-50 w-3.5 h-3.5 cursor-pointer"
+                      className="h-3.5 w-3.5 cursor-pointer rounded border-app-border accent-app-accent-text"
                     />
                   </td>
-                  <td className="p-3.5 font-semibold text-zinc-900 dark:text-zinc-50">
+                  <td className="p-3.5 font-semibold text-app-text">
                     {tenant.name}
                   </td>
                   <td className="p-3.5">
                     <span
                       className={`text-[10px] px-2 py-0.5 rounded-full font-semibold border inline-flex items-center gap-1 ${
                         tenant.status === "Active"
-                          ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-950/20 dark:text-emerald-400 border-emerald-100/50 dark:border-emerald-900/20"
+                          ? "border-app-accent-border bg-app-accent-surface text-app-accent-text"
                           : tenant.status === "Trial"
-                          ? "bg-amber-50 text-amber-700 dark:bg-amber-950/20 dark:text-amber-400 border-amber-100/50 dark:border-amber-900/20"
+                          ? "border-app-border bg-app-warning-surface text-app-warning-text"
                           : tenant.status === "Past Due"
-                          ? "bg-rose-50 text-rose-700 dark:bg-rose-950/20 dark:text-rose-450 border-rose-100/50 dark:border-rose-900/20"
-                          : "bg-zinc-100 text-zinc-500 dark:bg-zinc-800 dark:text-zinc-400 border-zinc-200/50 dark:border-zinc-700/30"
+                          ? "border-app-danger-border bg-app-danger-surface text-app-danger-text"
+                          : "border-app-border bg-app-surface-alt text-app-muted"
                       }`}
                     >
                       <span
                         className={`w-1 h-1 rounded-full ${
                           tenant.status === "Active"
-                            ? "bg-emerald-500"
+                            ? "bg-app-accent-text"
                             : tenant.status === "Trial"
                             ? "bg-amber-500"
                             : tenant.status === "Past Due"
-                            ? "bg-rose-500"
-                            : "bg-zinc-400"
+                            ? "bg-app-danger-text"
+                            : "bg-app-muted"
                         }`}
                       />
                       {tenant.status}
                     </span>
                   </td>
                   <td className="p-3.5">
-                    <span className="text-[10px] font-semibold uppercase tracking-wider text-zinc-500 dark:text-zinc-400 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200/50 dark:border-zinc-700/40 px-2 py-0.5 rounded-md">
+                    <span className="rounded-md border border-app-border bg-app-surface-alt px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-app-muted">
                       {tenant.plan}
                     </span>
                   </td>
-                  <td className="p-3.5 text-right font-bold text-zinc-900 dark:text-zinc-50">
+                  <td className="p-3.5 text-right font-bold text-app-text">
                     ₹{tenant.mrr.toLocaleString("en-IN")}
                   </td>
-                  <td className="p-3.5 text-center font-medium text-zinc-700 dark:text-zinc-300">
+                  <td className="p-3.5 text-center font-medium text-app-text">
                     {tenant.screensActive}/{tenant.screensTotal}
                   </td>
                   <td className="p-3.5">
                     <div className="flex flex-col gap-1 w-24">
-                      <span className="text-[10px] text-zinc-450 dark:text-zinc-500 font-medium">
+                      <span className="text-[10px] font-medium text-app-muted">
                         {storageInfo.text}
                       </span>
-                      <div className="w-full bg-zinc-100 dark:bg-zinc-800 h-1 rounded-full overflow-hidden">
+                      <div className="h-1 w-full overflow-hidden rounded-full bg-app-surface-alt">
                         <div
-                          className="bg-zinc-850 dark:bg-zinc-200 h-full"
+                          className="h-full bg-app-accent-text"
                           style={{ width: `${storageInfo.percent}%` }}
                         />
                       </div>
                     </div>
                   </td>
-                  <td className="p-3.5 font-mono text-[11px] text-zinc-450 dark:text-zinc-500 truncate max-w-[120px]" title={tenant.customDomain}>
+                  <td className="max-w-[120px] truncate p-3.5 font-mono text-[11px] text-app-muted" title={tenant.customDomain}>
                     {tenant.customDomain}
                   </td>
                 </tr>
@@ -260,29 +260,29 @@ export default function TenantsTable({ tenants, onAddTenantClick }: TenantsTable
       </div>
 
       {/* Pagination Footer */}
-      <div className="p-4 border-t border-zinc-100 dark:border-zinc-800/80 bg-zinc-50/30 dark:bg-zinc-900/30 flex items-center justify-between text-xs text-zinc-500 dark:text-zinc-450 select-none">
+      <div className="flex select-none items-center justify-between border-t border-app-border bg-app-surface-alt p-4 text-caption text-app-muted">
         <span>Showing 1–8 of 186 tenants</span>
         <div className="flex items-center gap-1">
-          <button className="flex items-center gap-1 px-2.5 py-1.5 border border-zinc-200 dark:border-zinc-800 rounded-lg hover:bg-zinc-50 dark:hover:bg-zinc-900 transition-colors text-zinc-700 dark:text-zinc-300 disabled:opacity-50 cursor-pointer" disabled>
+          <button className="flex cursor-pointer items-center gap-1 rounded-lg border border-app-border bg-app-surface px-2.5 py-1.5 text-app-text transition-colors hover:bg-app-surface-alt disabled:opacity-50" disabled>
             <ChevronLeft className="w-3.5 h-3.5" />
             <span>Previous</span>
           </button>
           
-          <button className="w-8 h-8 rounded-lg bg-blue-600 dark:bg-blue-500 text-white font-bold flex items-center justify-center cursor-pointer">
+          <button className="flex h-8 w-8 cursor-pointer items-center justify-center rounded-lg bg-app-accent font-bold text-app-accent-on">
             1
           </button>
-          <button className="w-8 h-8 rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-700 dark:text-zinc-300 flex items-center justify-center cursor-pointer">
+          <button className="flex h-8 w-8 cursor-pointer items-center justify-center rounded-lg text-app-text hover:bg-app-surface">
             2
           </button>
-          <button className="w-8 h-8 rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-700 dark:text-zinc-300 flex items-center justify-center cursor-pointer">
+          <button className="flex h-8 w-8 cursor-pointer items-center justify-center rounded-lg text-app-text hover:bg-app-surface">
             3
           </button>
-          <span className="px-1 text-zinc-400">...</span>
-          <button className="w-8 h-8 rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-700 dark:text-zinc-300 flex items-center justify-center cursor-pointer">
+          <span className="px-1 text-app-muted">...</span>
+          <button className="flex h-8 w-8 cursor-pointer items-center justify-center rounded-lg text-app-text hover:bg-app-surface">
             24
           </button>
 
-          <button className="flex items-center gap-1 px-2.5 py-1.5 border border-zinc-200 dark:border-zinc-800 rounded-lg hover:bg-zinc-50 dark:hover:bg-zinc-900 transition-colors text-zinc-700 dark:text-zinc-300 cursor-pointer">
+          <button className="flex cursor-pointer items-center gap-1 rounded-lg border border-app-border bg-app-surface px-2.5 py-1.5 text-app-text transition-colors hover:bg-app-surface-alt">
             <span>Next</span>
             <ChevronRight className="w-3.5 h-3.5" />
           </button>
