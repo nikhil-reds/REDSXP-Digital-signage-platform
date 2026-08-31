@@ -1,8 +1,18 @@
 "use client";
 
 import React, { useState, useRef } from "react";
-import { X, UploadCloud, RefreshCw, AlertCircle, CheckCircle2, Link, Eye, Save, Code } from "lucide-react";
+import { UploadCloud, RefreshCw, AlertCircle, CheckCircle2, Link, Eye, Save, Code } from "lucide-react";
 import type { MediaAsset } from "./media-grid";
+import {
+  Badge,
+  Button,
+  Card,
+  FieldLabel,
+  Modal,
+  ProgressBar,
+  SegmentedControl,
+  TextInput,
+} from "@/components/ui";
 
 interface MediaUploadModalProps {
   onClose: () => void;
@@ -261,272 +271,254 @@ export default function MediaUploadModal({ onClose, onUploadSuccess }: MediaUplo
     }
   };
 
+  const statusLabel = (file: UploadingFile) => {
+    if (file.status === "uploading")
+      return { tone: "accent" as const, text: `Uploading ${file.progress}%`, icon: null };
+    if (file.status === "transcoding")
+      return { tone: "warning" as const, text: "Processing", icon: RefreshCw };
+    if (file.status === "success")
+      return { tone: "accent" as const, text: "Ready", icon: CheckCircle2 };
+    return { tone: "danger" as const, text: "Failed", icon: AlertCircle };
+  };
+
   return (
-    <div className="fixed inset-0 bg-black/55 dark:bg-black/80 flex items-center justify-center z-50 animate-fadeIn font-sans">
-      <div className="bg-white dark:bg-[#111722] border border-[#E2E6EC] dark:border-[#283243] rounded-xl w-[480px] max-w-full shadow-2xl flex flex-col overflow-hidden">
-        
-        {/* Header */}
-        <div className="p-5 border-b border-[#E2E6EC] dark:border-[#283243] flex justify-between items-center bg-[#F6F7F9]/50 dark:bg-[#171F2C]/20">
-          <div>
-            <h3 className="font-bold text-sm text-[#18202B] dark:text-[#F2F5F8]">
-              Add Media Asset
-            </h3>
-            <p className="text-[10px] text-[#657080] dark:text-[#9AA7B7] mt-0.5">
-              Upload files or register an HTML5 web link for signage playback.
-            </p>
-          </div>
-          <button
-            onClick={onClose}
-            className="p-1 rounded-lg text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-55 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors cursor-pointer"
-          >
-            <X className="w-4 h-4" />
-          </button>
-        </div>
+    <Modal
+      open
+      onClose={onClose}
+      title="Add Media Asset"
+      description="Upload files or register an HTML5 web link for signage playback."
+      size="lg"
+      footer={
+        <Button variant="secondary" onClick={onClose}>
+          Close Window
+        </Button>
+      }
+    >
+      <div className="space-y-4">
+        <SegmentedControl
+          value={activeTab}
+          onChange={setActiveTab}
+          className="w-full [&>button]:flex-1"
+          options={[
+            { value: "file", label: "File Upload" },
+            { value: "link", label: "HTML Link" },
+          ]}
+        />
 
-        {/* Upload Container body */}
-        <div className="p-5 space-y-4 text-xs">
-          <div className="grid grid-cols-2 gap-1 rounded-lg border border-[#E2E6EC] dark:border-[#283243] bg-[#F6F7F9] dark:bg-[#171F2C]/50 p-1">
+        {/* Drag & drop zone */}
+        {activeTab === "file" && (
+          <>
+            <input
+              type="file"
+              ref={fileInputRef}
+              onChange={handleFileChange}
+              className="hidden"
+              multiple
+              accept="image/*,video/mp4,.zip,.html"
+            />
             <button
-              onClick={() => setActiveTab("file")}
-              className={`flex items-center justify-center gap-1.5 rounded-md py-2 font-bold transition-colors cursor-pointer ${
-                activeTab === "file"
-                  ? "bg-white dark:bg-[#111722] text-[#2859D9] dark:text-[#6F96FF] shadow-xs"
-                  : "text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200"
+              type="button"
+              onDragEnter={handleDrag}
+              onDragOver={handleDrag}
+              onDragLeave={handleDrag}
+              onDrop={handleDrop}
+              onClick={() => fileInputRef.current?.click()}
+              className={`w-full border-2 border-dashed rounded-xl p-8 text-center flex flex-col items-center justify-center gap-3 cursor-pointer transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-app-accent-text ${
+                dragActive
+                  ? "border-app-accent-text bg-app-accent-surface"
+                  : "border-app-border-strong hover:border-app-accent-text"
               }`}
             >
-              <UploadCloud className="w-3.5 h-3.5" />
-              <span>File Upload</span>
+              <span className="w-12 h-12 rounded-full bg-app-accent-surface text-app-accent-text flex items-center justify-center border border-app-border">
+                <UploadCloud className="w-6 h-6" />
+              </span>
+              <span>
+                <span className="block text-body font-semibold text-app-text">
+                  Drag and drop files here
+                </span>
+                <span className="block text-caption text-app-muted mt-1">
+                  or click to browse files from your disk
+                </span>
+              </span>
+              <span className="text-caption text-app-muted uppercase tracking-headline font-semibold">
+                Max single file 250 MB · HTML accepts .html or zipped packages
+              </span>
             </button>
-            <button
-              onClick={() => setActiveTab("link")}
-              className={`flex items-center justify-center gap-1.5 rounded-md py-2 font-bold transition-colors cursor-pointer ${
-                activeTab === "link"
-                  ? "bg-white dark:bg-[#111722] text-[#2859D9] dark:text-[#6F96FF] shadow-xs"
-                  : "text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200"
-              }`}
-            >
-              <Link className="w-3.5 h-3.5" />
-              <span>HTML Link</span>
-            </button>
-          </div>
-          
-          {/* Drag & drop zone */}
-          {activeTab === "file" && (
-            <>
-          <input 
-            type="file" 
-            ref={fileInputRef} 
-            onChange={handleFileChange} 
-            className="hidden" 
-            multiple 
-            accept="image/*,video/mp4,.zip,.html"
-          />
-          <div
-            onDragEnter={handleDrag}
-            onDragOver={handleDrag}
-            onDragLeave={handleDrag}
-            onDrop={handleDrop}
-            onClick={() => fileInputRef.current?.click()}
-            className={`border-2 border-dashed rounded-xl p-8 text-center flex flex-col items-center justify-center gap-3 cursor-pointer transition-all ${
-              dragActive
-                ? "border-[#2859D9] bg-blue-50/10 dark:border-[#6F96FF]"
-                : "border-[#E2E6EC] hover:border-[#2859D9]/55 dark:border-[#283243] dark:hover:border-[#6F96FF]/55"
-            }`}
-          >
-            <div className="w-12 h-12 rounded-full bg-blue-50 dark:bg-blue-950/20 text-[#2859D9] dark:text-[#6F96FF] flex items-center justify-center border border-[#E2E6EC] dark:border-[#283243]">
-              <UploadCloud className="w-6 h-6 animate-pulse" />
-            </div>
+
+            {/* Upload Progress Queue */}
+            {uploadingFiles.length > 0 && (
+              <div className="space-y-2.5">
+                <span className="block text-caption font-semibold uppercase tracking-headline text-app-muted">
+                  Transfer Queue ({uploadingFiles.length})
+                </span>
+                <div className="space-y-2 max-h-48 overflow-y-auto pr-1">
+                  {uploadingFiles.map((file, idx) => {
+                    const s = statusLabel(file);
+                    const StatusIcon = s.icon;
+                    return (
+                      <Card key={idx} size="row" padded className="space-y-2">
+                        <div className="flex justify-between items-start gap-2">
+                          <div className="min-w-0">
+                            <span className="block text-body font-semibold text-app-text truncate max-w-[280px]">
+                              {file.name}
+                            </span>
+                            <span className="block text-caption text-app-muted mt-0.5">
+                              {file.size}
+                            </span>
+                            {file.error && (
+                              <span className="block text-caption text-app-danger-text mt-0.5">
+                                {file.error}
+                              </span>
+                            )}
+                          </div>
+                          <Badge tone={s.tone}>
+                            {StatusIcon && (
+                              <StatusIcon
+                                className={`w-3 h-3 ${
+                                  file.status === "transcoding" ? "animate-spin" : ""
+                                }`}
+                                aria-hidden
+                              />
+                            )}
+                            {s.text}
+                          </Badge>
+                        </div>
+
+                        {(file.status === "uploading" || file.status === "transcoding") && (
+                          <ProgressBar
+                            value={file.progress}
+                            tone={file.status === "transcoding" ? "warning" : "accent"}
+                          />
+                        )}
+
+                        {(file.status === "uploading" || file.status === "failed") && (
+                          <div className="flex justify-end">
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              onClick={() =>
+                                setUploadingFiles(
+                                  uploadingFiles.filter((f) => f.name !== file.name),
+                                )
+                              }
+                            >
+                              {file.status === "failed" ? "Dismiss" : "Cancel"}
+                            </Button>
+                          </div>
+                        )}
+                      </Card>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+          </>
+        )}
+
+        {activeTab === "link" && (
+          <div className="space-y-4">
             <div>
-              <span className="block font-bold text-zinc-800 dark:text-zinc-200">
-                Drag and drop files here
-              </span>
-              <span className="text-[10px] text-zinc-400 dark:text-zinc-500 mt-1 block">
-                or click to browse files from your disk
-              </span>
-            </div>
-            <span className="text-[9px] text-zinc-400 dark:text-zinc-500 uppercase tracking-wide font-semibold mt-2">
-              Max single file upload size limit: 250 MB · HTML accepts .html or zipped packages
-            </span>
-          </div>
-
-          {/* Upload Progress Queue */}
-          {uploadingFiles.length > 0 && (
-            <div className="space-y-2.5">
-              <span className="text-[9px] font-bold uppercase tracking-wider text-zinc-400 block">
-                Transfer Queue ({uploadingFiles.length})
-              </span>
-              <div className="space-y-2 max-h-48 overflow-y-auto pr-1">
-                {uploadingFiles.map((file, idx) => (
-                  <div
-                    key={idx}
-                    className="p-3 border border-[#E2E6EC] dark:border-[#283243] rounded-lg bg-zinc-50/10 dark:bg-zinc-950/10 space-y-2 relative"
-                  >
-                    <div className="flex justify-between items-start gap-2 text-[10px]">
-                      <div className="min-w-0">
-                        <span className="block font-bold text-zinc-800 dark:text-zinc-200 truncate max-w-[280px]">
-                          {file.name}
-                        </span>
-                        <span className="text-[9px] text-zinc-400 mt-0.5 block">{file.size}</span>
-                        {file.error && <span className="text-[9px] text-red-500 mt-0.5 block">{file.error}</span>}
-                      </div>
-                      
-                      {/* Status indicator */}
-                      <span className="shrink-0 font-bold uppercase tracking-wider text-[8px]">
-                        {file.status === "uploading" && <span className="text-blue-500">Uploading {file.progress}%</span>}
-                        {file.status === "transcoding" && <span className="text-amber-500 flex items-center gap-1"><RefreshCw className="w-2.5 h-2.5 animate-spin" /> Processing</span>}
-                        {file.status === "success" && <span className="text-emerald-500 flex items-center gap-0.5"><CheckCircle2 className="w-3 h-3" /> Ready</span>}
-                        {file.status === "failed" && <span className="text-red-500 flex items-center gap-0.5"><AlertCircle className="w-3 h-3" /> Failed</span>}
-                      </span>
-                    </div>
-
-                    {/* Progress slider bar */}
-                    {(file.status === "uploading" || file.status === "transcoding") && (
-                      <div className="w-full bg-[#E2E6EC] dark:bg-zinc-800 h-1 rounded-full overflow-hidden">
-                        <div
-                          className={`h-full rounded-full transition-all duration-300 ${
-                            file.status === "transcoding" ? "bg-amber-500" : "bg-[#2859D9]"
-                          }`}
-                          style={{ width: `${file.progress}%` }}
-                        />
-                      </div>
-                    )}
-
-                    {/* Cancel trigger */}
-                    {(file.status === "uploading" || file.status === "failed") && (
-                      <button
-                        onClick={() => setUploadingFiles(uploadingFiles.filter((f) => f.name !== file.name))}
-                        className="absolute right-3 bottom-3 text-[9px] font-bold text-zinc-400 hover:text-red-500 cursor-pointer"
-                      >
-                        {file.status === "failed" ? "Dismiss" : "Cancel"}
-                      </button>
-                    )}
-                  </div>
-                ))}
+              <FieldLabel htmlFor="mu-url">HTML URL</FieldLabel>
+              <div className="relative">
+                <Link className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-app-muted pointer-events-none" />
+                <TextInput
+                  id="mu-url"
+                  value={linkUrl}
+                  onChange={(e) => {
+                    setLinkUrl(e.target.value);
+                    setLinkError("");
+                  }}
+                  placeholder="https://example.com/signage/menu.html"
+                  className="pl-9"
+                />
               </div>
             </div>
-          )}
-            </>
-          )}
 
-          {activeTab === "link" && (
-            <div className="space-y-4">
-              <div className="grid grid-cols-1 gap-3">
-                <label className="space-y-1.5">
-                  <span className="text-[9px] uppercase tracking-wider font-bold text-zinc-400">HTML URL</span>
-                  <div className="relative">
-                    <Link className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-zinc-400" />
-                    <input
-                      value={linkUrl}
-                      onChange={(e) => {
-                        setLinkUrl(e.target.value);
-                        setLinkError("");
-                      }}
-                      placeholder="https://example.com/signage/menu.html"
-                      className="w-full pl-9 pr-3 py-2 bg-[#F6F7F9] dark:bg-[#171F2C]/50 border border-[#E2E6EC] dark:border-[#283243] rounded-lg text-xs text-[#18202B] dark:text-[#F2F5F8] placeholder-zinc-450 focus:outline-none focus:border-[#2859D9]/60"
-                    />
-                  </div>
-                </label>
+            <div>
+              <FieldLabel htmlFor="mu-name">Asset Name</FieldLabel>
+              <TextInput
+                id="mu-name"
+                value={linkName}
+                onChange={(e) => setLinkName(e.target.value)}
+                placeholder="Rewards microsite"
+              />
+            </div>
 
-                <label className="space-y-1.5">
-                  <span className="text-[9px] uppercase tracking-wider font-bold text-zinc-400">Asset Name</span>
-                  <input
-                    value={linkName}
-                    onChange={(e) => setLinkName(e.target.value)}
-                    placeholder="Rewards microsite"
-                    className="w-full px-3 py-2 bg-[#F6F7F9] dark:bg-[#171F2C]/50 border border-[#E2E6EC] dark:border-[#283243] rounded-lg text-xs text-[#18202B] dark:text-[#F2F5F8] placeholder-zinc-450 focus:outline-none focus:border-[#2859D9]/60"
-                  />
-                </label>
+            <div className="grid grid-cols-3 gap-3">
+              <div>
+                <FieldLabel htmlFor="mu-dur">Duration</FieldLabel>
+                <TextInput
+                  id="mu-dur"
+                  type="number"
+                  min="1"
+                  value={linkDuration}
+                  onChange={(e) => setLinkDuration(e.target.value)}
+                />
               </div>
-
-              <div className="grid grid-cols-3 gap-3">
-                <label className="space-y-1.5">
-                  <span className="text-[9px] uppercase tracking-wider font-bold text-zinc-400">Duration</span>
-                  <input
-                    type="number"
-                    min="1"
-                    value={linkDuration}
-                    onChange={(e) => setLinkDuration(e.target.value)}
-                    className="w-full px-3 py-2 bg-[#F6F7F9] dark:bg-[#171F2C]/50 border border-[#E2E6EC] dark:border-[#283243] rounded-lg text-xs text-[#18202B] dark:text-[#F2F5F8] focus:outline-none focus:border-[#2859D9]/60"
-                  />
-                </label>
-                <label className="space-y-1.5">
-                  <span className="text-[9px] uppercase tracking-wider font-bold text-zinc-400">Width</span>
-                  <input
-                    type="number"
-                    min="1"
-                    value={linkWidth}
-                    onChange={(e) => setLinkWidth(e.target.value)}
-                    className="w-full px-3 py-2 bg-[#F6F7F9] dark:bg-[#171F2C]/50 border border-[#E2E6EC] dark:border-[#283243] rounded-lg text-xs text-[#18202B] dark:text-[#F2F5F8] focus:outline-none focus:border-[#2859D9]/60"
-                  />
-                </label>
-                <label className="space-y-1.5">
-                  <span className="text-[9px] uppercase tracking-wider font-bold text-zinc-400">Height</span>
-                  <input
-                    type="number"
-                    min="1"
-                    value={linkHeight}
-                    onChange={(e) => setLinkHeight(e.target.value)}
-                    className="w-full px-3 py-2 bg-[#F6F7F9] dark:bg-[#171F2C]/50 border border-[#E2E6EC] dark:border-[#283243] rounded-lg text-xs text-[#18202B] dark:text-[#F2F5F8] focus:outline-none focus:border-[#2859D9]/60"
-                  />
-                </label>
+              <div>
+                <FieldLabel htmlFor="mu-w">Width</FieldLabel>
+                <TextInput
+                  id="mu-w"
+                  type="number"
+                  min="1"
+                  value={linkWidth}
+                  onChange={(e) => setLinkWidth(e.target.value)}
+                />
               </div>
+              <div>
+                <FieldLabel htmlFor="mu-h">Height</FieldLabel>
+                <TextInput
+                  id="mu-h"
+                  type="number"
+                  min="1"
+                  value={linkHeight}
+                  onChange={(e) => setLinkHeight(e.target.value)}
+                />
+              </div>
+            </div>
 
-              {linkError && (
-                <div className="p-2.5 rounded-lg border border-red-200 dark:border-red-900/30 bg-red-50 dark:bg-red-950/20 text-red-600 dark:text-red-400 text-[10px] font-semibold flex items-center gap-2">
-                  <AlertCircle className="w-3.5 h-3.5 shrink-0" />
-                  <span>{linkError}</span>
+            {linkError && (
+              <div className="p-2.5 rounded-lg border border-app-danger/30 bg-app-danger-surface text-app-danger-text text-body font-semibold flex items-center gap-2">
+                <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+                <span>{linkError}</span>
+              </div>
+            )}
+
+            <div className="border border-app-border rounded-lg overflow-hidden bg-app-surface-alt aspect-video relative">
+              {linkPreviewUrl ? (
+                <iframe
+                  src={linkPreviewUrl}
+                  title="HTML link preview"
+                  className="absolute inset-0 w-full h-full bg-white"
+                  sandbox="allow-scripts allow-same-origin allow-forms allow-popups"
+                />
+              ) : (
+                <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 text-center text-app-muted">
+                  <Code className="w-8 h-8 opacity-50" />
+                  <span className="text-body font-semibold">
+                    Preview an HTML link before saving
+                  </span>
                 </div>
               )}
-
-              <div className="border border-[#E2E6EC] dark:border-[#283243] rounded-xl overflow-hidden bg-[#F6F7F9] dark:bg-[#090D14] aspect-video relative">
-                {linkPreviewUrl ? (
-                  <iframe
-                    src={linkPreviewUrl}
-                    title="HTML link preview"
-                    className="absolute inset-0 w-full h-full bg-white"
-                    sandbox="allow-scripts allow-same-origin allow-forms allow-popups"
-                  />
-                ) : (
-                  <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 text-center text-zinc-400 dark:text-zinc-500">
-                    <Code className="w-8 h-8 opacity-50" />
-                    <span className="text-[10px] font-bold">Preview an HTML link before saving</span>
-                  </div>
-                )}
-              </div>
-
-              <div className="flex justify-end gap-2">
-                <button
-                  onClick={handlePreviewLink}
-                  className="px-3 py-2 border border-[#E2E6EC] dark:border-[#283243] text-xs font-bold rounded-lg text-zinc-650 dark:text-zinc-350 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors cursor-pointer flex items-center gap-1.5"
-                >
-                  <Eye className="w-3.5 h-3.5" />
-                  <span>Preview Link</span>
-                </button>
-                <button
-                  onClick={handleSaveLink}
-                  disabled={isSavingLink}
-                  className="px-3 py-2 bg-[#2859D9] dark:bg-[#6F96FF] text-white dark:text-[#111722] text-xs font-bold rounded-lg hover:opacity-90 transition-opacity cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed flex items-center gap-1.5"
-                >
-                  {isSavingLink ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
-                  <span>{isSavingLink ? "Saving" : "Save HTML Link"}</span>
-                </button>
-              </div>
             </div>
-          )}
 
-        </div>
-
-        {/* Footer actions */}
-        <div className="p-4 border-t border-[#E2E6EC] dark:border-[#283243] flex justify-end bg-[#F6F7F9]/50 dark:bg-[#171F2C]/20 shrink-0">
-          <button
-            onClick={onClose}
-            className="px-4 py-2 border border-[#E2E6EC] dark:border-[#283243] text-xs font-bold rounded-lg text-zinc-650 dark:text-zinc-350 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors cursor-pointer"
-          >
-            Close Window
-          </button>
-        </div>
-
+            <div className="flex justify-end gap-2">
+              <Button variant="secondary" size="sm" icon={Eye} onClick={handlePreviewLink}>
+                Preview Link
+              </Button>
+              <Button
+                variant="primary"
+                size="sm"
+                icon={isSavingLink ? RefreshCw : Save}
+                onClick={handleSaveLink}
+                disabled={isSavingLink}
+              >
+                {isSavingLink ? "Saving" : "Save HTML Link"}
+              </Button>
+            </div>
+          </div>
+        )}
       </div>
-    </div>
+    </Modal>
   );
 }
