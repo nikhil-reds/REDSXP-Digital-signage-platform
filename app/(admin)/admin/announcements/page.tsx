@@ -4,6 +4,7 @@ import React, { useState } from "react";
 import { Plus } from "lucide-react";
 import AnnouncementsTable from "@/components/admin/announcements/announcements-table";
 import AnnouncementForm from "@/components/admin/announcements/announcement-form";
+import { Button } from "@/components/ui";
 
 interface Announcement {
   id: string;
@@ -127,34 +128,33 @@ export default function AnnouncementsBroadcastPage() {
   };
 
   return (
-    <div className="flex h-[calc(100vh-4rem)] overflow-hidden bg-zinc-50 dark:bg-zinc-950 font-sans">
+    <div className="flex h-[calc(100vh-4rem)] overflow-hidden bg-app-canvas font-sans text-app-text">
       {/* Main Table section */}
       <div className="flex-1 flex flex-col p-6 overflow-hidden min-w-0">
         {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-5">
           <div className="flex flex-col gap-0.5">
-            <h1 className="text-xl font-bold text-zinc-900 dark:text-zinc-50 tracking-tight">
+            <h1 className="text-page-title font-bold tracking-tight text-app-text">
               Announcements
             </h1>
-            <p className="text-xs text-zinc-500 dark:text-zinc-400">
+            <p className="text-caption text-app-muted">
               Broadcast messages to tenants and end users across the platform
             </p>
           </div>
-          <button
+          <Button
             onClick={() => setIsFormOpen(true)}
-            className="flex items-center gap-1.5 bg-zinc-950 text-white dark:bg-zinc-50 dark:text-zinc-955 px-3.5 py-1.5 rounded-lg text-xs font-semibold hover:opacity-90 transition-opacity shadow-sm cursor-pointer self-start sm:self-auto"
+            className="self-start sm:self-auto"
           >
             <Plus className="w-3.5 h-3.5" />
             <span>New Announcement</span>
-          </button>
+          </Button>
         </div>
 
         {/* Table list view */}
         <div className="flex-1 flex overflow-hidden min-h-0">
           <AnnouncementsTable
             announcements={announcements}
-            onSelectAnnouncement={(item) => setIsFormOpen(true)}
-            onAddNewClick={() => setIsFormOpen(true)}
+            onSelectAnnouncement={() => setIsFormOpen(true)}
           />
         </div>
       </div>
