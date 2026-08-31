@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React from "react";
 import {
   ResponsiveContainer,
   LineChart,
@@ -30,60 +30,45 @@ const tenantsData = [
 ];
 
 export default function AnalyticsTrendsSection() {
-  const [mounted, setMounted] = useState(false);
-
-  useEffect(() => {
-    setMounted(true);
-  }, []);
-
-  if (!mounted) {
-    return (
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <div className="bg-white dark:bg-zinc-900 border border-zinc-200/80 dark:border-zinc-800/80 p-5 rounded-xl h-80 animate-pulse" />
-        <div className="bg-white dark:bg-zinc-900 border border-zinc-200/80 dark:border-zinc-800/80 p-5 rounded-xl h-80 animate-pulse" />
-      </div>
-    );
-  }
-
   return (
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
       {/* Daily Active Screens */}
-      <div className="bg-white dark:bg-zinc-900 border border-zinc-200/80 dark:border-zinc-800/80 p-5 rounded-lg shadow-xs flex flex-col justify-between">
+      <div className="flex flex-col justify-between rounded-xl border border-app-border bg-app-surface p-5 shadow-xs">
         <div>
-          <h2 className="text-sm font-bold text-zinc-900 dark:text-zinc-50">Daily Active Screens</h2>
-          <p className="text-xs text-zinc-400 mt-0.5">Online screen count over June 2026 · dashed = prior period</p>
+          <h2 className="text-body font-bold text-app-text">Daily Active Screens</h2>
+          <p className="mt-0.5 text-caption text-app-muted">Online screen count over June 2026 · dashed = prior period</p>
         </div>
 
         <div className="h-64 mt-4 w-full text-xs">
           <ResponsiveContainer width="100%" height="100%">
             <LineChart data={dailyActiveData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--color-zinc-150)" className="dark:stroke-zinc-800/40" />
-              <XAxis dataKey="name" tickLine={false} axisLine={false} stroke="#888888" />
+              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--app-border)" />
+              <XAxis dataKey="name" tickLine={false} axisLine={false} stroke="var(--app-muted)" />
               <YAxis
                 tickLine={false}
                 axisLine={false}
-                stroke="#888888"
+                stroke="var(--app-muted)"
                 domain={[3800, 4600]}
                 ticks={[3800, 4000, 4200, 4400, 4600]}
               />
               <Tooltip
                 contentStyle={{
-                  background: "var(--background)",
-                  border: "1px solid var(--color-zinc-200)",
+                  background: "var(--app-surface)",
+                  border: "1px solid var(--app-border)",
                   borderRadius: "8px"
                 }}
               />
               <Line
                 type="monotone"
                 dataKey="current"
-                stroke="#2563eb"
+                stroke="var(--chart-1)"
                 strokeWidth={2}
-                dot={{ r: 3, fill: "#2563eb" }}
+                dot={{ r: 3, fill: "var(--chart-1)" }}
               />
               <Line
                 type="monotone"
                 dataKey="previous"
-                stroke="#94a3b8"
+                stroke="var(--app-muted)"
                 strokeWidth={1.5}
                 strokeDasharray="4 4"
                 dot={false}
@@ -94,33 +79,33 @@ export default function AnalyticsTrendsSection() {
       </div>
 
       {/* New Tenants vs Churned */}
-      <div className="bg-white dark:bg-zinc-900 border border-zinc-200/80 dark:border-zinc-800/80 p-5 rounded-lg shadow-xs flex flex-col justify-between">
+      <div className="flex flex-col justify-between rounded-xl border border-app-border bg-app-surface p-5 shadow-xs">
         <div>
-          <h2 className="text-sm font-bold text-zinc-900 dark:text-zinc-50">New Tenants vs Churned</h2>
-          <p className="text-xs text-zinc-400 mt-0.5">Weekly acquisition and cancellations</p>
+          <h2 className="text-body font-bold text-app-text">New Tenants vs Churned</h2>
+          <p className="mt-0.5 text-caption text-app-muted">Weekly acquisition and cancellations</p>
         </div>
 
         <div className="h-64 mt-4 w-full text-xs">
           <ResponsiveContainer width="100%" height="100%">
             <BarChart data={tenantsData} margin={{ top: 10, right: 10, left: -25, bottom: 0 }} barGap={5}>
-              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--color-zinc-150)" className="dark:stroke-zinc-800/40" />
-              <XAxis dataKey="name" tickLine={false} axisLine={false} stroke="#888888" />
+              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--app-border)" />
+              <XAxis dataKey="name" tickLine={false} axisLine={false} stroke="var(--app-muted)" />
               <YAxis
                 tickLine={false}
                 axisLine={false}
-                stroke="#888888"
+                stroke="var(--app-muted)"
                 domain={[0, 8]}
                 ticks={[0, 2, 4, 6, 8]}
               />
               <Tooltip
                 contentStyle={{
-                  background: "var(--background)",
-                  border: "1px solid var(--color-zinc-200)",
+                  background: "var(--app-surface)",
+                  border: "1px solid var(--app-border)",
                   borderRadius: "8px"
                 }}
               />
-              <Bar dataKey="active" name="New Tenants" fill="#2563eb" radius={[4, 4, 0, 0]} maxBarSize={35} />
-              <Bar dataKey="churn" name="Churned" fill="#ef4444" radius={[4, 4, 0, 0]} maxBarSize={35} />
+              <Bar dataKey="active" name="New Tenants" fill="var(--chart-1)" radius={[4, 4, 0, 0]} maxBarSize={35} />
+              <Bar dataKey="churn" name="Churned" fill="var(--app-danger)" radius={[4, 4, 0, 0]} maxBarSize={35} />
             </BarChart>
           </ResponsiveContainer>
         </div>
