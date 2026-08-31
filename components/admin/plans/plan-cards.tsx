@@ -126,8 +126,8 @@ export default function PlanCards() {
     <div className="space-y-4">
       {/* Small Header */}
       <div className="flex justify-between items-baseline">
-        <h2 className="text-sm font-bold text-zinc-900 dark:text-zinc-50">Plan Comparison</h2>
-        <span className="text-[10px] text-zinc-450 dark:text-zinc-500 font-medium">
+        <h2 className="text-body font-bold text-app-text">Plan Comparison</h2>
+        <span className="text-[10px] font-medium text-app-muted">
           Prices in INR · GST exclusive
         </span>
       </div>
@@ -141,14 +141,14 @@ export default function PlanCards() {
           return (
             <div
               key={plan.name}
-              className={`bg-white dark:bg-zinc-900 border p-4.5 rounded-xl flex flex-col justify-between hover:shadow-sm transition-all relative ${
+              className={`relative flex flex-col justify-between rounded-xl border bg-app-surface p-4.5 transition-all hover:shadow-sm ${
                 plan.isPopular
-                  ? "border-zinc-950 dark:border-zinc-100 ring-1 ring-zinc-950 dark:ring-zinc-100"
-                  : "border-zinc-200 dark:border-zinc-800"
+                  ? "border-app-accent-border ring-1 ring-app-accent-border"
+                  : "border-app-border"
               }`}
             >
               {plan.isPopular && (
-                <span className="absolute -top-2.5 right-6 bg-zinc-950 text-white dark:bg-zinc-50 dark:text-zinc-950 text-[8px] uppercase font-bold tracking-widest px-2 py-0.5 rounded-full shadow-xs">
+                <span className="absolute -top-2.5 right-6 rounded-full bg-app-accent px-2 py-0.5 text-[8px] font-bold uppercase tracking-widest text-app-accent-on shadow-xs">
                   Most Popular
                 </span>
               )}
@@ -156,28 +156,28 @@ export default function PlanCards() {
               <div>
                 {/* Plan Title & Price */}
                 <div>
-                  <h3 className="text-xs font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-wider">
+                  <h3 className="text-caption font-bold uppercase tracking-wider text-app-muted">
                     {plan.name}
                   </h3>
                   <div className="mt-2.5 flex items-baseline gap-1">
-                    <span className="text-xl font-bold text-zinc-900 dark:text-zinc-50 tracking-tight">
+                    <span className="text-xl font-bold tracking-tight text-app-text">
                       {plan.price}
                     </span>
                     {!isEnterprise && (
-                      <span className="text-[10px] text-zinc-450 dark:text-zinc-500 font-medium">/mo</span>
+                      <span className="text-[10px] font-medium text-app-muted">/mo</span>
                     )}
                   </div>
                 </div>
 
                 {/* Monthly/Annual Toggle Selector */}
                 {!isEnterprise ? (
-                  <div className="mt-3.5 p-0.5 bg-zinc-100 dark:bg-zinc-800/80 rounded-lg flex text-[10px] font-semibold text-zinc-505 select-none">
+                  <div className="mt-3.5 flex select-none rounded-lg bg-app-surface-alt p-0.5 text-[10px] font-semibold text-app-muted">
                     <button
                       onClick={() => setBillingCycles({ ...billingCycles, [plan.name]: "monthly" })}
                       className={`flex-1 py-1 rounded-md transition-all cursor-pointer ${
                         cycle === "monthly"
-                          ? "bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-50 shadow-xs"
-                          : "text-zinc-500 dark:text-zinc-450 hover:text-zinc-800"
+                          ? "bg-app-surface text-app-text shadow-xs"
+                          : "text-app-muted hover:text-app-text"
                       }`}
                     >
                       Monthly
@@ -186,15 +186,15 @@ export default function PlanCards() {
                       onClick={() => setBillingCycles({ ...billingCycles, [plan.name]: "annual" })}
                       className={`flex-1 py-1 rounded-md transition-all cursor-pointer ${
                         cycle === "annual"
-                          ? "bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-50 shadow-xs"
-                          : "text-zinc-500 dark:text-zinc-450 hover:text-zinc-800"
+                          ? "bg-app-surface text-app-text shadow-xs"
+                          : "text-app-muted hover:text-app-text"
                       }`}
                     >
                       Annual
                     </button>
                   </div>
                 ) : (
-                  <button className="mt-3.5 w-full py-1.5 border border-zinc-200 dark:border-zinc-800 rounded-lg text-[10px] font-semibold text-zinc-800 dark:text-zinc-200 flex items-center justify-center gap-1.5 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors shadow-xs cursor-pointer">
+                  <button className="mt-3.5 flex w-full cursor-pointer items-center justify-center gap-1.5 rounded-lg border border-app-border py-1.5 text-[10px] font-semibold text-app-text shadow-xs transition-colors hover:bg-app-surface-alt">
                     <PhoneCall className="w-3 h-3 text-zinc-500" />
                     <span>Contact Sales</span>
                   </button>
@@ -203,21 +203,21 @@ export default function PlanCards() {
                 {/* Param details grid */}
                 <div className="mt-5 space-y-2 text-xs">
                   {plan.params.map((param) => (
-                    <div key={param.label} className="flex justify-between items-center text-zinc-650 dark:text-zinc-450">
+                    <div key={param.label} className="flex items-center justify-between text-app-muted">
                       <span>{param.label}</span>
-                      <span className={param.isBold ? "font-bold text-zinc-900 dark:text-zinc-50" : "font-medium"}>
+                      <span className={param.isBold ? "font-bold text-app-text" : "font-medium text-app-text"}>
                         {param.value}
                       </span>
                     </div>
                   ))}
                 </div>
 
-                <hr className="border-zinc-100 dark:border-zinc-800 my-4" />
+                <hr className="my-4 border-app-border" />
 
                 {/* Features toggles list */}
                 <div className="space-y-3.5 text-xs">
                   {plan.features.map((feature, idx) => (
-                    <div key={feature.label} className="flex justify-between items-center text-zinc-600 dark:text-zinc-400">
+                    <div key={feature.label} className="flex items-center justify-between text-app-muted">
                       <span>{feature.label}</span>
                       {/* Custom Toggle Switch */}
                       <label className="relative inline-flex items-center cursor-pointer">
@@ -228,7 +228,7 @@ export default function PlanCards() {
                           onChange={() => handleToggleFeature(plan.name, idx)}
                           className="sr-only peer"
                         />
-                        <div className="w-7 h-4 bg-zinc-200 peer-focus:outline-none rounded-full peer dark:bg-zinc-800 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-zinc-300 after:border after:rounded-full after:h-3 after:w-3 after:transition-all dark:border-zinc-600 peer-checked:bg-zinc-950 dark:peer-checked:bg-zinc-100" />
+                        <div className="peer h-4 w-7 rounded-full bg-app-border after:absolute after:left-[2px] after:top-[2px] after:h-3 after:w-3 after:rounded-full after:border after:border-app-border after:bg-app-surface after:transition-all after:content-[''] peer-checked:bg-app-accent peer-checked:after:translate-x-full peer-focus:outline-none" />
                       </label>
                     </div>
                   ))}
