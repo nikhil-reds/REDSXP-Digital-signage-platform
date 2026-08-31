@@ -22,20 +22,20 @@ function PlaylistEditor() {
 
   if (loading) {
     return (
-      <div className="h-screen flex flex-col items-center justify-center gap-3 bg-[#F6F7F9] dark:bg-[#090D14] text-zinc-450">
+      <div className="h-screen flex flex-col items-center justify-center gap-3 bg-app-canvas text-app-muted">
         <Loader2 className="w-6 h-6 animate-spin" />
-        <p className="text-xs font-semibold">Loading playlist editor…</p>
+        <p className="text-body font-semibold">Loading playlist editor…</p>
       </div>
     );
   }
 
   if (loadError) {
     return (
-      <div className="h-screen flex flex-col items-center justify-center gap-3 bg-[#F6F7F9] dark:bg-[#090D14] text-center px-6">
-        <AlertTriangle className="w-6 h-6 text-red-500" />
-        <p className="text-sm font-bold text-zinc-900 dark:text-zinc-100">Couldn&apos;t load the playlist editor</p>
-        <p className="text-xs text-zinc-450 max-w-sm">{loadError}</p>
-        <Link href="/agent/playlists" className="text-xs font-bold text-[#2859D9] dark:text-[#6F96FF] hover:underline">
+      <div className="h-screen flex flex-col items-center justify-center gap-3 bg-app-canvas text-center px-6">
+        <AlertTriangle className="w-6 h-6 text-app-danger-text" />
+        <p className="font-heading text-h6 font-semibold tracking-headline text-app-text">Couldn&apos;t load the playlist editor</p>
+        <p className="text-body text-app-muted max-w-sm">{loadError}</p>
+        <Link href="/agent/playlists" className="text-body font-semibold text-app-accent-text hover:underline">
           Back to Playlists
         </Link>
       </div>
@@ -48,19 +48,19 @@ function PlaylistEditor() {
     <div
       onKeyDown={onKeyDown}
       tabIndex={-1}
-      className="h-screen flex flex-col overflow-hidden bg-[#F6F7F9] dark:bg-[#090D14] text-zinc-900 dark:text-zinc-100 outline-none relative"
+      className="h-screen flex flex-col overflow-hidden bg-app-canvas text-app-text outline-none relative"
     >
       <PlaylistToolbar {...toolbar} />
 
       {showSaveErrorBanner && (
-        <div className="flex items-center justify-between gap-3 px-4 py-2 bg-red-50 dark:bg-red-950/20 border-b border-red-200 dark:border-red-900/40 text-red-700 dark:text-red-400 text-xs font-semibold shrink-0">
+        <div className="flex items-center justify-between gap-3 px-4 py-2 bg-app-danger-surface border-b border-app-danger/30 text-app-danger-text text-body font-semibold shrink-0">
           <span className="flex items-center gap-2">
             <AlertTriangle className="w-3.5 h-3.5 shrink-0" />
             {toolbar.saveError}
           </span>
           <button
             onClick={() => setDismissedError(toolbar.saveError)}
-            className="p-0.5 rounded hover:bg-red-100 dark:hover:bg-red-900/30 cursor-pointer"
+            className="p-0.5 rounded hover:bg-app-surface-alt cursor-pointer"
             aria-label="Dismiss"
           >
             <X className="w-3.5 h-3.5" />
@@ -87,7 +87,7 @@ export default function AgentCreatePlaylistPage() {
   return (
     <Suspense
       fallback={
-        <div className="h-screen flex items-center justify-center bg-[#F6F7F9] dark:bg-[#090D14] text-zinc-450">
+        <div className="h-screen flex items-center justify-center bg-app-canvas text-app-muted">
           <Loader2 className="w-6 h-6 animate-spin" />
         </div>
       }
