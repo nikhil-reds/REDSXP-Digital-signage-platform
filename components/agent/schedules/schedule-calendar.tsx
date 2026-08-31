@@ -59,25 +59,32 @@ export function formatDays(daysOfWeek: number[]): string {
     .join(", ");
 }
 
+/**
+ * Schedule block tone. Priority is a categorical scale, so it uses the approved
+ * family: Blue for normal, brand Green for high priority. Conflicts use Amber
+ * because an overlap genuinely is a warning state, not decoration.
+ * (Was blue / purple / amber - purple is forbidden alongside green.)
+ */
 function priorityColorClasses(isConflict: boolean, isHighPriority: boolean) {
   if (isConflict) {
     return {
-      block: "bg-gradient-to-br from-amber-500/20 to-amber-500/10 border-2 border-amber-500 hover:from-amber-500/30 hover:to-amber-500/15 ring-2 ring-amber-500/10",
-      text: "text-amber-700 dark:text-amber-400",
-      dot: "bg-amber-500",
+      block:
+        "bg-app-warning-surface border-2 border-app-warning ring-2 ring-app-warning/20",
+      text: "text-app-warning-text",
+      dot: "bg-app-warning",
     };
   }
   if (isHighPriority) {
     return {
-      block: "bg-gradient-to-br from-purple-500/15 to-purple-500/5 border border-purple-500/30 hover:from-purple-500/20 hover:to-purple-500/10",
-      text: "text-purple-600 dark:text-purple-400",
-      dot: "bg-purple-500",
+      block: "bg-app-accent-surface border border-app-accent/40 hover:border-app-accent",
+      text: "text-app-accent-text",
+      dot: "bg-app-accent-text",
     };
   }
   return {
-    block: "bg-gradient-to-br from-blue-500/15 to-blue-500/5 border border-blue-500/30 hover:from-blue-500/20 hover:to-blue-500/10",
-    text: "text-blue-600 dark:text-blue-400",
-    dot: "bg-blue-500",
+    block: "bg-app-surface-alt border border-app-border-strong hover:border-app-accent-text",
+    text: "text-app-text",
+    dot: "bg-reds-blue",
   };
 }
 
@@ -163,19 +170,19 @@ export default function ScheduleCalendar({
       : "All Schedules";
 
   return (
-    <div className="flex-1 flex flex-col min-w-0 bg-white dark:bg-[#111722] border border-[#E2E6EC] dark:border-[#283243] rounded-2xl overflow-hidden shadow-md min-h-[500px]">
+    <div className="flex-1 flex flex-col min-w-0 bg-app-surface border border-app-border rounded-xl overflow-hidden min-h-[500px]">
 
       {/* Top bar: view tabs + navigation */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 p-4 border-b border-[#E2E6EC] dark:border-[#283243] bg-gradient-to-r from-[#F6F7F9] to-white dark:from-[#171F2C]/40 dark:to-[#111722]">
-        <div className="flex items-center gap-0.5 p-0.5 border border-[#E2E6EC] dark:border-[#283243] rounded-lg bg-white dark:bg-[#111722] shadow-xs w-fit">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 p-4 border-b border-app-border bg-app-surface-alt">
+        <div className="flex items-center gap-0.5 p-0.5 border border-app-border rounded-lg bg-app-surface-alt w-fit">
           {(["day", "week", "month", "agenda"] as const).map((v) => (
             <button
               key={v}
               onClick={() => setViewMode(v)}
-              className={`px-3 py-1 rounded-md text-[10px] uppercase font-bold tracking-wide transition-all duration-200 cursor-pointer ${
+              className={`px-3 py-1 rounded-md text-caption uppercase font-semibold tracking-headline transition-all duration-200 cursor-pointer ${
                 viewMode === v
-                  ? "bg-[#2859D9] dark:bg-[#6F96FF] text-white dark:text-[#111722] shadow-sm"
-                  : "text-zinc-400 hover:text-zinc-650 dark:hover:text-zinc-300"
+                  ? "bg-app-accent text-app-accent-on"
+                  : "text-app-muted hover:text-app-text"
               }`}
             >
               {v}
@@ -185,28 +192,28 @@ export default function ScheduleCalendar({
 
         {viewMode !== "agenda" && (
           <div className="flex items-center gap-2">
-            <div className="flex items-center gap-0.5 border border-[#E2E6EC] dark:border-[#283243] rounded-lg bg-white dark:bg-[#111722] shadow-xs">
+            <div className="flex items-center gap-0.5 border border-app-border rounded-lg bg-app-surface-alt">
               <button
                 onClick={goPrev}
-                className="p-1.5 rounded-l-lg text-zinc-500 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors cursor-pointer"
+                className="p-1.5 rounded-l-lg text-app-muted hover:bg-app-surface-alt hover:text-app-text transition-colors cursor-pointer"
               >
                 <ChevronLeft className="w-3.5 h-3.5" />
               </button>
               <button
                 onClick={goToday}
-                className="px-2.5 py-1 text-[10px] font-bold uppercase text-zinc-500 hover:text-[#2859D9] dark:hover:text-[#6F96FF] transition-colors cursor-pointer border-x border-[#E2E6EC] dark:border-[#283243]"
+                className="px-2.5 py-1 text-caption font-semibold uppercase text-app-muted hover:text-app-accent-text transition-colors cursor-pointer border-x border-app-border"
               >
                 Today
               </button>
               <button
                 onClick={goNext}
-                className="p-1.5 rounded-r-lg text-zinc-500 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors cursor-pointer"
+                className="p-1.5 rounded-r-lg text-app-muted hover:bg-app-surface-alt hover:text-app-text transition-colors cursor-pointer"
               >
                 <ChevronRight className="w-3.5 h-3.5" />
               </button>
             </div>
-            <span className="flex items-center gap-1.5 text-xs font-bold text-zinc-800 dark:text-zinc-200 min-w-[150px]">
-              <CalendarDays className="w-3.5 h-3.5 text-[#2859D9] dark:text-[#6F96FF]" />
+            <span className="flex items-center gap-1.5 text-body font-semibold text-app-text min-w-[150px]">
+              <CalendarDays className="w-3.5 h-3.5 text-app-accent-text" />
               {rangeLabel}
             </span>
           </div>
@@ -214,41 +221,41 @@ export default function ScheduleCalendar({
       </div>
 
       {/* Legend */}
-      <div className="px-4 py-2.5 border-b border-[#E2E6EC] dark:border-[#283243] bg-zinc-50/20 dark:bg-zinc-900/10 flex items-center justify-end gap-4 text-[10px] font-semibold text-zinc-500">
+      <div className="px-4 py-2.5 border-b border-app-border bg-app-surface-alt flex items-center justify-end gap-4 text-caption font-semibold text-app-muted">
         <span className="flex items-center gap-1">
-          <span className="w-2.5 h-2.5 bg-blue-500 rounded-sm" /> Normal (Priority &lt; 50)
+          <span className="w-2.5 h-2.5 bg-reds-blue rounded-sm" /> Normal (Priority &lt; 50)
         </span>
         <span className="flex items-center gap-1">
-          <span className="w-2.5 h-2.5 bg-purple-500 rounded-sm" /> High Priority (Priority &ge; 50)
+          <span className="w-2.5 h-2.5 bg-app-accent-text rounded-sm" /> High Priority (Priority &ge; 50)
         </span>
         <span className="flex items-center gap-1">
-          <span className="w-2.5 h-2.5 bg-amber-500 rounded-sm" /> Conflict Overlap
+          <span className="w-2.5 h-2.5 bg-app-warning rounded-sm" /> Conflict Overlap
         </span>
       </div>
 
       {viewMode === "agenda" && (
         schedules.length === 0 ? (
-          <div className="flex-1 flex items-center justify-center text-xs font-semibold text-zinc-400 dark:text-zinc-500">
+          <div className="flex-1 flex items-center justify-center text-body font-semibold text-app-muted">
             No schedules yet.
           </div>
         ) : (
-          <div className="p-4 divide-y divide-[#E2E6EC] dark:divide-[#283243] overflow-y-auto">
+          <div className="p-4 divide-y divide-app-border overflow-y-auto">
             {schedules.map((sch) => {
               const isConflict = agendaConflictedIds.has(sch.id);
               return (
                 <div
                   key={sch.id}
                   onClick={() => onSelectSchedule(sch)}
-                  className="py-3 flex items-center justify-between gap-4 first:pt-0 last:pb-0 cursor-pointer hover:bg-[#F6F7F9]/40 dark:hover:bg-[#171F2C]/20 rounded-lg px-2 -mx-2 transition-colors"
+                  className="py-3 flex items-center justify-between gap-4 first:pt-0 last:pb-0 cursor-pointer hover:bg-app-surface-alt rounded-lg px-2 -mx-2 transition-colors"
                 >
                   <div className="min-w-0">
-                    <span className="text-[10px] bg-[#F6F7F9] dark:bg-[#171F2C] text-zinc-500 font-bold px-1.5 py-0.2 rounded border border-[#E2E6EC] dark:border-[#283243] uppercase">
+                    <span className="text-caption bg-app-surface-alt text-app-muted font-semibold px-1.5 py-0.5 rounded border border-app-border uppercase">
                       P-{sch.priority}
                     </span>
-                    <h4 className="font-bold text-xs text-zinc-900 dark:text-white mt-1">
+                    <h4 className="text-body font-semibold text-app-text mt-1">
                       {sch.name}
                     </h4>
-                    <p className="text-[10px] text-zinc-500 mt-0.5">
+                    <p className="text-caption text-app-muted mt-0.5">
                       {sch.playlistName} · {formatDays(sch.daysOfWeek)} · {sch.dailyStartTime} - {sch.dailyEndTime}
                     </p>
                   </div>
@@ -262,18 +269,18 @@ export default function ScheduleCalendar({
                     }}
                   >
                     <span
-                      className={`text-[9px] font-bold px-2 py-0.5 rounded-sm border inline-flex items-center gap-1 ${
+                      className={`text-caption font-semibold px-2 py-0.5 rounded-full border inline-flex items-center gap-1 ${
                         isConflict
-                          ? "bg-amber-50 text-amber-700 dark:bg-amber-950/20 border-amber-100/50"
+                          ? "bg-app-warning-surface text-app-warning-text border-app-warning/30"
                           : sch.status === "ACTIVE"
-                          ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-950/20 border-emerald-100/50"
-                          : "bg-zinc-100 text-zinc-500 dark:bg-zinc-800 border-zinc-200/50"
+                          ? "bg-app-accent-surface text-app-accent-text border-app-accent/30"
+                          : "bg-app-surface-alt text-app-muted border-app-border"
                       }`}
                     >
-                      {isConflict && <AlertTriangle className="w-3 h-3 text-amber-500 animate-pulse" />}
+                      {isConflict && <AlertTriangle className="w-3 h-3 text-app-warning-text" />}
                       {isConflict ? "Conflict" : sch.status === "ACTIVE" ? "Active" : "Inactive"}
                     </span>
-                    <span className="block text-[9px] text-zinc-400 mt-1 font-semibold">
+                    <span className="block text-caption text-app-muted mt-1 font-semibold">
                       {sch.screensCount} Screens
                     </span>
                   </div>
@@ -286,14 +293,14 @@ export default function ScheduleCalendar({
 
       {viewMode === "week" && (
         <div className="flex-1 overflow-y-auto p-4 font-sans text-xs">
-          <div className="grid grid-cols-8 border border-[#E2E6EC] dark:border-[#283243] rounded-xl overflow-hidden bg-white dark:bg-zinc-950 divide-x divide-[#E2E6EC] dark:divide-[#283243] shadow-sm">
+          <div className="grid grid-cols-8 border border-app-border rounded-xl overflow-hidden bg-app-surface divide-x divide-app-border shadow-sm">
 
             {/* Hour labels column */}
-            <div className="relative bg-[#F6F7F9]/50 dark:bg-[#171F2C]/30" style={{ height: DAY_TIMELINE_HEIGHT + 32 }}>
+            <div className="relative bg-app-surface-alt" style={{ height: DAY_TIMELINE_HEIGHT + 32 }}>
               {HOUR_MARKS.map((hour) => (
                 <span
                   key={hour}
-                  className="absolute left-0 right-0 -translate-y-1/2 text-center text-zinc-450 font-bold text-[9px] select-none uppercase tracking-wider"
+                  className="absolute left-0 right-0 -translate-y-1/2 text-center text-app-muted font-semibold text-caption select-none uppercase tracking-headline"
                   style={{ top: 32 + (hour / 24) * DAY_TIMELINE_HEIGHT }}
                 >
                   {formatHour(hour)}
@@ -309,20 +316,20 @@ export default function ScheduleCalendar({
               return (
                 <div
                   key={date.toISOString()}
-                  className={`relative ${today ? "bg-[#2859D9]/[0.04] dark:bg-[#6F96FF]/[0.06]" : "bg-zinc-50/10 dark:bg-zinc-900/5"} hover:bg-zinc-50/40 dark:hover:bg-zinc-900/10 transition-colors`}
+                  className={`relative ${today ? "bg-app-accent-surface" : "bg-app-surface"} hover:bg-app-surface-alt transition-colors`}
                   style={{ height: DAY_TIMELINE_HEIGHT + 32 }}
                 >
-                  <div className="sticky top-0 z-10 h-8 flex flex-col items-center justify-center bg-white dark:bg-zinc-950 border-b border-[#E2E6EC] dark:border-[#283243] select-none">
-                    <span className="block text-[9px] font-bold text-zinc-400 uppercase tracking-wide">
+                  <div className="sticky top-0 z-10 h-8 flex flex-col items-center justify-center bg-app-surface border-b border-app-border select-none">
+                    <span className="block text-caption font-semibold text-app-muted uppercase tracking-headline">
                       {DAY_COLUMNS[weekdayNumber(date) - 1].label}
                     </span>
-                    <span className={`block text-[10px] font-bold ${today ? "text-[#2859D9] dark:text-[#6F96FF]" : "text-zinc-600 dark:text-zinc-300"}`}>
+                    <span className={`block text-caption font-semibold ${today ? "text-app-accent-text" : "text-app-text"}`}>
                       {date.getDate()}
                     </span>
                   </div>
 
                   {daySchedules.length === 0 && (
-                    <span className="absolute inset-x-1 top-12 text-[8px] text-zinc-400 uppercase select-none font-semibold text-center">
+                    <span className="absolute inset-x-1 top-12 text-caption text-app-muted uppercase select-none font-semibold text-center">
                       Offline
                     </span>
                   )}
@@ -344,12 +351,12 @@ export default function ScheduleCalendar({
                         style={{ top, height }}
                         title={`${sch.name} · ${sch.dailyStartTime} - ${sch.dailyEndTime}`}
                       >
-                        <span className={`font-bold text-[8px] block truncate ${colors.text}`}>{sch.name}</span>
-                        <span className="text-[7px] text-zinc-400 block truncate">
+                        <span className={`font-semibold text-caption block truncate ${colors.text}`}>{sch.name}</span>
+                        <span className="text-caption text-app-muted block truncate">
                           {sch.dailyStartTime} - {sch.dailyEndTime}
                         </span>
                         {isConflict && (
-                          <span className="flex items-center gap-1 text-[7px] text-amber-500 font-semibold">
+                          <span className="flex items-center gap-1 text-caption text-app-warning-text font-semibold">
                             <AlertTriangle className="w-2.5 h-2.5 shrink-0 animate-pulse" />
                             Conflict
                           </span>
@@ -370,12 +377,12 @@ export default function ScheduleCalendar({
             const daySchedules = schedules.filter((sch) => isScheduleActiveOnDate(sch, currentDate));
             const { ids: dayConflictedIds, findPartner: findDayConflictPartner } = dateConflictHelpers(currentDate);
             return (
-              <div className="grid grid-cols-[80px_1fr] border border-[#E2E6EC] dark:border-[#283243] rounded-xl overflow-hidden bg-white dark:bg-zinc-950 divide-x divide-[#E2E6EC] dark:divide-[#283243] shadow-sm">
-                <div className="relative bg-[#F6F7F9]/50 dark:bg-[#171F2C]/30" style={{ height: DAY_TIMELINE_HEIGHT }}>
+              <div className="grid grid-cols-[80px_1fr] border border-app-border rounded-xl overflow-hidden bg-app-surface divide-x divide-app-border shadow-sm">
+                <div className="relative bg-app-surface-alt" style={{ height: DAY_TIMELINE_HEIGHT }}>
                   {HOUR_MARKS.map((hour) => (
                     <span
                       key={hour}
-                      className="absolute left-0 right-0 -translate-y-1/2 text-center text-zinc-450 font-bold text-[9px] select-none uppercase tracking-wider"
+                      className="absolute left-0 right-0 -translate-y-1/2 text-center text-app-muted font-semibold text-caption select-none uppercase tracking-headline"
                       style={{ top: (hour / 24) * DAY_TIMELINE_HEIGHT }}
                     >
                       {formatHour(hour)}
@@ -383,7 +390,7 @@ export default function ScheduleCalendar({
                   ))}
                 </div>
 
-                <div className="relative bg-zinc-50/10 dark:bg-zinc-900/5" style={{ height: DAY_TIMELINE_HEIGHT }}>
+                <div className="relative bg-app-surface" style={{ height: DAY_TIMELINE_HEIGHT }}>
                   {HOUR_MARKS.slice(1, -1).map((hour) => (
                     <div
                       key={hour}
@@ -393,7 +400,7 @@ export default function ScheduleCalendar({
                   ))}
 
                   {daySchedules.length === 0 && (
-                    <div className="absolute inset-0 flex items-center justify-center text-xs font-semibold text-zinc-400 dark:text-zinc-500">
+                    <div className="absolute inset-0 flex items-center justify-center text-body font-semibold text-app-muted">
                       No schedules active on this day.
                     </div>
                   )}
@@ -441,11 +448,11 @@ export default function ScheduleCalendar({
 
       {viewMode === "month" && (
         <div className="flex-1 overflow-y-auto p-4 font-sans text-xs">
-          <div className="grid grid-cols-7 border border-[#E2E6EC] dark:border-[#283243] rounded-xl overflow-hidden bg-white dark:bg-zinc-950 shadow-sm">
+          <div className="grid grid-cols-7 border border-app-border rounded-xl overflow-hidden bg-app-surface shadow-sm">
             {DAY_COLUMNS.map((day) => (
               <div
                 key={day.label}
-                className="text-center text-[9px] font-bold uppercase tracking-wide text-zinc-400 py-2 bg-[#F6F7F9]/50 dark:bg-[#171F2C]/30 border-b border-[#E2E6EC] dark:border-[#283243]"
+                className="text-center text-[9px] font-bold uppercase tracking-wide text-zinc-400 py-2 bg-app-surface-alt border-b border-[#E2E6EC] dark:border-[#283243]"
               >
                 {day.label}
               </div>
