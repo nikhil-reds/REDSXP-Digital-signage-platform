@@ -1,7 +1,8 @@
 "use client";
 
 import React from "react";
-import { Zap, Edit2, Play, Eye, EyeOff, BarChart2 } from "lucide-react";
+import { Edit2, Zap } from "lucide-react";
+import { Badge, IconButton, TableCard, Td, Th, Tr } from "@/components/ui";
 
 export interface AutomationRule {
   id: string;
@@ -22,90 +23,97 @@ interface RulesListProps {
   onEditRule: (rule: AutomationRule) => void;
 }
 
-export default function RulesList({ rules, onToggleRule, onEditRule }: RulesListProps) {
+export default function RulesList({
+  rules,
+  onToggleRule,
+  onEditRule,
+}: RulesListProps) {
   return (
-    <div className="bg-white dark:bg-[#111722] border border-[#E2E6EC] dark:border-[#283243] rounded-xl overflow-hidden shadow-xs">
-      <div className="overflow-x-auto">
-        <table className="w-full text-left text-xs border-collapse">
-          <thead>
-            <tr className="bg-[#F6F7F9] dark:bg-[#171F2C]/50 text-[#657080] dark:text-[#9AA7B7] font-bold border-b border-[#E2E6EC] dark:border-[#283243] select-none">
-              <th className="p-3.5">Rule Name</th>
-              <th className="p-3.5">Sensor Trigger</th>
-              <th className="p-3.5">Action Output</th>
-              <th className="p-3.5">Priority</th>
-              <th className="p-3.5">Target Scope</th>
-              <th className="p-3.5">Active Times</th>
-              <th className="p-3.5 text-center">Triggers</th>
-              <th className="p-3.5 text-center">State</th>
-              <th className="p-3.5 w-12 text-center">Edit</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-[#E2E6EC] dark:divide-[#283243]">
-            {rules.map((rule) => {
-              return (
-                <tr
-                  key={rule.id}
-                  className={`hover:bg-[#F6F7F9]/30 dark:hover:bg-[#171F2C]/10 transition-all ${
-                    !rule.active ? "opacity-65" : ""
+    <TableCard
+      title="Automation rules"
+      description={`${rules.length} rule${rules.length === 1 ? "" : "s"} matching the current filters`}
+      icon={Zap}
+    >
+      <table className="w-full min-w-[1120px] border-collapse text-left">
+        <thead className="bg-app-surface-alt">
+          <tr>
+            <Th>Rule name</Th>
+            <Th>Sensor trigger</Th>
+            <Th>Action output</Th>
+            <Th>Priority</Th>
+            <Th>Target scope</Th>
+            <Th>Active times</Th>
+            <Th className="text-center">Triggers</Th>
+            <Th className="text-center">State</Th>
+            <Th className="w-16 text-center">Edit</Th>
+          </tr>
+        </thead>
+        <tbody>
+          {rules.map((rule) => (
+            <Tr key={rule.id} className={!rule.active ? "opacity-60" : undefined}>
+              <Td>
+                <span className="flex items-center gap-2 font-semibold">
+                  <Zap
+                    className={`h-4 w-4 shrink-0 ${
+                      rule.active ? "text-app-accent-text" : "text-app-muted"
+                    }`}
+                  />
+                  {rule.name}
+                </span>
+              </Td>
+              <Td>
+                <Badge tone="neutral" className="rounded-md">
+                  {rule.condition}
+                </Badge>
+              </Td>
+              <Td className="font-semibold">{rule.action}</Td>
+              <Td className="font-semibold text-app-muted">P-{rule.priority}</Td>
+              <Td>{rule.target}</Td>
+              <Td className="text-app-muted">{rule.schedule}</Td>
+              <Td className="text-center font-semibold">{rule.triggersCount}</Td>
+              <Td className="text-center">
+                <button
+                  type="button"
+                  role="switch"
+                  aria-checked={rule.active}
+                  aria-label={`${rule.active ? "Disable" : "Enable"} ${rule.name}`}
+                  onClick={() => onToggleRule(rule.id, !rule.active)}
+                  className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-app-accent-text focus-visible:ring-offset-2 focus-visible:ring-offset-app-surface ${
+                    rule.active
+                      ? "border-app-accent-text bg-app-accent"
+                      : "border-app-border-strong bg-app-surface-alt"
                   }`}
                 >
-                  <td className="p-3.5 font-bold text-zinc-900 dark:text-zinc-50 flex items-center gap-2">
-                    <Zap className={`w-3.5 h-3.5 ${rule.active ? "text-amber-500" : "text-zinc-400"}`} />
-                    <span>{rule.name}</span>
-                  </td>
-                  <td className="p-3.5 font-semibold text-zinc-700 dark:text-zinc-350">
-                    <span className="px-2 py-0.5 rounded-sm bg-zinc-50 dark:bg-zinc-800 border border-[#E2E6EC] dark:border-[#283243] font-mono text-[10px]">
-                      {rule.condition}
-                    </span>
-                  </td>
-                  <td className="p-3.5 text-[#2859D9] dark:text-[#6F96FF] font-semibold">
-                    {rule.action}
-                  </td>
-                  <td className="p-3.5 text-zinc-450 font-bold font-mono">
-                    P-{rule.priority}
-                  </td>
-                  <td className="p-3.5 text-zinc-550 dark:text-zinc-400">
-                    {rule.target}
-                  </td>
-                  <td className="p-3.5 text-zinc-450 text-[11px]">
-                    {rule.schedule}
-                  </td>
-                  
-                  {/* Triggers Count */}
-                  <td className="p-3.5 text-center font-mono font-bold text-zinc-800 dark:text-zinc-200">
-                    {rule.triggersCount}
-                  </td>
-
-                  {/* Active Toggle Switch */}
-                  <td className="p-3.5 text-center" onClick={(e) => e.stopPropagation()}>
-                    <button
-                      onClick={() => onToggleRule(rule.id, !rule.active)}
-                      className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 focus:outline-none ${
-                        rule.active ? "bg-emerald-500" : "bg-zinc-300 dark:bg-zinc-700"
-                      }`}
-                    >
-                      <span
-                        className={`pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow ring-0 transition duration-200 ${
-                          rule.active ? "translate-x-4" : "translate-x-0"
-                        }`}
-                      />
-                    </button>
-                  </td>
-
-                  <td className="p-3.5 text-center">
-                    <button
-                      onClick={() => onEditRule(rule)}
-                      className="p-1 rounded-md text-zinc-400 hover:bg-[#F6F7F9] dark:hover:bg-[#171F2C] hover:text-[#2859D9] dark:hover:text-[#6F96FF] cursor-pointer"
-                    >
-                      <Edit2 className="w-3.5 h-3.5" />
-                    </button>
-                  </td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
-      </div>
-    </div>
+                  <span
+                    aria-hidden
+                    className={`pointer-events-none mt-0.5 inline-block h-4.5 w-4.5 transform rounded-full shadow-sm transition-transform duration-200 ${
+                      rule.active
+                        ? "translate-x-5 bg-app-accent-on"
+                        : "translate-x-0.5 bg-app-muted"
+                    }`}
+                  />
+                </button>
+              </Td>
+              <Td className="text-center">
+                <IconButton
+                  size="sm"
+                  icon={Edit2}
+                  aria-label={`Edit ${rule.name}`}
+                  title={`Edit ${rule.name}`}
+                  onClick={() => onEditRule(rule)}
+                />
+              </Td>
+            </Tr>
+          ))}
+          {rules.length === 0 && (
+            <Tr>
+              <Td colSpan={9} className="py-12 text-center text-app-muted">
+                No sensor rules match the current filters.
+              </Td>
+            </Tr>
+          )}
+        </tbody>
+      </table>
+    </TableCard>
   );
 }
