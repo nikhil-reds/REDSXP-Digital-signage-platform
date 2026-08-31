@@ -20,22 +20,28 @@ const VARIANT: Record<ButtonVariant, string> = {
   danger: "bg-app-danger text-app-danger-on hover:opacity-90",
 };
 
-export interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
+export type ButtonProps = React.ButtonHTMLAttributes<HTMLButtonElement> & {
   variant?: ButtonVariant;
   size?: "sm" | "md";
   icon?: React.ComponentType<{ className?: string }>;
-}
+  /** Render as another element (e.g. next/link) while keeping button styling. */
+  as?: React.ElementType;
+  /** Only meaningful together with `as` — e.g. `as={Link} href="/login"`. */
+  href?: string;
+};
 
 export function Button({
   variant = "secondary",
   size = "md",
   icon: Icon,
+  as,
   className,
   children,
   ...rest
 }: ButtonProps) {
+  const Component = as ?? "button";
   return (
-    <button
+    <Component
       className={cn(
         "inline-flex items-center justify-center gap-2 rounded-lg font-heading font-semibold",
         "transition-colors duration-200 cursor-pointer whitespace-nowrap",
@@ -50,7 +56,7 @@ export function Button({
     >
       {Icon && <Icon className={size === "md" ? "w-4 h-4" : "w-3.5 h-3.5"} />}
       {children}
-    </button>
+    </Component>
   );
 }
 
