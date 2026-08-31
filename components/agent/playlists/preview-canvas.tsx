@@ -248,7 +248,7 @@ export default function PreviewCanvas({
         <button
           onClick={onPlayPause}
           title="Play / Pause (Space)"
-          className="w-10 h-10 rounded-full border-none bg-app-accent text-app-accent-on flex items-center justify-center shadow-md hover:opacity-90 cursor-pointer transition-opacity"
+          className="w-10 h-10 rounded-full border-none bg-app-accent text-app-accent-on flex items-center justify-center shadow-xs hover:opacity-90 cursor-pointer transition-opacity"
         >
           {playing ? <Pause className="w-3.5 h-3.5 fill-current" /> : <Play className="w-3.5 h-3.5 fill-current ml-0.5" />}
         </button>
