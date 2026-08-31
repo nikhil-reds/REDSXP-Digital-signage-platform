@@ -150,14 +150,14 @@ export default function TenantsPage() {
   };
 
   return (
-    <div className="flex h-[calc(100vh-4rem)] overflow-hidden bg-zinc-50 dark:bg-zinc-950 font-sans">
+    <div className="flex h-[calc(100vh-4rem)] overflow-hidden bg-app-canvas font-sans text-app-text">
       {/* Main Table Section */}
       <div className="flex-1 flex flex-col p-6 overflow-hidden min-w-0">
         {/* Breadcrumb */}
-        <div className="flex items-center gap-1.5 text-xs text-zinc-400 dark:text-zinc-500 font-semibold mb-4 select-none">
+        <div className="mb-4 flex select-none items-center gap-1.5 text-caption font-semibold text-app-muted">
           <span>Admin</span>
           <span>&gt;</span>
-          <span className="text-zinc-700 dark:text-zinc-350">Tenants</span>
+          <span className="text-app-text">Tenants</span>
         </div>
 
         {/* Content View Container */}
