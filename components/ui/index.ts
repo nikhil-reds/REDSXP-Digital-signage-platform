@@ -51,4 +51,6 @@ export {
   FieldLabel,
   TextInput,
   Checkbox,
+  Switch,
+  Textarea,
 } from "./toolbar";

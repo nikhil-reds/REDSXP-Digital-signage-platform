@@ -174,3 +174,88 @@ export function Checkbox({
     />
   );
 }
+
+/**
+ * Toggle switch. One implementation for the whole product — the settings panels
+ * and the sensor-rules table previously hand-rolled two different ones.
+ * Renders as a real `role="switch"` button so it is keyboard operable.
+ */
+export function Switch({
+  checked,
+  onChange,
+  label,
+  description,
+  disabled = false,
+  className,
+}: {
+  checked: boolean;
+  onChange: (checked: boolean) => void;
+  /** Accessible name. Rendered visibly when `description` is also given. */
+  label: string;
+  description?: string;
+  disabled?: boolean;
+  className?: string;
+}) {
+  const control = (
+    <button
+      type="button"
+      role="switch"
+      aria-checked={checked}
+      aria-label={description ? undefined : label}
+      disabled={disabled}
+      onClick={() => onChange(!checked)}
+      className={cn(
+        "relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border transition-colors duration-200",
+        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-app-accent-text",
+        "focus-visible:ring-offset-2 focus-visible:ring-offset-app-surface",
+        "disabled:opacity-60 disabled:pointer-events-none",
+        checked
+          ? "border-app-accent-text bg-app-accent"
+          : "border-app-border-strong bg-app-surface-alt"
+      )}
+    >
+      <span
+        aria-hidden
+        className={cn(
+          "pointer-events-none mt-0.5 inline-block h-4.5 w-4.5 transform rounded-full transition-transform duration-200",
+          checked ? "translate-x-5 bg-app-accent-on" : "translate-x-0.5 bg-app-muted"
+        )}
+      />
+    </button>
+  );
+
+  if (!description) return <span className={className}>{control}</span>;
+
+  return (
+    <div
+      className={cn(
+        "flex items-center justify-between gap-3 rounded-lg border border-app-border bg-app-surface-alt p-3",
+        className
+      )}
+    >
+      <span className="min-w-0">
+        <span className="block text-body font-semibold text-app-text">{label}</span>
+        <span className="block text-caption text-app-muted mt-0.5">{description}</span>
+      </span>
+      {control}
+    </div>
+  );
+}
+
+export function Textarea({
+  className,
+  ...rest
+}: React.TextareaHTMLAttributes<HTMLTextAreaElement>) {
+  return (
+    <textarea
+      className={cn(
+        "w-full px-3 py-2 rounded-lg text-body resize-none",
+        "bg-app-surface-alt border border-app-border text-app-text placeholder-app-muted",
+        "focus:outline-none focus:ring-2 focus:ring-app-accent-text transition-all duration-200",
+        "disabled:opacity-60",
+        className
+      )}
+      {...rest}
+    />
+  );
+}

@@ -1,6 +1,7 @@
 "use client";
 
 import React from "react";
+import NextImage from "next/image";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import {
@@ -53,13 +54,16 @@ export default function AdminSidebar() {
   };
 
   return (
-    <aside className="w-64 border-r border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 flex flex-col h-screen shrink-0 font-sans">
+    <aside className="flex h-screen w-64 shrink-0 flex-col border-r border-app-border bg-app-surface font-sans">
       {/* Brand Header */}
-      <div className="p-4 border-b border-zinc-100 dark:border-zinc-900 flex items-center gap-3">
-        <img
+      <div className="flex items-center gap-3 border-b border-app-border p-4">
+        <NextImage
           src="/reds-xos-logo.png"
           alt="REDS XOS Logo"
+          width={132}
+          height={28}
           className="h-7 w-auto object-contain"
+          priority
         />
       </div>
 
@@ -79,20 +83,20 @@ export default function AdminSidebar() {
               href={item.href}
               className={`flex items-center gap-3.5 px-4 py-2.5 rounded-lg text-sm transition-all duration-200 relative group ${
                 isActive
-                  ? "bg-zinc-100 dark:bg-zinc-900 text-zinc-900 dark:text-zinc-50 font-medium"
-                  : "text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-50 hover:bg-zinc-50 dark:hover:bg-zinc-900/50"
+                  ? "bg-app-accent-surface text-app-text font-semibold"
+                  : "text-app-muted hover:text-app-text hover:bg-app-surface-alt"
               }`}
             >
               {/* Active Indicator Bar */}
               {isActive && (
-                <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-5 bg-zinc-900 dark:bg-zinc-50 rounded-r-md" />
+                <div className="absolute left-0 top-1/2 h-5 w-1 -translate-y-1/2 rounded-r-md bg-app-accent-text" />
               )}
               
               <Icon
                 className={`w-4 h-4 shrink-0 transition-transform duration-200 group-hover:scale-105 ${
                   isActive
-                    ? "text-zinc-900 dark:text-zinc-50"
-                    : "text-zinc-400 group-hover:text-zinc-600 dark:group-hover:text-zinc-300"
+                    ? "text-app-accent-text"
+                    : "text-app-muted group-hover:text-app-text"
                 }`}
               />
               <span>{item.name}</span>
@@ -102,16 +106,16 @@ export default function AdminSidebar() {
       </nav>
 
       {/* User Profile Footer */}
-      <div className="p-4 border-t border-zinc-100 dark:border-zinc-900 bg-zinc-50/50 dark:bg-zinc-950/50 flex items-center justify-between gap-3 mt-auto">
+      <div className="mt-auto flex items-center justify-between gap-3 border-t border-app-border bg-app-surface-alt p-4">
         <div className="flex items-center gap-3 min-w-0">
-          <div className="w-9 h-9 rounded-full bg-zinc-200 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 text-xs font-semibold flex items-center justify-center ring-2 ring-white dark:ring-zinc-950 shadow-sm shrink-0">
+          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-app-accent text-caption font-semibold text-app-accent-on ring-2 ring-app-surface">
             PS
           </div>
           <div className="flex flex-col min-w-0">
-            <span className="text-sm font-semibold text-zinc-900 dark:text-zinc-100 truncate leading-none mb-1">
+            <span className="mb-1 truncate text-body font-semibold leading-none text-app-text">
               Priya Sharma
             </span>
-            <span className="text-[11px] text-zinc-500 dark:text-zinc-400 truncate leading-none">
+            <span className="truncate text-caption leading-none text-app-muted">
               Super Admin
             </span>
           </div>
@@ -119,7 +123,8 @@ export default function AdminSidebar() {
         <button
           onClick={handleLogout}
           title="Sign out"
-          className="p-1.5 rounded-lg text-zinc-400 hover:text-zinc-900 hover:bg-zinc-100 dark:hover:text-zinc-50 dark:hover:bg-zinc-900 transition-all duration-200 shrink-0"
+          className="shrink-0 rounded-lg p-1.5 text-app-muted transition-colors hover:bg-app-surface hover:text-app-danger-text"
+          aria-label="Sign out"
         >
           <LogOut className="w-4 h-4" />
         </button>
