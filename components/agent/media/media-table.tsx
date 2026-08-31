@@ -1,159 +1,146 @@
 "use client";
 
 import React, { useState } from "react";
-import { Film, Image as ImageIcon, Code, AlertCircle, RefreshCw, Archive, Trash, Tag, Folder } from "lucide-react";
+import {
+  Film,
+  Image as ImageIcon,
+  Code,
+  AlertCircle,
+  RefreshCw,
+  Archive,
+  Trash,
+  Tag,
+  Folder,
+} from "lucide-react";
 import { MediaAsset } from "./media-grid";
+import { Badge, Button, Card, Checkbox, Td, Th, Tr, type Tone } from "@/components/ui";
 
 interface MediaTableProps {
   assets: MediaAsset[];
   onSelectMedia: (asset: MediaAsset) => void;
 }
 
+/** Transcode state → the portal-wide status vocabulary. */
+function statusTone(status: MediaAsset["status"]): Tone {
+  if (status === "Ready") return "accent";
+  if (status === "Failed") return "danger";
+  return "warning";
+}
+
 export default function MediaTable({ assets, onSelectMedia }: MediaTableProps) {
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
 
   const handleSelectAll = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.checked) {
-      setSelectedIds(assets.map((a) => a.id));
-    } else {
-      setSelectedIds([]);
-    }
+    setSelectedIds(e.target.checked ? assets.map((a) => a.id) : []);
   };
 
   const handleSelectOne = (id: string, checked: boolean) => {
-    if (checked) {
-      setSelectedIds([...selectedIds, id]);
-    } else {
-      setSelectedIds(selectedIds.filter((x) => x !== id));
-    }
+    setSelectedIds((prev) => (checked ? [...prev, id] : prev.filter((x) => x !== id)));
   };
 
   return (
-    <div className="bg-white dark:bg-[#111722] border border-[#E2E6EC] dark:border-[#283243] rounded-xl overflow-hidden shadow-xs">
-      
+    <Card size="panel" className="overflow-hidden">
       {/* Bulk actions */}
       {selectedIds.length > 0 && (
-        <div className="p-3 bg-blue-50/50 dark:bg-blue-950/20 border-b border-blue-100 dark:border-blue-900/30 flex items-center justify-between gap-3 animate-fadeIn">
-          <span className="text-xs font-bold text-[#2859D9] dark:text-[#6F96FF]">
+        <div className="p-3 bg-app-accent-surface border-b border-app-border flex items-center justify-between gap-3 animate-fadeIn">
+          <span className="text-body font-semibold text-app-accent-text">
             {selectedIds.length} assets selected
           </span>
           <div className="flex items-center gap-2">
-            <button className="flex items-center gap-1.5 px-2.5 py-1 bg-white dark:bg-zinc-900 border border-[#E2E6EC] dark:border-[#283243] rounded text-[10px] font-bold text-zinc-700 dark:text-zinc-350 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors cursor-pointer">
-              <Folder className="w-3.5 h-3.5 text-blue-500" />
+            <Button size="sm" variant="secondary" icon={Folder}>
               Move to Folder
-            </button>
-            <button className="flex items-center gap-1.5 px-2.5 py-1 bg-white dark:bg-zinc-900 border border-[#E2E6EC] dark:border-[#283243] rounded text-[10px] font-bold text-zinc-700 dark:text-zinc-350 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors cursor-pointer">
-              <Tag className="w-3.5 h-3.5 text-purple-500" />
+            </Button>
+            <Button size="sm" variant="secondary" icon={Tag}>
               Add Tags
-            </button>
-            <button className="flex items-center gap-1.5 px-2.5 py-1 bg-white dark:bg-zinc-900 border border-[#E2E6EC] dark:border-[#283243] rounded text-[10px] font-bold text-zinc-700 dark:text-zinc-350 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors cursor-pointer">
-              <Archive className="w-3.5 h-3.5 text-amber-500" />
+            </Button>
+            <Button size="sm" variant="secondary" icon={Archive}>
               Archive
-            </button>
-            <button className="flex items-center gap-1.5 px-2.5 py-1 bg-white dark:bg-zinc-900 border border-[#E2E6EC] dark:border-[#283243] rounded text-[10px] font-bold text-red-600 hover:bg-red-50 dark:hover:bg-red-950/20 transition-colors cursor-pointer">
-              <Trash className="w-3.5 h-3.5" />
+            </Button>
+            <Button size="sm" variant="danger" icon={Trash}>
               Delete Selected
-            </button>
+            </Button>
           </div>
         </div>
       )}
 
       <div className="overflow-x-auto">
-        <table className="w-full text-left text-xs border-collapse">
+        <table className="w-full text-left border-collapse">
           <thead>
-            <tr className="bg-[#F6F7F9] dark:bg-[#171F2C]/50 text-[#657080] dark:text-[#9AA7B7] font-bold border-b border-[#E2E6EC] dark:border-[#283243] select-none">
-              <th className="p-3.5 w-10 text-center">
-                <input
-                  type="checkbox"
+            <tr className="bg-app-surface-alt select-none">
+              <Th className="w-10 text-center">
+                <Checkbox
                   checked={selectedIds.length === assets.length && assets.length > 0}
                   onChange={handleSelectAll}
-                  className="rounded border-[#E2E6EC] dark:border-[#283243] focus:ring-[#2859D9]"
+                  aria-label="Select all assets"
                 />
-              </th>
-              <th className="p-3.5">Filename</th>
-              <th className="p-3.5">Type</th>
-              <th className="p-3.5">Resolution</th>
-              <th className="p-3.5">File Size</th>
-              <th className="p-3.5">Status</th>
-              <th className="p-3.5">Assigned Playlists</th>
-              <th className="p-3.5">Uploaded By</th>
-              <th className="p-3.5">Date Added</th>
+              </Th>
+              <Th>Filename</Th>
+              <Th>Type</Th>
+              <Th>Resolution</Th>
+              <Th>File Size</Th>
+              <Th>Status</Th>
+              <Th>Assigned Playlists</Th>
+              <Th>Uploaded By</Th>
+              <Th>Date Added</Th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-[#E2E6EC] dark:divide-[#283243]">
+          <tbody>
             {assets.map((asset) => {
               const isSelected = selectedIds.includes(asset.id);
-              const Icon = asset.type === "Video" ? Film : asset.type === "HTML5" ? Code : ImageIcon;
+              const Icon =
+                asset.type === "Video" ? Film : asset.type === "HTML5" ? Code : ImageIcon;
               const isExternalLink = asset.sourceType === "external_url";
               return (
-                <tr
-                  key={asset.id}
-                  onClick={() => onSelectMedia(asset)}
-                  className="hover:bg-[#F6F7F9]/30 dark:hover:bg-[#171F2C]/10 transition-all cursor-pointer"
-                >
-                  <td className="p-3.5 text-center" onClick={(e) => e.stopPropagation()}>
-                    <input
-                      type="checkbox"
+                <Tr key={asset.id} interactive onClick={() => onSelectMedia(asset)}>
+                  <Td className="text-center" onClick={(e) => e.stopPropagation()}>
+                    <Checkbox
                       checked={isSelected}
                       onChange={(e) => handleSelectOne(asset.id, e.target.checked)}
-                      className="rounded border-[#E2E6EC] dark:border-[#283243] focus:ring-[#2859D9]"
+                      aria-label={`Select ${asset.name}`}
                     />
-                  </td>
-                  
-                  {/* Name column */}
-                  <td className="p-3.5 font-bold text-zinc-900 dark:text-zinc-50 flex items-center gap-2.5">
-                    <Icon className="w-4 h-4 text-zinc-400 shrink-0" />
-                    <span className="truncate max-w-[200px]">{asset.name}</span>
-                  </td>
-                  
-                  <td className="p-3.5 text-zinc-450 uppercase text-[9px] font-bold tracking-wide">
-                    {isExternalLink ? "HTML Link" : asset.type}
-                  </td>
-                  <td className="p-3.5 text-zinc-500 font-mono text-[10px]">
-                    {asset.dimensions}
-                  </td>
-                  <td className="p-3.5 text-zinc-500 font-mono text-[10px]">
-                    {asset.size}
-                  </td>
+                  </Td>
 
-                  {/* Status chip */}
-                  <td className="p-3.5">
-                    <span
-                      className={`text-[9px] px-2 py-0.5 rounded-full font-bold border inline-flex items-center gap-1.5 ${
-                        asset.status === "Ready"
-                          ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-950/20 dark:text-emerald-450 border-emerald-100/50"
-                          : asset.status === "Failed"
-                          ? "bg-rose-50 text-rose-700 dark:bg-rose-950/20 dark:text-rose-455 border-rose-100/50"
-                          : "bg-amber-50 text-amber-700 dark:bg-amber-950/20 dark:text-amber-450 border-amber-100/50"
-                      }`}
-                    >
-                      {asset.status === "Transcoding" && <RefreshCw className="w-2.5 h-2.5 animate-spin" />}
-                      {asset.status === "Failed" && <AlertCircle className="w-2.5 h-2.5" />}
-                      <span>{asset.status}</span>
+                  <Td className="font-semibold">
+                    <span className="flex items-center gap-2.5">
+                      <Icon className="w-4 h-4 text-app-muted shrink-0" />
+                      <span className="truncate max-w-[200px]">{asset.name}</span>
                     </span>
-                  </td>
+                  </Td>
 
-                  {/* Playlists count */}
-                  <td className="p-3.5 font-semibold text-[#2859D9] dark:text-[#6F96FF]">
+                  <Td className="text-app-muted uppercase tracking-headline">
+                    {isExternalLink ? "HTML Link" : asset.type}
+                  </Td>
+                  <Td className="text-app-muted">{asset.dimensions}</Td>
+                  <Td className="text-app-muted">{asset.size}</Td>
+
+                  <Td>
+                    <Badge tone={statusTone(asset.status)}>
+                      {asset.status === "Transcoding" && (
+                        <RefreshCw className="w-3 h-3 animate-spin" aria-hidden />
+                      )}
+                      {asset.status === "Failed" && <AlertCircle className="w-3 h-3" aria-hidden />}
+                      {asset.status}
+                    </Badge>
+                  </Td>
+
+                  <Td>
                     {asset.usedInPlaylists.length > 0 ? (
-                      <span>{asset.usedInPlaylists.length} playlists</span>
+                      <span className="font-semibold text-app-accent-text">
+                        {asset.usedInPlaylists.length} playlists
+                      </span>
                     ) : (
-                      <span className="text-zinc-400 font-normal">Unused</span>
+                      <span className="text-app-muted">Unused</span>
                     )}
-                  </td>
-                  
-                  <td className="p-3.5 text-zinc-500">
-                    {asset.uploader}
-                  </td>
-                  <td className="p-3.5 text-zinc-400 font-mono text-[10px]">
-                    {asset.date}
-                  </td>
-                </tr>
+                  </Td>
+
+                  <Td className="text-app-muted">{asset.uploader}</Td>
+                  <Td className="text-app-muted">{asset.date}</Td>
+                </Tr>
               );
             })}
           </tbody>
         </table>
       </div>
-    </div>
+    </Card>
   );
 }
