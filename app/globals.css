@@ -181,7 +181,8 @@
 }
 
 /* The agent portal opts into the brand typeface; other portals keep Geist. */
-.agent-portal {
+.agent-portal,
+.admin-portal {
   --app-font-sans: var(--font-source-sans);
 }
 
