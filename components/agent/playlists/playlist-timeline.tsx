@@ -221,9 +221,9 @@ export default function PlaylistTimeline({
                       c.selected
                         ? "border-app-accent-text ring-2 ring-app-accent-text/40"
                         : c.warning
-                        ? "border-app-warning shadow-sm"
-                        : "border-white/15 shadow-sm"
-                    } ${c.dragging ? "shadow-lg" : ""}`}
+                        ? "border-app-warning"
+                        : "border-white/15"
+                    } ${c.dragging ? "shadow-md" : ""}`}
                     style={{
                       left: `${c.left}px`,
                       top: `${c.laneIndex * zoneLaneHeight + 8}px`,
@@ -264,7 +264,7 @@ export default function PlaylistTimeline({
                   key={tm.key}
                   onClick={tm.onClick}
                   title={tm.tooltip}
-                  className="absolute w-5 h-5 -ml-2.5 rounded-full border-[1.5px] border-app-border bg-app-surface text-app-muted cursor-pointer z-[6] flex items-center justify-center p-0 shadow-sm hover:border-app-accent-text hover:text-app-accent-text hover:scale-125 transition-transform"
+                  className="absolute w-5 h-5 -ml-2.5 rounded-full border-[1.5px] border-app-border bg-app-surface text-app-muted cursor-pointer z-[6] flex items-center justify-center p-0 shadow-xs hover:border-app-accent-text hover:text-app-accent-text hover:scale-125 transition-transform"
                   style={{ left: `${tm.left}px`, top: `${tm.laneIndex * zoneLaneHeight + 17}px` }}
                 >
                   <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor">
@@ -276,7 +276,7 @@ export default function PlaylistTimeline({
 
               {selActionsVisible && (
                 <div
-                  className="absolute -top-0.5 z-[8] flex gap-0.5 bg-app-surface border border-app-border rounded-md p-0.5 shadow-md"
+                  className="absolute -top-0.5 z-[8] flex gap-0.5 bg-app-surface border border-app-border rounded-md p-0.5 shadow-xs"
                   style={{ left: `${selActionsLeft}px`, top: `${selActionsTop}px` }}
                 >
                   <button
