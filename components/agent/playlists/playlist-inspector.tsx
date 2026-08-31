@@ -127,7 +127,7 @@ export default function PlaylistInspector({
               onClick={() => onLayoutModeChange("zone")}
               className={`h-7 rounded text-caption font-semibold cursor-pointer transition-colors ${
                 layoutMode === "zone"
-                  ? "bg-app-surface text-app-accent-text shadow-sm"
+                  ? "bg-app-surface text-app-accent-text shadow-xs"
                   : "text-app-muted hover:text-app-text"
               }`}
             >
@@ -138,7 +138,7 @@ export default function PlaylistInspector({
               onClick={() => onLayoutModeChange("custom-grid")}
               className={`h-7 rounded text-caption font-semibold cursor-pointer transition-colors ${
                 layoutMode === "custom-grid"
-                  ? "bg-app-surface text-app-accent-text shadow-sm"
+                  ? "bg-app-surface text-app-accent-text shadow-xs"
                   : "text-app-muted hover:text-app-text"
               }`}
             >
