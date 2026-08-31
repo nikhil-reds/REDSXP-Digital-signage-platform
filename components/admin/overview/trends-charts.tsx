@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React from "react";
 import {
   ResponsiveContainer,
   LineChart,
@@ -28,21 +28,6 @@ const tenantsData = [
 ];
 
 export default function TrendsCharts() {
-  const [mounted, setMounted] = useState(false);
-
-  useEffect(() => {
-    setMounted(true);
-  }, []);
-
-  if (!mounted) {
-    return (
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <div className="bg-white dark:bg-zinc-900 border border-zinc-200/80 dark:border-zinc-800/80 p-5 rounded-xl h-80 animate-pulse" />
-        <div className="bg-white dark:bg-zinc-900 border border-zinc-200/80 dark:border-zinc-800/80 p-5 rounded-xl h-80 animate-pulse" />
-      </div>
-    );
-  }
-
   // Format currency for Y axis (e.g. 500k, 1M, 1.5M, 2M)
   const formatCurrency = (value: number) => {
     if (value >= 1000000) {
@@ -57,7 +42,7 @@ export default function TrendsCharts() {
   return (
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
       {/* MRR Trend Chart */}
-      <div className="bg-white dark:bg-zinc-900 border border-zinc-200/80 dark:border-zinc-800/80 p-5 rounded-lg shadow-xs flex flex-col justify-between">
+      <div className="flex flex-col justify-between rounded-xl border border-app-border bg-app-surface p-5">
         <div>
           <h2 className="text-sm font-bold text-zinc-900 dark:text-zinc-50">MRR Trend — June 2026</h2>
           <p className="text-xs text-zinc-400 mt-0.5">Current period vs previous period (dashed)</p>
@@ -77,25 +62,25 @@ export default function TrendsCharts() {
                 ticks={[0, 500000, 1000000, 1500000, 2000000]}
               />
               <Tooltip
-                formatter={(value: any) => [`₹${Number(value || 0).toLocaleString("en-IN")}`, ""]}
+                formatter={(value) => [`₹${Number(value || 0).toLocaleString("en-IN")}`, ""]}
                 contentStyle={{
-                  background: "var(--background)",
-                  border: "1px solid var(--color-zinc-200)",
+                  background: "var(--app-surface)",
+                  border: "1px solid var(--app-border)",
                   borderRadius: "8px"
                 }}
               />
               <Line
                 type="monotone"
                 dataKey="current"
-                stroke="#2563eb"
+                stroke="var(--chart-1)"
                 strokeWidth={2}
-                dot={{ r: 3, fill: "#2563eb" }}
+                dot={{ r: 3, fill: "var(--chart-1)" }}
                 activeDot={{ r: 5 }}
               />
               <Line
                 type="monotone"
                 dataKey="previous"
-                stroke="#94a3b8"
+                stroke="var(--chart-2)"
                 strokeWidth={1.5}
                 strokeDasharray="4 4"
                 dot={false}
@@ -106,7 +91,7 @@ export default function TrendsCharts() {
       </div>
 
       {/* New Tenants vs Churn Chart */}
-      <div className="bg-white dark:bg-zinc-900 border border-zinc-200/80 dark:border-zinc-800/80 p-5 rounded-lg shadow-xs flex flex-col justify-between">
+      <div className="flex flex-col justify-between rounded-xl border border-app-border bg-app-surface p-5">
         <div>
           <h2 className="text-sm font-bold text-zinc-900 dark:text-zinc-50">New Tenants vs Churn</h2>
           <p className="text-xs text-zinc-400 mt-0.5">Weekly acquisition and cancellations</p>
@@ -126,13 +111,13 @@ export default function TrendsCharts() {
               />
               <Tooltip
                 contentStyle={{
-                  background: "var(--background)",
-                  border: "1px solid var(--color-zinc-200)",
+                  background: "var(--app-surface)",
+                  border: "1px solid var(--app-border)",
                   borderRadius: "8px"
                 }}
               />
-              <Bar dataKey="active" name="New Tenants" fill="#2563eb" radius={[4, 4, 0, 0]} maxBarSize={35} />
-              <Bar dataKey="churn" name="Churn" fill="#ef4444" radius={[4, 4, 0, 0]} maxBarSize={35} />
+              <Bar dataKey="active" name="New Tenants" fill="var(--chart-1)" radius={[4, 4, 0, 0]} maxBarSize={35} />
+              <Bar dataKey="churn" name="Churn" fill="var(--app-danger)" radius={[4, 4, 0, 0]} maxBarSize={35} />
             </BarChart>
           </ResponsiveContainer>
         </div>
