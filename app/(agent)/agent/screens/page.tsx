@@ -2,7 +2,6 @@
 
 import React, { useEffect, useState } from "react";
 import {
-  Search,
   Monitor,
   Map,
   Plus,
@@ -12,14 +11,26 @@ import {
   MapPin,
   Cpu,
   ShieldAlert,
-  ChevronDown,
-  X
 } from "lucide-react";
 import ScreensTable, { ScreenDevice } from "@/components/agent/screens/screens-table";
 import ScreensMap from "@/components/agent/screens/screens-map";
 import ScreensDetailDrawer from "@/components/agent/screens/screens-detail-drawer";
 import ScreenCreateModal from "@/components/agent/screens/screen-create-modal";
-import { claimPlayerRegistration, createPlayerDownload, createScreen, fetchScreens } from "@/components/agent/screens/api";
+import {
+  claimPlayerRegistration,
+  createPlayerDownload,
+  createScreen,
+  fetchScreens,
+} from "@/components/agent/screens/api";
+import {
+  Button,
+  Card,
+  EmptyState,
+  Modal,
+  SearchInput,
+  SegmentedControl,
+  Select,
+} from "@/components/ui";
 
 function uniqueSorted(values: (string | undefined)[]): string[] {
   return Array.from(new Set(values.filter((v): v is string => Boolean(v)))).sort();
@@ -53,7 +64,9 @@ export default function AgentScreensPage() {
   const locationOptions = uniqueSorted(screens.map((s) => s.location));
   const modelOptions = uniqueSorted(screens.map((s) => s.model));
 
-  const handleCreateScreen: React.ComponentProps<typeof ScreenCreateModal>["onCreate"] = async (payload) => {
+  const handleCreateScreen: React.ComponentProps<typeof ScreenCreateModal>["onCreate"] = async (
+    payload,
+  ) => {
     const created = await createScreen(payload);
     setScreens((prev) => [created, ...prev]);
     setIsCreateModalOpen(false);
@@ -72,7 +85,7 @@ export default function AgentScreensPage() {
     setDownloadError(null);
     try {
       const download = await createPlayerDownload(platform);
-      window.location.href = download.downloadUrl;
+      window.location.assign(download.downloadUrl);
       setIsDownloadModalOpen(false);
     } catch (err) {
       setDownloadError(err instanceof Error ? err.message : "Failed to prepare player download");
@@ -85,12 +98,12 @@ export default function AgentScreensPage() {
       screen.name.toLowerCase().includes(search.toLowerCase()) ||
       screen.location.toLowerCase().includes(search.toLowerCase()) ||
       screen.model.toLowerCase().includes(search.toLowerCase());
-    
+
     const matchesStatus = statusFilter === "All" || screen.status === statusFilter;
     const matchesGroup = groupFilter === "All" || screen.group === groupFilter;
     const matchesLocation = locationFilter === "All" || screen.location === locationFilter;
     const matchesModel = modelFilter === "All" || screen.model === modelFilter;
-    
+
     const matchesAlerts =
       alertsFilter === "All" ||
       (alertsFilter === "Alerts Only" && screen.alertsCount > 0) ||
@@ -101,191 +114,149 @@ export default function AgentScreensPage() {
 
   return (
     <div className="flex h-full overflow-hidden relative">
-      <div className="flex-1 flex flex-col min-w-0 p-6 space-y-6 overflow-y-auto">
-        
+      <div className="flex-1 flex flex-col min-w-0 py-6 px-8 space-y-6 overflow-y-auto">
         {/* Header Section */}
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b border-[#E2E6EC] dark:border-[#283243] pb-5 shrink-0">
-          <div className="flex flex-col gap-0.5">
-            <h1 className="text-xl font-bold text-zinc-900 dark:text-zinc-50 tracking-tight">
-              Screens & Device Players
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b border-app-border pb-5 shrink-0">
+          <div>
+            <h1 className="font-heading text-h5 font-semibold tracking-headline text-app-text">
+              Screens &amp; Device Players
             </h1>
-            <p className="text-xs text-[#657080] dark:text-[#9AA7B7]">
+            <p className="text-body text-app-muted mt-1">
               Monitor hardware heartbeats, active playlists, rules automations, and errors.
             </p>
           </div>
-          
-          <div className="flex items-center gap-2.5 self-start sm:self-auto">
-            
-            {/* View Mode Toggle */}
-            <div className="flex items-center gap-0.5 p-0.5 border border-[#E2E6EC] dark:border-[#283243] rounded-lg bg-white dark:bg-[#111722] shadow-xs">
-              <button
-                onClick={() => setViewMode("table")}
-                className={`p-1.5 rounded-md transition-all duration-200 cursor-pointer ${
-                  viewMode === "table"
-                    ? "bg-[#F6F7F9] dark:bg-[#171F2C] text-[#2859D9] dark:text-[#6F96FF]"
-                    : "text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300"
-                }`}
-                title="Table List View"
-              >
-                <Monitor className="w-4 h-4" />
-              </button>
-              <button
-                onClick={() => setViewMode("map")}
-                className={`p-1.5 rounded-md transition-all duration-200 cursor-pointer ${
-                  viewMode === "map"
-                    ? "bg-[#F6F7F9] dark:bg-[#171F2C] text-[#2859D9] dark:text-[#6F96FF]"
-                    : "text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300"
-                }`}
-                title="Map Cluster View"
-              >
-                <Map className="w-4 h-4" />
-              </button>
-            </div>
 
-            <button
+          <div className="flex items-center gap-2 self-start sm:self-auto">
+            <SegmentedControl
+              value={viewMode}
+              onChange={setViewMode}
+              options={[
+                { value: "table", label: "Table list view", icon: Monitor },
+                { value: "map", label: "Map cluster view", icon: Map },
+              ]}
+            />
+
+            <Button
+              variant="secondary"
+              size="sm"
+              icon={Download}
               onClick={() => {
                 setDownloadError(null);
                 setIsDownloadModalOpen(true);
               }}
-              className="flex items-center gap-1.5 border border-[#E2E6EC] dark:border-[#283243] bg-white dark:bg-[#111722] text-[#18202B] dark:text-[#F2F5F8] px-3.5 py-1.5 rounded-lg text-xs font-bold hover:bg-[#F6F7F9] dark:hover:bg-[#171F2C] transition-colors shadow-sm cursor-pointer"
             >
-              <Download className="w-3.5 h-3.5" />
-              <span>Player</span>
-            </button>
+              Player
+            </Button>
 
-            {/* Add Screen action */}
-            <button
-              onClick={() => setIsCreateModalOpen(true)}
-              className="flex items-center gap-1.5 bg-[#2859D9] dark:bg-[#6F96FF] text-white dark:text-[#111722] px-3.5 py-1.5 rounded-lg text-xs font-bold hover:opacity-90 transition-opacity shadow-sm cursor-pointer"
-            >
-              <Plus className="w-3.5 h-3.5" />
-              <span>Add Screen</span>
-            </button>
+            <Button variant="primary" size="sm" icon={Plus} onClick={() => setIsCreateModalOpen(true)}>
+              Add Screen
+            </Button>
           </div>
         </div>
 
         {downloadError && (
-          <div className="rounded-lg border border-red-200 dark:border-red-900/40 bg-red-50 dark:bg-red-950/20 px-3 py-2 text-xs font-semibold text-red-700 dark:text-red-300">
+          <div className="rounded-lg border border-app-danger/30 bg-app-danger-surface px-3 py-2 text-body font-semibold text-app-danger-text">
             {downloadError}
           </div>
         )}
 
         {/* Advanced Filters Panel */}
-        <div className="p-4 bg-white dark:bg-[#111722] border border-[#E2E6EC] dark:border-[#283243] rounded-xl space-y-3 shrink-0">
+        <Card size="widget" padded className="space-y-3 shrink-0">
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-            {/* Search Input */}
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-zinc-400" />
-              <input
-                type="text"
-                placeholder="Search screen, location, model..."
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                className="w-full pl-9 pr-3 py-1.5 bg-[#F6F7F9] dark:bg-[#171F2C]/50 border border-[#E2E6EC] dark:border-[#283243] rounded-lg text-xs text-[#18202B] dark:text-[#F2F5F8] placeholder-zinc-400 focus:outline-none"
-              />
-            </div>
+            <SearchInput
+              placeholder="Search screen, location, model…"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+            />
 
-            {/* Status Selector */}
-            <div className="relative">
-              <select
-                value={statusFilter}
-                onChange={(e) => setStatusFilter(e.target.value)}
-                className="w-full pl-8 pr-8 py-1.5 border border-[#E2E6EC] dark:border-[#283243] rounded-lg bg-[#F6F7F9] dark:bg-[#171F2C]/50 text-xs text-zinc-700 dark:text-zinc-300 font-bold focus:outline-none appearance-none cursor-pointer"
-              >
-                <option value="All">All Statuses</option>
-                <option value="Online">Online</option>
-                <option value="Delayed">Delayed</option>
-                <option value="Offline">Offline</option>
-              </select>
-              <Activity className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-zinc-400" />
-              <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-zinc-400 pointer-events-none" />
-            </div>
+            <Select
+              icon={Activity}
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value)}
+              aria-label="Filter by status"
+            >
+              <option value="All">All Statuses</option>
+              <option value="Online">Online</option>
+              <option value="Delayed">Delayed</option>
+              <option value="Offline">Offline</option>
+            </Select>
 
-            {/* Group Selector */}
-            <div className="relative">
-              <select
-                value={groupFilter}
-                onChange={(e) => setGroupFilter(e.target.value)}
-                className="w-full pl-8 pr-8 py-1.5 border border-[#E2E6EC] dark:border-[#283243] rounded-lg bg-[#F6F7F9] dark:bg-[#171F2C]/50 text-xs text-zinc-700 dark:text-zinc-300 font-bold focus:outline-none appearance-none cursor-pointer"
-              >
-                <option value="All">All Screen Groups</option>
-                {groupOptions.map((group) => (
-                  <option key={group} value={group}>
-                    {group}
-                  </option>
-                ))}
-              </select>
-              <Layers className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-zinc-400" />
-              <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-zinc-400 pointer-events-none" />
-            </div>
+            <Select
+              icon={Layers}
+              value={groupFilter}
+              onChange={(e) => setGroupFilter(e.target.value)}
+              aria-label="Filter by screen group"
+            >
+              <option value="All">All Screen Groups</option>
+              {groupOptions.map((group) => (
+                <option key={group} value={group}>
+                  {group}
+                </option>
+              ))}
+            </Select>
 
-            {/* Location Selector */}
-            <div className="relative">
-              <select
-                value={locationFilter}
-                onChange={(e) => setLocationFilter(e.target.value)}
-                className="w-full pl-8 pr-8 py-1.5 border border-[#E2E6EC] dark:border-[#283243] rounded-lg bg-[#F6F7F9] dark:bg-[#171F2C]/50 text-xs text-zinc-700 dark:text-zinc-300 font-bold focus:outline-none appearance-none cursor-pointer"
-              >
-                <option value="All">All Locations</option>
-                {locationOptions.map((location) => (
-                  <option key={location} value={location}>
-                    {location}
-                  </option>
-                ))}
-              </select>
-              <MapPin className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-zinc-400" />
-              <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-zinc-400 pointer-events-none" />
-            </div>
+            <Select
+              icon={MapPin}
+              value={locationFilter}
+              onChange={(e) => setLocationFilter(e.target.value)}
+              aria-label="Filter by location"
+            >
+              <option value="All">All Locations</option>
+              {locationOptions.map((location) => (
+                <option key={location} value={location}>
+                  {location}
+                </option>
+              ))}
+            </Select>
           </div>
 
-          <div className="flex gap-3 max-w-lg">
-            {/* Model Selector */}
-            <div className="relative w-1/2">
-              <select
-                value={modelFilter}
-                onChange={(e) => setModelFilter(e.target.value)}
-                className="w-full pl-8 pr-8 py-1.5 border border-[#E2E6EC] dark:border-[#283243] rounded-lg bg-[#F6F7F9] dark:bg-[#171F2C]/50 text-xs text-zinc-700 dark:text-zinc-300 font-bold focus:outline-none appearance-none cursor-pointer"
-              >
-                <option value="All">All Hardware Models</option>
-                {modelOptions.map((model) => (
-                  <option key={model} value={model}>
-                    {model}
-                  </option>
-                ))}
-              </select>
-              <Cpu className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-zinc-400" />
-              <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-zinc-400 pointer-events-none" />
-            </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 max-w-lg">
+            <Select
+              icon={Cpu}
+              value={modelFilter}
+              onChange={(e) => setModelFilter(e.target.value)}
+              aria-label="Filter by hardware model"
+            >
+              <option value="All">All Hardware Models</option>
+              {modelOptions.map((model) => (
+                <option key={model} value={model}>
+                  {model}
+                </option>
+              ))}
+            </Select>
 
-            {/* Alerts Selector */}
-            <div className="relative w-1/2">
-              <select
-                value={alertsFilter}
-                onChange={(e) => setAlertsFilter(e.target.value)}
-                className="w-full pl-8 pr-8 py-1.5 border border-[#E2E6EC] dark:border-[#283243] rounded-lg bg-[#F6F7F9] dark:bg-[#171F2C]/50 text-xs text-zinc-700 dark:text-zinc-300 font-bold focus:outline-none appearance-none cursor-pointer"
-              >
-                <option value="All">All Alerts</option>
-                <option value="Alerts Only">With active alerts</option>
-                <option value="Clear Only">No active alerts</option>
-              </select>
-              <ShieldAlert className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-zinc-400" />
-              <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-zinc-400 pointer-events-none" />
-            </div>
+            <Select
+              icon={ShieldAlert}
+              value={alertsFilter}
+              onChange={(e) => setAlertsFilter(e.target.value)}
+              aria-label="Filter by alert state"
+            >
+              <option value="All">All Alerts</option>
+              <option value="Alerts Only">With active alerts</option>
+              <option value="Clear Only">No active alerts</option>
+            </Select>
           </div>
-        </div>
+        </Card>
 
         {/* Main Render Area */}
         <div className="flex-1 flex flex-col min-h-0">
           {isLoading ? (
-            <div className="flex-1 flex items-center justify-center text-xs font-semibold text-zinc-400 dark:text-zinc-500 min-h-[400px]">
-              Loading screens…
-            </div>
+            <Card size="panel" className="flex-1 min-h-[400px] flex items-center justify-center">
+              <span className="text-body font-semibold text-app-muted">Loading screens…</span>
+            </Card>
           ) : screens.length === 0 ? (
-            <div className="flex-1 flex flex-col items-center justify-center gap-2 text-center min-h-[400px] border border-dashed border-[#E2E6EC] dark:border-[#283243] rounded-xl">
-              <Monitor className="w-6 h-6 text-zinc-400 dark:text-zinc-500" />
-              <p className="text-xs font-semibold text-zinc-500 dark:text-zinc-400">No screens yet.</p>
-              <p className="text-[11px] text-zinc-400 dark:text-zinc-500">Add your first screen to get started.</p>
-            </div>
+            <Card size="panel" className="flex-1 min-h-[400px] flex items-center justify-center">
+              <EmptyState
+                icon={Monitor}
+                title="No screens yet"
+                description="Add your first screen to get started."
+                action={
+                  <Button variant="primary" size="sm" icon={Plus} onClick={() => setIsCreateModalOpen(true)}>
+                    Add Screen
+                  </Button>
+                }
+              />
+            </Card>
           ) : viewMode === "table" ? (
             <ScreensTable
               screens={filteredScreens}
@@ -300,15 +271,11 @@ export default function AgentScreensPage() {
             />
           )}
         </div>
-
       </div>
 
       {/* Sliding detail drawer panel */}
       {selectedScreen && (
-        <ScreensDetailDrawer
-          screen={selectedScreen}
-          onClose={() => setSelectedScreen(null)}
-        />
+        <ScreensDetailDrawer screen={selectedScreen} onClose={() => setSelectedScreen(null)} />
       )}
 
       {isCreateModalOpen && (
@@ -319,55 +286,50 @@ export default function AgentScreensPage() {
         />
       )}
 
-      {isDownloadModalOpen && (
-        <div className="fixed inset-0 bg-black/55 dark:bg-black/80 flex items-center justify-center z-50 animate-fadeIn font-sans">
-          <div className="bg-white dark:bg-[#111722] border border-[#E2E6EC] dark:border-[#283243] rounded-xl w-[460px] max-w-[calc(100vw-32px)] shadow-2xl overflow-hidden">
-            <div className="p-5 border-b border-[#E2E6EC] dark:border-[#283243] flex justify-between items-center bg-[#F6F7F9]/50 dark:bg-[#171F2C]/20">
-              <div className="flex items-center gap-2.5">
-                <div className="p-1.5 bg-blue-50 dark:bg-blue-950/20 text-[#2859D9] dark:text-[#6F96FF] rounded-lg">
-                  <Download className="w-4 h-4" />
-                </div>
-                <h3 className="font-bold text-sm text-[#18202B] dark:text-[#F2F5F8]">Download Player</h3>
-              </div>
-              <button
-                onClick={() => setIsDownloadModalOpen(false)}
-                className="p-1 rounded-lg text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-50 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors cursor-pointer"
-              >
-                <X className="w-4 h-4" />
-              </button>
-            </div>
+      <Modal
+        open={isDownloadModalOpen}
+        onClose={() => setIsDownloadModalOpen(false)}
+        title="Download Player"
+        description="Bootstrap packages for the on-device player."
+        size="md"
+      >
+        <div className="space-y-3">
+          {(
+            [
+              {
+                platform: "LINUX" as const,
+                name: "Linux Player",
+                desc: "Download shell bootstrap from public player package.",
+              },
+              {
+                platform: "WINDOWS" as const,
+                name: "Windows Player",
+                desc: "Download Windows bootstrap config from public player package.",
+              },
+            ]
+          ).map((opt) => (
+            <Card
+              key={opt.platform}
+              as="button"
+              size="row"
+              padded
+              interactive
+              onClick={() => handleDownloadPlayer(opt.platform)}
+              className="w-full flex items-center justify-between gap-3 text-left"
+            >
+              <span>
+                <span className="block text-body font-semibold text-app-text">{opt.name}</span>
+                <span className="block text-caption text-app-muted">{opt.desc}</span>
+              </span>
+              <Download className="w-4 h-4 text-app-accent-text shrink-0" />
+            </Card>
+          ))}
 
-            <div className="p-5 space-y-3">
-              <button
-                onClick={() => handleDownloadPlayer("LINUX")}
-                className="w-full flex items-center justify-between gap-3 rounded-lg border border-[#E2E6EC] dark:border-[#283243] bg-[#F6F7F9] dark:bg-[#171F2C]/50 px-4 py-3 text-left hover:border-[#2859D9] dark:hover:border-[#6F96FF] transition-colors cursor-pointer"
-              >
-                <div>
-                  <p className="text-sm font-bold text-[#18202B] dark:text-[#F2F5F8]">Linux Player</p>
-                  <p className="text-[11px] text-[#657080] dark:text-[#9AA7B7]">Download shell bootstrap from public player package.</p>
-                </div>
-                <Download className="w-4 h-4 text-[#2859D9] dark:text-[#6F96FF] shrink-0" />
-              </button>
-
-              <button
-                onClick={() => handleDownloadPlayer("WINDOWS")}
-                className="w-full flex items-center justify-between gap-3 rounded-lg border border-[#E2E6EC] dark:border-[#283243] bg-[#F6F7F9] dark:bg-[#171F2C]/50 px-4 py-3 text-left hover:border-[#2859D9] dark:hover:border-[#6F96FF] transition-colors cursor-pointer"
-              >
-                <div>
-                  <p className="text-sm font-bold text-[#18202B] dark:text-[#F2F5F8]">Windows Player</p>
-                  <p className="text-[11px] text-[#657080] dark:text-[#9AA7B7]">Download Windows bootstrap config from public player package.</p>
-                </div>
-                <Download className="w-4 h-4 text-[#2859D9] dark:text-[#6F96FF] shrink-0" />
-              </button>
-
-              {downloadError && (
-                <p className="text-[11px] font-semibold text-red-500">{downloadError}</p>
-              )}
-            </div>
-          </div>
+          {downloadError && (
+            <p className="text-body font-semibold text-app-danger-text">{downloadError}</p>
+          )}
         </div>
-      )}
-
+      </Modal>
     </div>
   );
 }
