@@ -1,9 +1,10 @@
 "use client";
 
 import React from "react";
-import { AlertTriangle, Pencil, X, ShieldCheck } from "lucide-react";
+import { AlertTriangle, Pencil, ShieldCheck } from "lucide-react";
 import { ScheduleSummary } from "./api";
 import { formatDays } from "./schedule-calendar";
+import { Badge, Button, Card, IconButton, Modal } from "@/components/ui";
 
 interface ConflictDialogProps {
   onClose: () => void;
@@ -12,129 +13,105 @@ interface ConflictDialogProps {
   campaign2: ScheduleSummary;
 }
 
-export default function ConflictDialog({ onClose, onEditSchedule, campaign1, campaign2 }: ConflictDialogProps) {
+export default function ConflictDialog({
+  onClose,
+  onEditSchedule,
+  campaign1,
+  campaign2,
+}: ConflictDialogProps) {
   const winner = campaign2.priority > campaign1.priority ? campaign2 : campaign1;
   const loser = campaign2.priority > campaign1.priority ? campaign1 : campaign2;
-
   const sharedDays = campaign1.daysOfWeek.filter((d) => campaign2.daysOfWeek.includes(d));
-  const handleEditSchedule = (schedule: ScheduleSummary) => {
-    onEditSchedule(schedule);
-  };
+
+  const campaigns: { label: string; data: ScheduleSummary }[] = [
+    { label: "Campaign A", data: campaign1 },
+    { label: "Campaign B", data: campaign2 },
+  ];
 
   return (
-    <div className="fixed inset-0 bg-black/55 dark:bg-black/80 flex items-center justify-center z-50 animate-fadeIn font-sans">
-      <div className="bg-white dark:bg-[#111722] border border-[#E2E6EC] dark:border-[#283243] rounded-xl w-[450px] max-w-full shadow-2xl p-5 space-y-4">
-
-        {/* Header */}
-        <div className="flex justify-between items-start gap-4 pb-3 border-b border-[#E2E6EC] dark:border-[#283243]">
-          <div className="flex items-center gap-2 text-amber-600 dark:text-amber-500 font-bold">
-            <AlertTriangle className="w-5 h-5 animate-pulse" />
-            <h3 className="text-sm font-bold text-zinc-900 dark:text-zinc-50 leading-none">
-              Schedule Conflict Detected
-            </h3>
-          </div>
-          <button
-            onClick={onClose}
-            className="p-1 rounded-lg text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-50 hover:bg-[#F6F7F9] dark:hover:bg-zinc-800 transition-colors cursor-pointer"
-          >
-            <X className="w-4 h-4" />
-          </button>
-        </div>
-
-        {/* Conflict Description */}
-        <div className="text-xs space-y-3">
-          <p className="text-zinc-500 leading-relaxed">
-            An overlap occurs on <span className="font-bold text-zinc-800 dark:text-zinc-200">{formatDays(sharedDays)}</span> between{" "}
-            <span className="font-bold text-zinc-800 dark:text-zinc-200">
+    <Modal
+      open
+      onClose={onClose}
+      title="Schedule Conflict Detected"
+      description="Two campaigns overlap on shared screens. The higher priority wins."
+      size="md"
+      footer={
+        <Button variant="secondary" onClick={onClose}>
+          Close Dialog
+        </Button>
+      }
+    >
+      <div className="space-y-4">
+        <div className="flex items-start gap-2.5 rounded-lg border border-app-warning/30 bg-app-warning-surface p-3">
+          <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5 text-app-warning-text" />
+          <p className="text-body text-app-warning-text">
+            An overlap occurs on{" "}
+            <span className="font-semibold">{formatDays(sharedDays)}</span> between{" "}
+            <span className="font-semibold">
               {campaign1.dailyStartTime}–{campaign1.dailyEndTime}
             </span>{" "}
             and{" "}
-            <span className="font-bold text-zinc-800 dark:text-zinc-200">
+            <span className="font-semibold">
               {campaign2.dailyStartTime}–{campaign2.dailyEndTime}
             </span>{" "}
             on shared screens.
           </p>
+        </div>
 
-          <div className="space-y-2">
-            {/* Overlap Item 1 */}
-            <div className="p-3 border border-zinc-250 dark:border-zinc-800 rounded-lg flex justify-between items-center gap-3">
+        <div className="space-y-2">
+          {campaigns.map(({ label, data }) => (
+            <Card
+              key={label}
+              size="row"
+              padded
+              className="flex justify-between items-center gap-3"
+            >
               <div className="min-w-0">
-                <span className="text-[9px] font-bold uppercase tracking-wider text-zinc-400">Campaign A</span>
-                <span className="block font-bold text-zinc-850 dark:text-zinc-200 mt-0.5 truncate">{campaign1.name}</span>
-                <span className="text-[9px] text-zinc-400">
-                  {campaign1.dailyStartTime} - {campaign1.dailyEndTime}
+                <span className="block text-caption font-semibold uppercase tracking-headline text-app-muted">
+                  {label}
+                </span>
+                <span className="block text-body font-semibold text-app-text mt-0.5 truncate">
+                  {data.name}
+                </span>
+                <span className="block text-caption text-app-muted">
+                  {data.dailyStartTime} – {data.dailyEndTime}
                 </span>
               </div>
               <div className="flex items-center gap-2 shrink-0">
-                <span className="text-[9px] px-2 py-0.5 bg-zinc-100 dark:bg-zinc-800 text-zinc-650 rounded-sm font-bold font-mono">
-                  Priority {campaign1.priority}
-                </span>
-                <button
-                  type="button"
-                  onClick={() => handleEditSchedule(campaign1)}
-                  title={`Edit ${campaign1.name}`}
-                  aria-label={`Edit ${campaign1.name}`}
-                  className="p-1.5 rounded-lg text-zinc-400 hover:text-[#2859D9] dark:hover:text-[#6F96FF] hover:bg-[#F6F7F9] dark:hover:bg-zinc-800 transition-colors cursor-pointer"
-                >
-                  <Pencil className="w-3.5 h-3.5" />
-                </button>
+                <Badge tone={data.id === winner.id ? "accent" : "neutral"}>
+                  Priority {data.priority}
+                </Badge>
+                <IconButton
+                  icon={Pencil}
+                  size="sm"
+                  onClick={() => onEditSchedule(data)}
+                  aria-label={`Edit ${data.name}`}
+                  title={`Edit ${data.name}`}
+                />
               </div>
-            </div>
-
-            {/* Overlap Item 2 */}
-            <div className="p-3 border border-zinc-250 dark:border-zinc-800 rounded-lg flex justify-between items-center gap-3">
-              <div className="min-w-0">
-                <span className="text-[9px] font-bold uppercase tracking-wider text-zinc-400">Campaign B</span>
-                <span className="block font-bold text-zinc-850 dark:text-zinc-200 mt-0.5 truncate">{campaign2.name}</span>
-                <span className="text-[9px] text-zinc-400">
-                  {campaign2.dailyStartTime} - {campaign2.dailyEndTime}
-                </span>
-              </div>
-              <div className="flex items-center gap-2 shrink-0">
-                <span className="text-[9px] px-2 py-0.5 bg-zinc-100 dark:bg-zinc-800 text-zinc-650 rounded-sm font-bold font-mono">
-                  Priority {campaign2.priority}
-                </span>
-                <button
-                  type="button"
-                  onClick={() => handleEditSchedule(campaign2)}
-                  title={`Edit ${campaign2.name}`}
-                  aria-label={`Edit ${campaign2.name}`}
-                  className="p-1.5 rounded-lg text-zinc-400 hover:text-[#2859D9] dark:hover:text-[#6F96FF] hover:bg-[#F6F7F9] dark:hover:bg-zinc-800 transition-colors cursor-pointer"
-                >
-                  <Pencil className="w-3.5 h-3.5" />
-                </button>
-              </div>
-            </div>
-          </div>
-
-          {/* Resolution Winner explanation */}
-          <div className="p-3.5 border border-emerald-100 dark:border-emerald-950/30 bg-emerald-50/20 dark:bg-emerald-955/10 rounded-xl space-y-2">
-            <h4 className="text-[10px] font-bold uppercase tracking-wider text-emerald-600 dark:text-emerald-450 flex items-center gap-1.5">
-              <ShieldCheck className="w-4 h-4 shrink-0" />
-              Conflict Resolution Winner
-            </h4>
-            <div className="text-[10px] text-zinc-600 dark:text-zinc-400 leading-normal space-y-1">
-              <p>
-                ● <span className="font-bold text-zinc-900 dark:text-white">&quot;{winner.name}&quot;</span> overrides &quot;{loser.name}&quot; because Priority {winner.priority} is higher than Priority {loser.priority}.
-              </p>
-              <p>
-                ● Displays will automatically select the winning manifest on the overlap timeline. Fallback assets are ignored.
-              </p>
-            </div>
-          </div>
+            </Card>
+          ))}
         </div>
 
-        {/* Buttons */}
-        <div className="flex gap-2 font-sans pt-2 border-t border-[#E2E6EC] dark:border-[#283243]">
-          <button
-            onClick={onClose}
-            className="flex-1 py-2 border border-[#E2E6EC] dark:border-[#283243] text-xs font-bold rounded-lg text-zinc-650 dark:text-zinc-350 hover:bg-[#F6F7F9] dark:hover:bg-zinc-800 transition-colors cursor-pointer"
-          >
-            Close Dialog
-          </button>
+        {/* Resolution Winner explanation */}
+        <div className="p-3.5 border border-app-accent/30 bg-app-accent-surface rounded-lg space-y-2">
+          <h4 className="text-caption font-semibold uppercase tracking-headline text-app-accent-text flex items-center gap-1.5">
+            <ShieldCheck className="w-4 h-4 shrink-0" />
+            Conflict Resolution Winner
+          </h4>
+          <ul className="text-body text-app-muted space-y-1 list-disc pl-4">
+            <li>
+              <span className="font-semibold text-app-text">“{winner.name}”</span> overrides “
+              {loser.name}” because Priority {winner.priority} is higher than Priority{" "}
+              {loser.priority}.
+            </li>
+            <li>
+              Displays automatically select the winning manifest on the overlap timeline. Fallback
+              assets are ignored.
+            </li>
+          </ul>
         </div>
-
       </div>
-    </div>
+    </Modal>
   );
 }
