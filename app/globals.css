@@ -273,6 +273,12 @@
   --text-display: 84px;
   --text-display--line-height: 88px;
 
+  /* Alias used by the admin pages' <h1>. It was referenced on 10 pages but never
+     defined, so those titles fell back to the inherited 16px body size. Mapped to
+     the H5 step, which is what the brand book assigns to page titles. */
+  --text-page-title: 24px;
+  --text-page-title--line-height: 32px;
+
   /* Sora is drawn tight; headlines need a touch of tracking, never less. */
   --tracking-headline: 0.01em;
 
