@@ -180,9 +180,10 @@
   --foreground: #fafafa;
 }
 
-/* The agent portal opts into the brand typeface; other portals keep Geist. */
+/* Portals that opt into the brand typeface. Anything outside these keeps Geist. */
 .agent-portal,
-.admin-portal {
+.admin-portal,
+.auth-portal {
   --app-font-sans: var(--font-source-sans);
 }
 
@@ -342,12 +343,12 @@
   }
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
-}
+/* No prefers-color-scheme override here on purpose. ThemeProvider (and the
+   pre-paint script in app/layout.tsx) already add `.dark` when the user's
+   choice — or their system setting — resolves to dark. A media query on :root
+   fought that: on a dark-preferring OS it forced --foreground to near-white
+   even while the app was in light mode, so any element relying on inherited
+   colour rendered near-white text on a light surface. */
 
 body {
   background: var(--background);
@@ -366,3 +367,4 @@ body {
     scroll-behavior: auto !important;
   }
 }
+
