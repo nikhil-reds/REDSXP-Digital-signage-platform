@@ -3,7 +3,8 @@
 import React, { Suspense, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
-import { AlertTriangle, Loader2, X } from "lucide-react";
+import { AlertTriangle, X } from "lucide-react";
+import PlaylistEditorSkeleton from "@/components/agent/playlists/playlist-editor-skeleton";
 import PlaylistToolbar from "@/components/agent/playlists/playlist-toolbar";
 import AssetLibraryPanel from "@/components/agent/playlists/asset-library-panel";
 import PreviewCanvas from "@/components/agent/playlists/preview-canvas";
@@ -21,12 +22,7 @@ function PlaylistEditor() {
   const [dismissedError, setDismissedError] = useState<string | null>(null);
 
   if (loading) {
-    return (
-      <div className="h-screen flex flex-col items-center justify-center gap-3 bg-app-canvas text-app-muted">
-        <Loader2 className="w-6 h-6 animate-spin" />
-        <p className="text-body font-semibold">Loading playlist editor…</p>
-      </div>
-    );
+    return <PlaylistEditorSkeleton />;
   }
 
   if (loadError) {
@@ -85,13 +81,7 @@ function PlaylistEditor() {
 
 export default function AgentCreatePlaylistPage() {
   return (
-    <Suspense
-      fallback={
-        <div className="h-screen flex items-center justify-center bg-app-canvas text-app-muted">
-          <Loader2 className="w-6 h-6 animate-spin" />
-        </div>
-      }
-    >
+    <Suspense fallback={<PlaylistEditorSkeleton />}>
       <PlaylistEditor />
     </Suspense>
   );
