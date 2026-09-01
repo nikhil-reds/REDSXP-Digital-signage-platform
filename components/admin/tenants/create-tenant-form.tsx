@@ -1,53 +1,63 @@
 "use client";
 
 import React, { useState } from "react";
-import { X, Upload, Calendar } from "lucide-react";
+import { X, Calendar, Loader2, AlertCircle } from "lucide-react";
+import type { PlanOption } from "@/components/admin/tenants/tenants-table";
 
-interface CreateTenantFormProps {
-  onClose: () => void;
-  onSave: (tenant: {
-    name: string;
-    slug: string;
-    ownerName: string;
-    ownerEmail: string;
-    plan: "Enterprise" | "Business" | "Growth";
-    trialEndDate: string;
-    screenQuota: number;
-    storageLimit: number; // in GB
-    primaryColor: string;
-    whiteLabelName: string;
-    customDomain: string;
-  }) => void;
+export interface CreateTenantPayload {
+  name: string;
+  slug: string;
+  planId: string;
+  trialEndDate: string;
+  primaryColor: string;
+  brandLogoUrl: string;
+  customDomain: string;
 }
 
-export default function CreateTenantForm({ onClose, onSave }: CreateTenantFormProps) {
-  const [name, setName] = useState("Acme Retail Pvt Ltd");
-  const [slug, setSlug] = useState("acme-retail");
-  const [ownerName, setOwnerName] = useState("");
-  const [ownerEmail, setOwnerEmail] = useState("");
-  const [plan, setPlan] = useState<"Enterprise" | "Business" | "Growth">("Enterprise");
-  const [trialEndDate, setTrialEndDate] = useState("2026-07-16");
-  const [screenQuota, setScreenQuota] = useState("50");
-  const [storageLimit, setStorageLimit] = useState("250");
-  const [primaryColor, setPrimaryColor] = useState("#0F7A4F");
-  const [whiteLabelName, setWhiteLabelName] = useState("Acme Signage");
-  const [customDomain, setCustomDomain] = useState("screens.acme.in");
+interface CreateTenantFormProps {
+  planOptions: PlanOption[];
+  isSaving: boolean;
+  error: string | null;
+  onClose: () => void;
+  onSave: (tenant: CreateTenantPayload) => void;
+}
+
+function slugify(value: string) {
+  return value.toLowerCase().trim().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+}
+
+export default function CreateTenantForm({
+  planOptions,
+  isSaving,
+  error,
+  onClose,
+  onSave,
+}: CreateTenantFormProps) {
+  const [name, setName] = useState("");
+  const [slug, setSlug] = useState("");
+  const [isSlugEdited, setIsSlugEdited] = useState(false);
+  const [planId, setPlanId] = useState("");
+  const [trialEndDate, setTrialEndDate] = useState("");
+  const [primaryColor, setPrimaryColor] = useState("#1A4E8C");
+  const [brandLogoUrl, setBrandLogoUrl] = useState("");
+  const [customDomain, setCustomDomain] = useState("");
+
+  const handleNameChange = (value: string) => {
+    setName(value);
+    if (!isSlugEdited) setSlug(slugify(value));
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!name || !slug) return;
+    if (!name.trim() || !slug.trim() || isSaving) return;
     onSave({
-      name,
-      slug,
-      ownerName,
-      ownerEmail,
-      plan,
-      trialEndDate,
-      screenQuota: Number(screenQuota) || 0,
-      storageLimit: Number(storageLimit) || 0,
+      name: name.trim(),
+      slug: slug.trim(),
+      planId,
+      trialEndDate: planId ? trialEndDate : "",
       primaryColor,
-      whiteLabelName,
-      customDomain
+      brandLogoUrl: brandLogoUrl.trim(),
+      customDomain: customDomain.trim(),
     });
   };
 
@@ -71,14 +81,22 @@ export default function CreateTenantForm({ onClose, onSave }: CreateTenantFormPr
 
       {/* Form */}
       <form onSubmit={handleSubmit} className="p-4 space-y-4 flex-1 text-xs">
+        {error && (
+          <div className="flex items-start gap-2 rounded-lg border border-app-danger-border bg-app-danger-surface px-3 py-2 text-[11px] font-medium text-app-danger-text">
+            <AlertCircle className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+            <span>{error}</span>
+          </div>
+        )}
+
         {/* Tenant Name */}
         <div className="flex flex-col gap-1.5">
           <label className="font-semibold text-app-muted">Tenant Name</label>
           <input
             type="text"
+            placeholder="e.g. Acme Retail Pvt Ltd"
             value={name}
-            onChange={(e) => setName(e.target.value)}
-            className="w-full rounded-lg border border-app-border bg-app-surface-alt px-3 py-2 text-caption text-app-text focus:outline-none focus:ring-2 focus:ring-app-accent-text"
+            onChange={(e) => handleNameChange(e.target.value)}
+            className="w-full rounded-lg border border-app-border bg-app-surface-alt px-3 py-2 text-caption text-app-text placeholder:text-app-muted focus:outline-none focus:ring-2 focus:ring-app-accent-text"
             required
           />
         </div>
@@ -92,50 +110,38 @@ export default function CreateTenantForm({ onClose, onSave }: CreateTenantFormPr
             </span>
             <input
               type="text"
+              placeholder="acme-retail"
               value={slug}
-              onChange={(e) => setSlug(e.target.value)}
-              className="w-full bg-app-surface px-3 py-2 text-caption text-app-text focus:outline-none"
+              onChange={(e) => {
+                setIsSlugEdited(true);
+                setSlug(e.target.value);
+              }}
+              className="w-full bg-app-surface px-3 py-2 text-caption text-app-text placeholder:text-app-muted focus:outline-none"
               required
             />
           </div>
         </div>
 
-        {/* Owner Details */}
-        <div className="grid grid-cols-2 gap-3">
-          <div className="flex flex-col gap-1.5">
-            <label className="font-semibold text-app-muted">Owner Name</label>
-            <input
-              type="text"
-              placeholder="Full name"
-              value={ownerName}
-              onChange={(e) => setOwnerName(e.target.value)}
-              className="w-full rounded-lg border border-app-border bg-app-surface-alt px-3 py-2 text-caption text-app-text placeholder:text-app-muted focus:outline-none focus:ring-2 focus:ring-app-accent-text"
-            />
-          </div>
-          <div className="flex flex-col gap-1.5">
-            <label className="font-semibold text-app-muted">Owner Email</label>
-            <input
-              type="email"
-              placeholder="owner@acme.in"
-              value={ownerEmail}
-              onChange={(e) => setOwnerEmail(e.target.value)}
-              className="w-full rounded-lg border border-app-border bg-app-surface-alt px-3 py-2 text-caption text-app-text placeholder:text-app-muted focus:outline-none focus:ring-2 focus:ring-app-accent-text"
-            />
-          </div>
-        </div>
-
-        {/* Plan Select */}
+        {/* Plan Select — sourced from the plans table */}
         <div className="flex flex-col gap-1.5">
           <label className="font-semibold text-app-muted">Plan</label>
           <select
-            value={plan}
-            onChange={(e) => setPlan(e.target.value as "Enterprise" | "Business" | "Growth")}
+            value={planId}
+            onChange={(e) => setPlanId(e.target.value)}
             className="w-full cursor-pointer rounded-lg border border-app-border bg-app-surface-alt px-3 py-2 text-caption text-app-text focus:outline-none focus:ring-2 focus:ring-app-accent-text"
           >
-            <option value="Enterprise">Enterprise</option>
-            <option value="Business">Business</option>
-            <option value="Growth">Growth</option>
+            <option value="">No plan (assign later)</option>
+            {planOptions.map((option) => (
+              <option key={option.id} value={option.id}>
+                {option.name}
+              </option>
+            ))}
           </select>
+          {planOptions.length === 0 && (
+            <span className="text-[10px] text-app-muted">
+              No plans exist yet — create them under Plans &amp; Features first.
+            </span>
+          )}
         </div>
 
         {/* Trial End Date */}
@@ -146,43 +152,26 @@ export default function CreateTenantForm({ onClose, onSave }: CreateTenantFormPr
               type="date"
               value={trialEndDate}
               onChange={(e) => setTrialEndDate(e.target.value)}
-              className="w-full cursor-pointer rounded-lg border border-app-border bg-app-surface-alt py-2 pl-3 pr-9 text-caption text-app-text focus:outline-none focus:ring-2 focus:ring-app-accent-text"
+              disabled={!planId}
+              className="w-full cursor-pointer rounded-lg border border-app-border bg-app-surface-alt py-2 pl-3 pr-9 text-caption text-app-text focus:outline-none focus:ring-2 focus:ring-app-accent-text disabled:cursor-not-allowed disabled:opacity-50"
             />
             <Calendar className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-app-muted" />
           </div>
+          <span className="text-[10px] text-app-muted">
+            Leave empty to start the subscription as active instead of a trial.
+          </span>
         </div>
 
-        {/* Screen Quota & Storage */}
-        <div className="grid grid-cols-2 gap-3">
-          <div className="flex flex-col gap-1.5">
-            <label className="font-semibold text-app-muted">Screen Quota</label>
-            <input
-              type="text"
-              placeholder="e.g. 50"
-              value={screenQuota}
-              onChange={(e) => setScreenQuota(e.target.value)}
-              className="w-full rounded-lg border border-app-border bg-app-surface-alt px-3 py-2 text-caption text-app-text placeholder:text-app-muted focus:outline-none focus:ring-2 focus:ring-app-accent-text"
-            />
-          </div>
-          <div className="flex flex-col gap-1.5">
-            <label className="font-semibold text-app-muted">Storage Limit</label>
-            <input
-              type="text"
-              placeholder="e.g. 250 GB"
-              value={storageLimit}
-              onChange={(e) => setStorageLimit(e.target.value)}
-              className="w-full rounded-lg border border-app-border bg-app-surface-alt px-3 py-2 text-caption text-app-text placeholder:text-app-muted focus:outline-none focus:ring-2 focus:ring-app-accent-text"
-            />
-          </div>
-        </div>
-
-        {/* Logo File Upload */}
+        {/* Brand Logo URL */}
         <div className="flex flex-col gap-1.5">
-          <label className="font-semibold text-app-muted">Logo</label>
-          <div className="flex cursor-pointer flex-col items-center justify-center gap-1.5 rounded-xl border border-dashed border-app-border bg-app-surface-alt p-4 text-center transition-colors hover:border-app-accent-border">
-            <Upload className="h-4 w-4 text-app-muted" />
-            <span className="text-[10px] font-medium text-app-muted">Upload logo (PNG, SVG)</span>
-          </div>
+          <label className="font-semibold text-app-muted">Logo URL</label>
+          <input
+            type="url"
+            placeholder="https://cdn.example.com/logo.svg"
+            value={brandLogoUrl}
+            onChange={(e) => setBrandLogoUrl(e.target.value)}
+            className="w-full rounded-lg border border-app-border bg-app-surface-alt px-3 py-2 text-caption text-app-text placeholder:text-app-muted focus:outline-none focus:ring-2 focus:ring-app-accent-text"
+          />
         </div>
 
         {/* Primary Color Picker */}
@@ -202,25 +191,15 @@ export default function CreateTenantForm({ onClose, onSave }: CreateTenantFormPr
           </div>
         </div>
 
-        {/* White-label Name */}
-        <div className="flex flex-col gap-1.5">
-          <label className="font-semibold text-app-muted">White-label Name</label>
-          <input
-            type="text"
-            value={whiteLabelName}
-            onChange={(e) => setWhiteLabelName(e.target.value)}
-            className="w-full rounded-lg border border-app-border bg-app-surface-alt px-3 py-2 text-caption text-app-text focus:outline-none focus:ring-2 focus:ring-app-accent-text"
-          />
-        </div>
-
         {/* Custom Domain */}
         <div className="flex flex-col gap-1.5">
           <label className="font-semibold text-app-muted">Custom Domain</label>
           <input
             type="text"
+            placeholder="screens.acme.in"
             value={customDomain}
             onChange={(e) => setCustomDomain(e.target.value)}
-            className="w-full rounded-lg border border-app-border bg-app-surface-alt px-3 py-2 text-caption text-app-text focus:outline-none focus:ring-2 focus:ring-app-accent-text"
+            className="w-full rounded-lg border border-app-border bg-app-surface-alt px-3 py-2 text-caption text-app-text placeholder:text-app-muted focus:outline-none focus:ring-2 focus:ring-app-accent-text"
           />
         </div>
 
@@ -235,9 +214,11 @@ export default function CreateTenantForm({ onClose, onSave }: CreateTenantFormPr
           </button>
           <button
             type="submit"
-            className="cursor-pointer rounded-lg bg-app-accent px-4 py-2 font-semibold text-app-accent-on shadow-xs transition-colors hover:bg-app-accent-hover"
+            disabled={isSaving}
+            className="flex cursor-pointer items-center gap-1.5 rounded-lg bg-app-accent px-4 py-2 font-semibold text-app-accent-on shadow-xs transition-colors hover:bg-app-accent-hover disabled:cursor-not-allowed disabled:opacity-60"
           >
-            Save
+            {isSaving && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
+            <span>{isSaving ? "Saving…" : "Save"}</span>
           </button>
         </div>
       </form>
