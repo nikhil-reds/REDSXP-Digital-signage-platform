@@ -13,6 +13,8 @@ import {
   PageShell,
   SearchInput,
   SegmentedControl,
+  SkeletonCardGrid,
+  SkeletonTable,
 } from "@/components/ui";
 
 export default function AgentScreenGroupsPage() {
@@ -22,6 +24,10 @@ export default function AgentScreenGroupsPage() {
   const [search, setSearch] = useState("");
   const [selectedGroup, setSelectedGroup] = useState<ScreenGroup | null>(null);
   const [isCreatingGroup, setIsCreatingGroup] = useState(false);
+  // Plan §2: skeleton on first load only — a refetch keeps the current content
+  // on screen rather than replacing it with grey bars.
+  const isFirstLoad = isLoading && groups.length === 0;
+
 
   const loadGroups = useCallback(() => {
     return fetchScreenGroups()
@@ -89,10 +95,14 @@ export default function AgentScreenGroupsPage() {
 
       {/* Render Area */}
       <div className="flex-1">
-        {isLoading ? (
-          <Card size="panel" className="min-h-[300px] flex items-center justify-center">
-            <span className="text-body font-semibold text-app-muted">Loading screen groups…</span>
-          </Card>
+        {isFirstLoad ? (
+          viewMode === "grid" ? (
+            <SkeletonCardGrid count={6} columns={3} label="Loading screen groups…" />
+          ) : (
+            <Card size="panel" className="overflow-hidden">
+              <SkeletonTable rows={6} cols={9} label="Loading screen groups…" />
+            </Card>
+          )
         ) : groups.length === 0 ? (
           <Card size="panel" className="min-h-[300px] flex items-center justify-center">
             <EmptyState
