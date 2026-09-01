@@ -9,7 +9,42 @@ import { ScheduleSummary, fetchSchedules } from "@/components/agent/schedules/ap
 import { findConflicts, ScheduleConflict } from "@/components/agent/schedules/conflict-utils";
 import { fetchScreenGroups, fetchScreenGroup } from "@/components/agent/screen-groups/api";
 import { ScreenGroup } from "@/components/agent/screen-groups/groups-grid";
-import { Button, Card, EmptyState, PageShell, Select, StatGrid, StatTile } from "@/components/ui";
+import {
+  Button,
+  Card,
+  EmptyState,
+  PageShell,
+  Select,
+  Skeleton,
+  SkeletonRegion,
+  SkeletonStatGrid,
+  StatGrid,
+  StatTile,
+} from "@/components/ui";
+
+/**
+ * The schedules page renders a month calendar, not a list, so it gets its own
+ * skeleton rather than a table or card grid: a weekday header row over a 5x7
+ * grid of day cells at the same min-height as the real calendar panel.
+ */
+function ScheduleCalendarSkeleton() {
+  return (
+    <SkeletonRegion label="Loading schedules…">
+      <Card size="panel" padded className="min-h-[300px]">
+        <div className="grid grid-cols-7 gap-2">
+          {Array.from({ length: 7 }).map((_, index) => (
+            <Skeleton key={`head-${index}`} className="h-3 w-10" />
+          ))}
+        </div>
+        <div className="mt-3 grid grid-cols-7 gap-2">
+          {Array.from({ length: 35 }).map((_, index) => (
+            <Skeleton key={`cell-${index}`} className="h-14 rounded-lg" />
+          ))}
+        </div>
+      </Card>
+    </SkeletonRegion>
+  );
+}
 
 export default function AgentSchedulesPage() {
   const [schedules, setSchedules] = useState<ScheduleSummary[]>([]);
@@ -20,6 +55,9 @@ export default function AgentSchedulesPage() {
 
   // Modals state
   const [selectedSchedule, setSelectedSchedule] = useState<ScheduleSummary | null>(null);
+
+  // Plan §2: skeleton on first load only — a refetch keeps the calendar on screen.
+  const isFirstLoad = isLoading && schedules.length === 0;
   const [isCreating, setIsCreating] = useState(false);
   const [conflictModalData, setConflictModalData] = useState<{ c1: ScheduleSummary; c2: ScheduleSummary } | null>(null);
 
@@ -102,12 +140,16 @@ export default function AgentSchedulesPage() {
         </Button>
       </div>
 
+      {isFirstLoad ? (
+        <SkeletonStatGrid columns={4} label="Loading schedule counts…" />
+      ) : (
       <StatGrid columns={4}>
         <StatTile label="Total Schedules" value={`${schedules.length}`} icon={ListChecks} />
         <StatTile label="Active Schedules" value={`${schedules.filter((s) => s.status === "ACTIVE").length}`} icon={Calendar} />
         <StatTile label="Conflicts" value={`${conflicts.length}`} icon={AlertTriangle} tone={conflicts.length ? "warning" : undefined} />
         <StatTile label="Targeted Screens" value={`${new Set(schedules.flatMap((s) => s.deviceIds)).size}`} icon={Monitor} />
       </StatGrid>
+      )}
 
       {/* Group Filters panel */}
       <Card size="widget" padded className="flex items-center gap-3">
@@ -129,10 +171,8 @@ export default function AgentSchedulesPage() {
 
       {/* Calendar Area */}
       <div className="flex-1">
-        {isLoading ? (
-          <Card size="panel" className="min-h-[300px] flex items-center justify-center">
-            <span className="text-body font-semibold text-app-muted">Loading schedules…</span>
-          </Card>
+        {isFirstLoad ? (
+          <ScheduleCalendarSkeleton />
         ) : schedules.length === 0 ? (
           <Card size="panel" className="min-h-[300px] flex items-center justify-center">
             <EmptyState
