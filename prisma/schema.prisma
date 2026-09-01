@@ -40,6 +40,7 @@ model Tenant {
   payments           Payment[]
   invoices           Invoice[]
   tickets            Ticket[]
+  roles              Role[]
 
   @@map("tenants")
 }
@@ -96,24 +97,33 @@ model PasswordResetToken {
 }
 
 model Role {
-  id          String   @id @default(uuid())
-  name        String   @unique
+  id          String    @id @default(uuid())
+  tenantId    String?   @map("tenant_id")
+  scope       RoleScope @default(TENANT)
+  name        String
   description String?
-  createdAt   DateTime @default(now()) @map("created_at")
-  updatedAt   DateTime @updatedAt @map("updated_at")
+  isSystem    Boolean   @default(false) @map("is_system")
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
 
+  tenant      Tenant?      @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   users       User[]
   permissions Permission[] @relation("RolePermissions")
 
+  @@unique([tenantId, name])
   @@map("roles")
 }
 
 model Permission {
-  id          String   @id @default(uuid())
-  name        String   @unique
+  id          String    @id @default(uuid())
+  key         String    @unique
+  scope       RoleScope @default(TENANT)
+  resource    String
+  action      String
+  name        String
   description String?
-  createdAt   DateTime @default(now()) @map("created_at")
-  updatedAt   DateTime @updatedAt @map("updated_at")
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
 
   roles Role[] @relation("RolePermissions")
 
@@ -580,4 +590,9 @@ enum TicketStatus {
   IN_PROGRESS
   RESOLVED
   CLOSED
+}
+
+enum RoleScope {
+  SYSTEM
+  TENANT
 }

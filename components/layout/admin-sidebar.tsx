@@ -17,6 +17,7 @@ import {
   Activity,
   Settings,
   Users,
+  Shield,
   LogOut
 } from "lucide-react";
 
@@ -39,6 +40,7 @@ const navItems: NavItem[] = [
   { name: "System Health", href: "/admin/health", icon: Activity },
   { name: "Platform Settings", href: "/admin/settings", icon: Settings },
   { name: "Admin Users", href: "/admin/users", icon: Users },
+  { name: "Platform Roles", href: "/admin/roles", icon: Shield },
 ];
 
 export default function AdminSidebar() {

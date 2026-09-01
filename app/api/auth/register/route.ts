@@ -35,14 +35,28 @@ export async function POST(request: Request) {
   try {
     const user = await prisma.$transaction(async (tx) => {
       const tenant = await tx.tenant.create({ data: { name: workspaceName, slug } });
-      const role = await tx.role.upsert({
-        where: { name: "AGENT" },
-        update: {},
-        create: { name: "AGENT", description: "Tenant workspace administrator" },
+
+      // Fetch all tenant-scope permissions
+      const tenantPermissions = await tx.permission.findMany({ where: { scope: "TENANT" } });
+
+      // Create tenant's initial custom admin role
+      const role = await tx.role.create({
+        data: {
+          tenantId: tenant.id,
+          name: "AGENT_ADMIN",
+          scope: "TENANT",
+          isSystem: true,
+          description: "Full Workspace Administrator custom role",
+          permissions: {
+            connect: tenantPermissions.map((p) => ({ id: p.id })),
+          },
+        },
+        include: { permissions: true },
       });
+
       return tx.user.create({
         data: { tenantId: tenant.id, roleId: role.id, email, passwordHash, firstName, lastName },
-        include: { tenant: true, role: true },
+        include: { tenant: true, role: { include: { permissions: true } } },
       });
     });
 
@@ -50,7 +64,19 @@ export async function POST(request: Request) {
       {
         success: true,
         message: "Account created successfully.",
-        data: { user: { id: user.id, email: user.email, role: user.role.name }, redirectTo: "/agent" },
+        data: {
+          user: {
+            id: user.id,
+            email: user.email,
+            firstName: user.firstName,
+            lastName: user.lastName,
+            role: user.role.name,
+            roleScope: user.role.scope,
+            permissions: user.role.permissions.map((p) => p.key),
+            tenant: { id: user.tenant.id, name: user.tenant.name, slug: user.tenant.slug },
+          },
+          redirectTo: "/agent",
+        },
       },
       { status: 201 },
     );

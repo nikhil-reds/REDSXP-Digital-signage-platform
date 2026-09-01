@@ -9,6 +9,7 @@ import {
   Eye,
   EyeOff,
   Loader2,
+  Lock,
   Plus,
   RefreshCw,
   Search,
@@ -18,11 +19,13 @@ import {
   Users,
   X,
 } from "lucide-react";
+import Link from "next/link";
 import {
   Button,
   FieldLabel,
   Modal,
   PageShell,
+  Select,
   Skeleton,
   SkeletonRegion,
   SkeletonStatGrid,
@@ -30,6 +33,7 @@ import {
   StatTile,
   TextInput,
 } from "@/components/ui";
+import { RoleFormModal, type RoleFormRole } from "@/components/admin/roles/role-form-modal";
 
 type AdminUser = {
   id: string;
@@ -40,7 +44,15 @@ type AdminUser = {
   createdAt: string;
   lastLoginAt: string | null;
   isCurrentUser: boolean;
-  role: { name: string };
+  role: { name: string; isSystem?: boolean };
+};
+
+type AdminRoleOption = {
+  id: string;
+  name: string;
+  description?: string;
+  isSystem: boolean;
+  permissions: { id: string }[];
 };
 
 type UsersResponse = {
@@ -208,9 +220,14 @@ export default function UsersPage() {
           </div>
           <p className="text-body text-app-muted">Manage the people who can access the Rubenius administration panel.</p>
         </div>
-        <Button onClick={() => setIsModalOpen(true)} className="self-start sm:self-auto">
-          <Plus className="h-4 w-4" /> Add Admin
-        </Button>
+        <div className="flex items-center gap-2 self-start sm:self-auto">
+          <Button as={Link} href="/admin/roles" variant="secondary" icon={Shield}>
+            Manage roles
+          </Button>
+          <Button onClick={() => setIsModalOpen(true)}>
+            <Plus className="h-4 w-4" /> Add Admin
+          </Button>
+        </div>
       </div>
 
       {isFirstLoad ? (
@@ -281,7 +298,7 @@ export default function UsersPage() {
                 {data.users.map((user) => (
                   <tr key={user.id} className="transition-colors hover:bg-app-surface-alt">
                     <td className="p-4"><div className="flex items-center gap-3"><div className="flex h-9 w-9 items-center justify-center rounded-full bg-app-accent-surface text-caption font-bold text-app-accent-text">{initials(user)}</div><div><div className="font-semibold text-app-text">{displayName(user)} {user.isCurrentUser && <span className="ml-1 text-[10px] font-medium text-app-muted">(You)</span>}</div><div className="text-caption text-app-muted">{user.email}</div></div></div></td>
-                    <td className="p-4"><span className="inline-flex items-center gap-1.5 rounded-full bg-zinc-100 px-2.5 py-1 text-xs font-medium text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300"><Shield className="h-3 w-3" />Administrator</span></td>
+                    <td className="p-4"><span className="inline-flex items-center gap-1.5 rounded-full bg-zinc-100 px-2.5 py-1 text-xs font-medium text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300">{user.role.isSystem ? <Lock className="h-3 w-3" /> : <Shield className="h-3 w-3" />}{user.role.name}</span></td>
                     <td className="p-4"><span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-caption font-medium ${user.status === "ACTIVE" ? "bg-app-accent-surface text-app-accent-text" : "bg-app-surface-alt text-app-muted"}`}><span className={`h-1.5 w-1.5 rounded-full ${user.status === "ACTIVE" ? "bg-app-accent-text" : "bg-app-muted"}`} />{user.status[0] + user.status.slice(1).toLowerCase()}</span></td>
                     <td className="p-4 text-xs text-zinc-500">{formatDate(user.lastLoginAt)}</td>
                     <td className="p-4 text-xs text-zinc-500">{formatDate(user.createdAt)}</td>
@@ -307,13 +324,54 @@ function AddAdminModal({
   onClose: () => void;
   onCreated: (message: string) => Promise<void>;
 }) {
-  const [form, setForm] = useState({ firstName: "", lastName: "", email: "", password: "" });
+  const [form, setForm] = useState({ firstName: "", lastName: "", email: "", password: "", roleId: "" });
   const [showPassword, setShowPassword] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const [roles, setRoles] = useState<AdminRoleOption[]>([]);
+  const [isLoadingRoles, setIsLoadingRoles] = useState(true);
+  const [isRoleModalOpen, setIsRoleModalOpen] = useState(false);
+
+  const loadRoles = useCallback(async (selectId?: string) => {
+    setIsLoadingRoles(true);
+    try {
+      const response = await fetch("/api/admin/roles", { cache: "no-store" });
+      const result = await response.json();
+      if (response.ok && result.success) {
+        const list: AdminRoleOption[] = result.data || [];
+        setRoles(list);
+        setForm((current) => ({
+          ...current,
+          roleId:
+            selectId ||
+            current.roleId ||
+            list.find((role) => role.name === "SUPER_ADMIN")?.id ||
+            list[0]?.id ||
+            "",
+        }));
+      }
+    } catch {
+      // Non-fatal: the select renders empty and the form blocks submit until a role is chosen.
+    } finally {
+      setIsLoadingRoles(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    // The state updates happen after the asynchronous API request resolves.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    void loadRoles();
+  }, [loadRoles]);
+
+  const selectedRole = roles.find((role) => role.id === form.roleId);
+
   const submit = async (event: FormEvent) => {
     event.preventDefault();
+    if (!form.roleId) {
+      setError("Choose a role for this administrator.");
+      return;
+    }
     setIsSaving(true);
     setError(null);
     try {
@@ -352,7 +410,12 @@ function AddAdminModal({
             Cancel
           </Button>
           {/* The footer sits outside the <form>, so submit by id instead. */}
-          <Button type="submit" form="add-admin-form" variant="primary" disabled={isSaving}>
+          <Button
+            type="submit"
+            form="add-admin-form"
+            variant="primary"
+            disabled={isSaving || isLoadingRoles || !form.roleId}
+          >
             {isSaving && <Loader2 className="h-4 w-4 animate-spin" />}
             {isSaving ? "Creating…" : "Create admin"}
           </Button>
@@ -397,6 +460,46 @@ function AddAdminModal({
         </div>
 
         <div>
+          <FieldLabel htmlFor="roleId">Role</FieldLabel>
+          <div className="flex items-start gap-2">
+            <div className="flex-1">
+              <Select
+                id="roleId"
+                required
+                value={form.roleId}
+                onChange={(event) => update("roleId", event.target.value)}
+                disabled={isLoadingRoles || roles.length === 0}
+              >
+                {isLoadingRoles && <option value="">Loading roles…</option>}
+                {!isLoadingRoles && roles.length === 0 && (
+                  <option value="">No platform roles found</option>
+                )}
+                {roles.map((role) => (
+                  <option key={role.id} value={role.id}>
+                    {role.name}
+                    {role.isSystem ? " (system)" : ""} — {role.permissions.length} permission
+                    {role.permissions.length === 1 ? "" : "s"}
+                  </option>
+                ))}
+              </Select>
+            </div>
+            <Button
+              type="button"
+              variant="secondary"
+              size="sm"
+              onClick={() => setIsRoleModalOpen(true)}
+            >
+              + New role
+            </Button>
+          </div>
+          {selectedRole?.description && (
+            <p className="mt-1.5 text-caption leading-relaxed text-app-muted">
+              {selectedRole.description}
+            </p>
+          )}
+        </div>
+
+        <div>
           <FieldLabel htmlFor="password">Initial password</FieldLabel>
           <div className="flex gap-2">
             <div className="relative flex-1">
@@ -436,10 +539,31 @@ function AddAdminModal({
         </div>
 
         <div className="rounded-lg border border-app-border bg-app-surface-alt p-3 text-caption leading-relaxed text-app-muted">
-          <strong className="font-semibold text-app-text">Administrator access</strong> grants full
-          access to platform settings and user management.
+          <strong className="font-semibold text-app-text">
+            {selectedRole ? selectedRole.name : "This role"}
+          </strong>{" "}
+          grants{" "}
+          {selectedRole
+            ? `${selectedRole.permissions.length} platform permission${selectedRole.permissions.length === 1 ? "" : "s"}`
+            : "platform"}{" "}
+          access. Manage what each role can do from the{" "}
+          <strong className="font-semibold text-app-text">Manage roles</strong> page.
         </div>
       </form>
+
+      {isRoleModalOpen && (
+        <RoleFormModal
+          role={null}
+          rolesEndpoint="/api/admin/roles"
+          permissionsScope="SYSTEM"
+          title="Create Custom Admin Role"
+          onClose={() => setIsRoleModalOpen(false)}
+          onSaved={(role: RoleFormRole) => {
+            setIsRoleModalOpen(false);
+            void loadRoles(role.id);
+          }}
+        />
+      )}
     </Modal>
   );
 }
