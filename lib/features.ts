@@ -156,6 +156,27 @@ export async function requireFeature(request: NextRequest, key: FeatureKey) {
   };
 }
 
+/**
+ * Does a plan include a feature? Used where the tenant does not exist yet — a
+ * platform admin creating a workspace on a chosen plan — so getTenantFeatures()
+ * has nothing to resolve against.
+ *
+ * Entitlements only. Flags carry a rollout keyed on the tenant id, which by
+ * definition has no answer before the tenant exists.
+ */
+export async function planHasFeature(planId: string | null, key: FeatureKey): Promise<boolean> {
+  const plan = planId
+    ? await prisma.plan.findUnique({ where: { id: planId }, select: { id: true } })
+    : await prisma.plan.findFirst({ where: { isDefault: true }, select: { id: true } });
+  if (!plan) return false;
+
+  const link = await prisma.planFeature.findFirst({
+    where: { planId: plan.id, feature: { key } },
+    select: { planId: true },
+  });
+  return Boolean(link);
+}
+
 const BYTES_PER_GB = 1024 ** 3;
 
 /** Plan limits for a tenant. Null on any field means unlimited. */
@@ -199,11 +220,12 @@ async function getUsage(tenantId: string, resource: QuotaResource): Promise<numb
   }
 }
 
-const QUOTA_LABEL: Record<QuotaResource, string> = {
-  devices: "screens",
-  users: "team members",
-  rules: "sensor rules",
-  storageGb: "storage",
+/** Reads straight into "…allows 2 screens" / "…allows 5 GB of storage". */
+const QUOTA_PHRASE: Record<QuotaResource, { unit: string; noun: string }> = {
+  devices: { unit: "", noun: "screens" },
+  users: { unit: "", noun: "team members" },
+  rules: { unit: "", noun: "sensor rules" },
+  storageGb: { unit: " GB", noun: "of storage" },
 };
 
 /**
@@ -231,9 +253,9 @@ export async function assertQuota(tenantId: string, resource: QuotaResource, add
   const used = await getUsage(tenantId, resource);
   if (used + adding <= limit) return null;
 
-  const unit = resource === "storageGb" ? " GB" : "";
+  const { unit, noun } = QUOTA_PHRASE[resource];
   return apiError(
-    `Your ${plan.name} plan allows ${limit}${unit} of ${QUOTA_LABEL[resource]} and ${Math.round(used * 100) / 100}${unit} are in use. Upgrade to add more.`,
+    `Your ${plan.name} plan allows ${limit}${unit} ${noun} and ${Math.round(used * 100) / 100}${unit} are already in use. Upgrade to add more.`,
     402,
   );
 }

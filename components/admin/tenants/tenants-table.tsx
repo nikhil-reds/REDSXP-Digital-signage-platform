@@ -46,6 +46,8 @@ export interface TenantsSummary {
 export interface PlanOption {
   id: string;
   name: string;
+  /** Entitlement keys this plan includes — see lib/features.ts. */
+  featureKeys?: string[];
 }
 
 interface TenantsTableProps {

@@ -202,11 +202,18 @@ export default function MediaUploadModal({ onClose, onUploadSuccess }: MediaUplo
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           filename: file.name,
-          contentType: file.type || "application/octet-stream"
+          contentType: file.type || "application/octet-stream",
+          // Declared up front so the storage quota is checked before the URL is
+          // issued rather than after the bytes land.
+          sizeBytes: file.size
         })
       });
       
-      if (!presignedRes.ok) throw new Error("Failed to get upload URL");
+      if (!presignedRes.ok) {
+        // 402 is the plan quota talking; its message names the limit.
+        const problem = await presignedRes.json().catch(() => null);
+        throw new Error(problem?.message || problem?.error || "Failed to get upload URL");
+      }
       const { presignedUrl, s3Key, cdnUrl } = await presignedRes.json();
 
       // 2. Upload to S3 using XMLHttpRequest for progress
