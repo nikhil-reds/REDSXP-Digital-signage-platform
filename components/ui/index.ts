@@ -40,6 +40,19 @@ export { Modal } from "./modal";
 export type { ModalSize } from "./modal";
 export { Drawer } from "./drawer";
 
+export {
+  Skeleton,
+  SkeletonRegion,
+  SkeletonText,
+  SkeletonCircle,
+  SkeletonRows,
+  SkeletonTable,
+  SkeletonStatGrid,
+  SkeletonCardGrid,
+  SkeletonChart,
+  PageSkeleton,
+} from "./skeleton";
+
 export { Button, IconButton } from "./button";
 export type { ButtonProps, ButtonVariant } from "./button";
 
