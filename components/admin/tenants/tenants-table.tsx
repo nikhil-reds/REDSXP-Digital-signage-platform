@@ -1,101 +1,267 @@
 "use client";
 
 import React, { useState } from "react";
-import { Search, ChevronDown, Download, LayoutGrid, ArrowUpDown, ChevronLeft, ChevronRight } from "lucide-react";
+import {
+  Search,
+  ChevronDown,
+  Download,
+  ArrowUpDown,
+  ChevronLeft,
+  ChevronRight,
+  AlertCircle,
+  RefreshCw,
+} from "lucide-react";
+import { Skeleton } from "@/components/ui";
 
-interface Tenant {
+export interface Tenant {
   id: string;
   name: string;
+  slug: string;
   status: "Active" | "Trial" | "Past Due" | "Suspended";
-  plan: "Enterprise" | "Business" | "Growth";
+  plan: string | null;
   mrr: number;
   screensActive: number;
   screensTotal: number;
-  storageUsed: number; // in GB
-  storageTotal: number; // in GB
-  customDomain: string;
+  storageUsedGb: number;
+  storageLimitGb: number | null;
+  customDomain: string | null;
+  createdAt: string;
+}
+
+export interface TenantsPagination {
+  page: number;
+  pageSize: number;
+  total: number;
+  totalPages: number;
+}
+
+export interface TenantsSummary {
+  total: number;
+  active: number;
+  trial: number;
+  pastDue: number;
+  suspended: number;
+}
+
+export interface PlanOption {
+  id: string;
+  name: string;
 }
 
 interface TenantsTableProps {
   tenants: Tenant[];
+  pagination: TenantsPagination;
+  summary: TenantsSummary;
+  planOptions: PlanOption[];
+  search: string;
+  status: string;
+  plan: string;
+  isLoading: boolean;
+  error: string | null;
+  onFilterChange: (next: { status?: string; plan?: string; search?: string }) => void;
+  onPageChange: (page: number) => void;
+  onRefresh: () => void;
   onAddTenantClick: () => void;
 }
 
-export default function TenantsTable({ tenants, onAddTenantClick }: TenantsTableProps) {
-  const [search, setSearch] = useState("");
-  const [statusFilter, setStatusFilter] = useState("All");
-  const [planFilter, setPlanFilter] = useState("All");
+const STATUS_OPTIONS = [
+  { value: "ALL", label: "Status: All" },
+  { value: "ACTIVE", label: "Active" },
+  { value: "TRIAL", label: "Trial" },
+  { value: "PAST_DUE", label: "Past Due" },
+  { value: "SUSPENDED", label: "Suspended" },
+];
+
+function formatStorageValue(gb: number) {
+  if (gb >= 1024) return `${(gb / 1024).toFixed(1)} TB`;
+  if (gb > 0 && gb < 1) return `${(gb * 1024).toFixed(0)} MB`;
+  return `${gb.toFixed(gb % 1 === 0 ? 0 : 1)} GB`;
+}
+
+function formatStorage(used: number, limit: number | null) {
+  if (limit === null || limit <= 0) {
+    return { text: formatStorageValue(used), percent: null as number | null };
+  }
+  return {
+    text: `${formatStorageValue(used)}/${formatStorageValue(limit)}`,
+    percent: Math.min((used / limit) * 100, 100),
+  };
+}
+
+function toCsv(tenants: Tenant[]) {
+  const header = [
+    "Name",
+    "Slug",
+    "Status",
+    "Plan",
+    "MRR",
+    "Screens Online",
+    "Screens Total",
+    "Storage Used (GB)",
+    "Storage Limit (GB)",
+    "Custom Domain",
+  ];
+  const rows = tenants.map((tenant) => [
+    tenant.name,
+    tenant.slug,
+    tenant.status,
+    tenant.plan ?? "",
+    tenant.mrr,
+    tenant.screensActive,
+    tenant.screensTotal,
+    tenant.storageUsedGb,
+    tenant.storageLimitGb ?? "",
+    tenant.customDomain ?? "",
+  ]);
+  return [header, ...rows]
+    .map((row) => row.map((cell) => `"${String(cell).replace(/"/g, '""')}"`).join(","))
+    .join("\n");
+}
+
+/**
+ * Mirrors the real tenant row cell-for-cell at its own p-3.5 padding: checkbox,
+ * two-line name/slug, both pills, right-aligned MRR, centred screens, the
+ * storage bar, the domain. Geometry has to match or the table jumps when data
+ * lands (plan §2).
+ */
+function TenantSkeletonRows({ rows = 6 }: { rows?: number }) {
+  return (
+    <>
+      {Array.from({ length: rows }).map((_, index) => (
+        <tr key={index}>
+          <td className="p-3.5 text-center">
+            <Skeleton className="mx-auto h-3.5 w-3.5 rounded-sm" />
+          </td>
+          <td className="p-3.5">
+            <div className="flex flex-col gap-1.5">
+              <Skeleton className="h-3.5 w-40" />
+              <Skeleton className="h-2.5 w-24" />
+            </div>
+          </td>
+          <td className="p-3.5">
+            <Skeleton className="h-4 w-16 rounded-full" />
+          </td>
+          <td className="p-3.5">
+            <Skeleton className="h-4 w-20 rounded-md" />
+          </td>
+          <td className="p-3.5">
+            <Skeleton className="ml-auto h-3.5 w-16" />
+          </td>
+          <td className="p-3.5">
+            <Skeleton className="mx-auto h-3.5 w-12" />
+          </td>
+          <td className="p-3.5">
+            <div className="flex w-24 flex-col gap-1">
+              <Skeleton className="h-2.5 w-16" />
+              <Skeleton className="h-1 w-full rounded-full" />
+            </div>
+          </td>
+          <td className="p-3.5">
+            <Skeleton className="h-3 w-28" />
+          </td>
+        </tr>
+      ))}
+    </>
+  );
+}
+
+export default function TenantsTable({
+  tenants,
+  pagination,
+  summary,
+  planOptions,
+  search,
+  status,
+  plan,
+  isLoading,
+  error,
+  onFilterChange,
+  onPageChange,
+  onRefresh,
+  onAddTenantClick,
+}: TenantsTableProps) {
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
 
-  // Filter logic
-  const filteredTenants = tenants.filter((tenant) => {
-    const matchesSearch =
-      tenant.name.toLowerCase().includes(search.toLowerCase()) ||
-      tenant.customDomain.toLowerCase().includes(search.toLowerCase());
-    const matchesStatus = statusFilter === "All" || tenant.status === statusFilter;
-    const matchesPlan = planFilter === "All" || tenant.plan === planFilter;
-    return matchesSearch && matchesStatus && matchesPlan;
-  });
+  // Plan §2: skeleton on first load only. Filter and page changes keep the rows.
+  const isFirstLoad = isLoading && tenants.length === 0;
 
   const toggleSelectAll = () => {
-    if (selectedIds.length === filteredTenants.length) {
-      setSelectedIds([]);
-    } else {
-      setSelectedIds(filteredTenants.map((t) => t.id));
-    }
+    setSelectedIds(selectedIds.length === tenants.length ? [] : tenants.map((t) => t.id));
   };
 
   const toggleSelect = (id: string) => {
-    if (selectedIds.includes(id)) {
-      setSelectedIds(selectedIds.filter((item) => item !== id));
-    } else {
-      setSelectedIds([...selectedIds, id]);
-    }
+    setSelectedIds(
+      selectedIds.includes(id)
+        ? selectedIds.filter((item) => item !== id)
+        : [...selectedIds, id],
+    );
   };
 
-  // Convert storage values for display
-  const formatStorage = (used: number, total: number) => {
-    const formatValue = (val: number) => {
-      if (val >= 1024) {
-        return `${(val / 1024).toFixed(1)} TB`;
-      }
-      return `${val} GB`;
-    };
-    return {
-      text: `${formatValue(used)}/${formatValue(total)}`,
-      percent: Math.min((used / total) * 100, 100)
-    };
+  const exportCsv = () => {
+    const blob = new Blob([toCsv(tenants)], { type: "text/csv;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `tenants-page-${pagination.page}.csv`;
+    link.click();
+    URL.revokeObjectURL(url);
   };
+
+  const firstRow = pagination.total === 0 ? 0 : (pagination.page - 1) * pagination.pageSize + 1;
+  const lastRow = Math.min(pagination.page * pagination.pageSize, pagination.total);
+  const pageNumbers = Array.from({ length: pagination.totalPages }, (_, index) => index + 1).filter(
+    (number) =>
+      number === 1 ||
+      number === pagination.totalPages ||
+      Math.abs(number - pagination.page) <= 1,
+  );
 
   return (
-    <div className="flex-1 flex flex-col min-w-0 bg-white dark:bg-zinc-900 border border-zinc-200/80 dark:border-zinc-800/80 rounded-xl overflow-hidden shadow-xs">
+    <div className="flex min-w-0 flex-1 flex-col overflow-hidden rounded-xl border border-app-border bg-app-surface shadow-xs">
       {/* Header section with title and Add button */}
-      <div className="p-4 border-b border-zinc-150 dark:border-zinc-800 flex justify-between items-center gap-4">
+      <div className="flex items-center justify-between gap-4 border-b border-app-border p-4">
         <div>
-          <h2 className="text-base font-bold text-zinc-900 dark:text-zinc-50">Tenant Management</h2>
-          <p className="text-xs text-zinc-450 dark:text-zinc-400 mt-0.5">
-            186 active tenants · 23 on trial
-          </p>
+          <h2 className="text-title font-bold text-app-text">Tenant Management</h2>
+          {isFirstLoad ? (
+            <Skeleton className="mt-1.5 h-3 w-64" />
+          ) : (
+            <p className="mt-0.5 text-caption text-app-muted">
+              {summary.total} {summary.total === 1 ? "tenant" : "tenants"} · {summary.active} active ·{" "}
+              {summary.trial} on trial
+              {summary.pastDue > 0 ? ` · ${summary.pastDue} past due` : ""}
+              {summary.suspended > 0 ? ` · ${summary.suspended} suspended` : ""}
+            </p>
+          )}
         </div>
-        <button
-          onClick={onAddTenantClick}
-          className="flex items-center gap-1.5 bg-blue-600 text-white dark:bg-blue-500 hover:opacity-90 px-3.5 py-1.5 rounded-lg text-xs font-semibold shadow-xs transition-opacity cursor-pointer"
-        >
-          <span>+ Add Tenant</span>
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={onRefresh}
+            className="flex cursor-pointer items-center gap-1.5 rounded-lg border border-app-border bg-app-surface px-3 py-1.5 text-caption font-semibold text-app-text shadow-xs transition-colors hover:bg-app-surface-alt"
+            title="Refresh tenants"
+          >
+            <RefreshCw className={`h-3.5 w-3.5 text-app-muted ${isLoading ? "animate-spin" : ""}`} />
+            <span>Refresh</span>
+          </button>
+          <button
+            onClick={onAddTenantClick}
+            className="flex cursor-pointer items-center gap-1.5 rounded-lg bg-app-accent px-3.5 py-1.5 text-caption font-semibold text-app-accent-on shadow-xs transition-colors hover:bg-app-accent-hover"
+          >
+            <span>+ Add Tenant</span>
+          </button>
+        </div>
       </div>
 
       {/* Toolbar / Filters */}
-      <div className="p-4 bg-zinc-50/50 dark:bg-zinc-900/50 border-b border-zinc-150 dark:border-zinc-800 flex flex-wrap gap-3 items-center justify-between">
+      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-app-border bg-app-surface-alt p-4">
         <div className="flex items-center gap-2 flex-1 min-w-[200px] max-w-xs">
           <div className="relative w-full">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-zinc-400" />
+            <Search className="absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-app-muted" />
             <input
               type="text"
-              placeholder="Search by name, domain, owner..."
+              placeholder="Search by name, slug or domain..."
               value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="w-full pl-8.5 pr-3 py-1.5 bg-white dark:bg-zinc-950 border border-zinc-200/80 dark:border-zinc-800/85 rounded-lg text-xs text-zinc-900 dark:text-zinc-100 placeholder-zinc-400 focus:outline-none focus:ring-1 focus:ring-zinc-950 dark:focus:ring-zinc-50"
+              onChange={(e) => onFilterChange({ search: e.target.value })}
+              className="w-full rounded-lg border border-app-border bg-app-surface py-1.5 pl-8.5 pr-3 text-caption text-app-text placeholder:text-app-muted focus:outline-none focus:ring-2 focus:ring-app-accent-text"
             />
           </div>
         </div>
@@ -104,88 +270,112 @@ export default function TenantsTable({ tenants, onAddTenantClick }: TenantsTable
           {/* Status Filter */}
           <div className="relative">
             <select
-              value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value)}
-              className="pl-3 pr-8 py-1.5 border border-zinc-200 dark:border-zinc-850 rounded-lg bg-white dark:bg-zinc-950 text-xs text-zinc-700 dark:text-zinc-300 font-medium focus:outline-none appearance-none cursor-pointer"
+              value={status}
+              onChange={(e) => onFilterChange({ status: e.target.value })}
+              className="cursor-pointer appearance-none rounded-lg border border-app-border bg-app-surface py-1.5 pl-3 pr-8 text-caption font-medium text-app-text focus:outline-none focus:ring-2 focus:ring-app-accent-text"
             >
-              <option value="All">Status: All</option>
-              <option value="Active">Active</option>
-              <option value="Trial">Trial</option>
-              <option value="Past Due">Past Due</option>
-              <option value="Suspended">Suspended</option>
+              {STATUS_OPTIONS.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
             </select>
-            <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 w-3 h-3 text-zinc-400 pointer-events-none" />
+            <ChevronDown className="pointer-events-none absolute right-2.5 top-1/2 h-3 w-3 -translate-y-1/2 text-app-muted" />
           </div>
 
-          {/* Plan Filter */}
+          {/* Plan Filter — options come from the plans table */}
           <div className="relative">
             <select
-              value={planFilter}
-              onChange={(e) => setPlanFilter(e.target.value)}
-              className="pl-3 pr-8 py-1.5 border border-zinc-200 dark:border-zinc-850 rounded-lg bg-white dark:bg-zinc-950 text-xs text-zinc-700 dark:text-zinc-300 font-medium focus:outline-none appearance-none cursor-pointer"
+              value={plan}
+              onChange={(e) => onFilterChange({ plan: e.target.value })}
+              disabled={planOptions.length === 0}
+              className="cursor-pointer appearance-none rounded-lg border border-app-border bg-app-surface py-1.5 pl-3 pr-8 text-caption font-medium text-app-text focus:outline-none focus:ring-2 focus:ring-app-accent-text disabled:cursor-not-allowed disabled:opacity-50"
             >
-              <option value="All">Plan: All</option>
-              <option value="Enterprise">Enterprise</option>
-              <option value="Business">Business</option>
-              <option value="Growth">Growth</option>
+              <option value="ALL">Plan: All</option>
+              {planOptions.map((option) => (
+                <option key={option.id} value={option.name}>
+                  {option.name}
+                </option>
+              ))}
             </select>
-            <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 w-3 h-3 text-zinc-400 pointer-events-none" />
+            <ChevronDown className="pointer-events-none absolute right-2.5 top-1/2 h-3 w-3 -translate-y-1/2 text-app-muted" />
           </div>
 
-          {/* Columns Config */}
-          <button className="flex items-center gap-1 px-3 py-1.5 border border-zinc-200 dark:border-zinc-800 rounded-lg bg-white dark:bg-zinc-950 text-xs text-zinc-700 dark:text-zinc-300 font-semibold shadow-xs hover:bg-zinc-50 dark:hover:bg-zinc-900 transition-colors cursor-pointer">
-            <LayoutGrid className="w-3.5 h-3.5 text-zinc-500" />
-            <span>Columns</span>
-          </button>
-
           {/* Export CSV */}
-          <button className="flex items-center gap-1 px-3 py-1.5 border border-zinc-200 dark:border-zinc-800 rounded-lg bg-white dark:bg-zinc-950 text-xs text-zinc-700 dark:text-zinc-300 font-semibold shadow-xs hover:bg-zinc-50 dark:hover:bg-zinc-900 transition-colors cursor-pointer">
-            <Download className="w-3.5 h-3.5 text-zinc-500" />
+          <button
+            onClick={exportCsv}
+            disabled={tenants.length === 0}
+            className="flex cursor-pointer items-center gap-1 rounded-lg border border-app-border bg-app-surface px-3 py-1.5 text-caption font-semibold text-app-text shadow-xs transition-colors hover:bg-app-surface-alt disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            <Download className="h-3.5 w-3.5 text-app-muted" />
             <span>Export CSV</span>
           </button>
         </div>
       </div>
 
+      {error && (
+        <div className="flex items-center gap-2 border-b border-app-danger-border bg-app-danger-surface px-4 py-2.5 text-caption font-medium text-app-danger-text">
+          <AlertCircle className="h-3.5 w-3.5 shrink-0" />
+          <span>{error}</span>
+        </div>
+      )}
+
       {/* Tenants Table */}
-      <div className="overflow-x-auto">
-        <table className="w-full text-left text-xs border-collapse">
+      <div
+        className={`flex-1 overflow-auto transition-opacity duration-200 ${
+          isLoading && tenants.length > 0 ? "opacity-60" : ""
+        }`}
+        aria-busy={isLoading}
+        role={isFirstLoad ? "status" : undefined}
+        aria-live={isFirstLoad ? "polite" : undefined}
+      >
+        {isFirstLoad && <span className="sr-only">Loading tenants…</span>}
+        <table className="w-full border-collapse text-left text-caption">
           <thead>
-            <tr className="bg-zinc-50/50 dark:bg-zinc-800/40 text-zinc-450 dark:text-zinc-500 font-bold border-b border-zinc-150 dark:border-zinc-800/80 select-none">
+            <tr className="select-none border-b border-app-border bg-app-surface-alt font-bold text-app-muted">
               <th className="p-3.5 w-10 text-center">
                 <input
                   type="checkbox"
-                  checked={filteredTenants.length > 0 && selectedIds.length === filteredTenants.length}
+                  checked={tenants.length > 0 && selectedIds.length === tenants.length}
                   onChange={toggleSelectAll}
-                  className="rounded border-zinc-300 dark:border-zinc-750 accent-zinc-950 dark:accent-zinc-50 w-3.5 h-3.5 cursor-pointer"
+                  className="h-3.5 w-3.5 cursor-pointer rounded border-app-border accent-app-accent-text"
                 />
               </th>
               <th className="p-3.5 font-bold">
-                <span className="flex items-center gap-1 cursor-pointer hover:text-zinc-800 dark:hover:text-zinc-200">
-                  Tenant <ArrowUpDown className="w-3 h-3 text-zinc-400" />
+                <span className="flex items-center gap-1">
+                  Tenant <ArrowUpDown className="h-3 w-3 text-app-muted" />
                 </span>
               </th>
               <th className="p-3.5 font-bold">Status</th>
               <th className="p-3.5 font-bold">Plan</th>
-              <th className="p-3.5 font-bold">
-                <span className="flex items-center gap-1 justify-end cursor-pointer hover:text-zinc-800 dark:hover:text-zinc-200">
-                  MRR <ArrowUpDown className="w-3 h-3 text-zinc-400" />
-                </span>
-              </th>
+              <th className="p-3.5 font-bold text-right">MRR</th>
               <th className="p-3.5 font-bold text-center">Screens</th>
               <th className="p-3.5 font-bold">Storage</th>
               <th className="p-3.5 font-bold">Custom Domain</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-zinc-100 dark:divide-zinc-850">
-            {filteredTenants.map((tenant) => {
+          <tbody className="divide-y divide-app-border">
+            {isFirstLoad && <TenantSkeletonRows />}
+
+            {!isLoading && tenants.length === 0 && !error && (
+              <tr>
+                <td colSpan={8} className="p-10 text-center text-app-muted">
+                  {search || status !== "ALL" || plan !== "ALL"
+                    ? "No tenants match these filters."
+                    : "No tenants yet. Use “Add Tenant” to provision the first workspace."}
+                </td>
+              </tr>
+            )}
+
+            {tenants.map((tenant) => {
               const isSelected = selectedIds.includes(tenant.id);
-              const storageInfo = formatStorage(tenant.storageUsed, tenant.storageTotal);
+              const storageInfo = formatStorage(tenant.storageUsedGb, tenant.storageLimitGb);
 
               return (
                 <tr
                   key={tenant.id}
-                  className={`hover:bg-zinc-50/30 dark:hover:bg-zinc-900/20 transition-colors ${
-                    isSelected ? "bg-blue-50/10 dark:bg-blue-950/5" : ""
+                  className={`transition-colors hover:bg-app-surface-alt ${
+                    isSelected ? "bg-app-accent-surface" : ""
                   }`}
                 >
                   <td className="p-3.5 text-center">
@@ -193,64 +383,78 @@ export default function TenantsTable({ tenants, onAddTenantClick }: TenantsTable
                       type="checkbox"
                       checked={isSelected}
                       onChange={() => toggleSelect(tenant.id)}
-                      className="rounded border-zinc-300 dark:border-zinc-750 accent-zinc-950 dark:accent-zinc-50 w-3.5 h-3.5 cursor-pointer"
+                      className="h-3.5 w-3.5 cursor-pointer rounded border-app-border accent-app-accent-text"
                     />
                   </td>
-                  <td className="p-3.5 font-semibold text-zinc-900 dark:text-zinc-50">
-                    {tenant.name}
+                  <td className="p-3.5 font-semibold text-app-text">
+                    <div className="flex flex-col">
+                      <span>{tenant.name}</span>
+                      <span className="font-mono text-[10px] font-normal text-app-muted">
+                        {tenant.slug}
+                      </span>
+                    </div>
                   </td>
                   <td className="p-3.5">
                     <span
                       className={`text-[10px] px-2 py-0.5 rounded-full font-semibold border inline-flex items-center gap-1 ${
                         tenant.status === "Active"
-                          ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-950/20 dark:text-emerald-400 border-emerald-100/50 dark:border-emerald-900/20"
+                          ? "border-app-accent-border bg-app-accent-surface text-app-accent-text"
                           : tenant.status === "Trial"
-                          ? "bg-amber-50 text-amber-700 dark:bg-amber-950/20 dark:text-amber-400 border-amber-100/50 dark:border-amber-900/20"
+                          ? "border-app-border bg-app-warning-surface text-app-warning-text"
                           : tenant.status === "Past Due"
-                          ? "bg-rose-50 text-rose-700 dark:bg-rose-950/20 dark:text-rose-450 border-rose-100/50 dark:border-rose-900/20"
-                          : "bg-zinc-100 text-zinc-500 dark:bg-zinc-800 dark:text-zinc-400 border-zinc-200/50 dark:border-zinc-700/30"
+                          ? "border-app-danger-border bg-app-danger-surface text-app-danger-text"
+                          : "border-app-border bg-app-surface-alt text-app-muted"
                       }`}
                     >
                       <span
                         className={`w-1 h-1 rounded-full ${
                           tenant.status === "Active"
-                            ? "bg-emerald-500"
+                            ? "bg-app-accent-text"
                             : tenant.status === "Trial"
                             ? "bg-amber-500"
                             : tenant.status === "Past Due"
-                            ? "bg-rose-500"
-                            : "bg-zinc-400"
+                            ? "bg-app-danger-text"
+                            : "bg-app-muted"
                         }`}
                       />
                       {tenant.status}
                     </span>
                   </td>
                   <td className="p-3.5">
-                    <span className="text-[10px] font-semibold uppercase tracking-wider text-zinc-500 dark:text-zinc-400 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200/50 dark:border-zinc-700/40 px-2 py-0.5 rounded-md">
-                      {tenant.plan}
-                    </span>
+                    {tenant.plan ? (
+                      <span className="rounded-md border border-app-border bg-app-surface-alt px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-app-muted">
+                        {tenant.plan}
+                      </span>
+                    ) : (
+                      <span className="text-app-muted">—</span>
+                    )}
                   </td>
-                  <td className="p-3.5 text-right font-bold text-zinc-900 dark:text-zinc-50">
-                    ₹{tenant.mrr.toLocaleString("en-IN")}
+                  <td className="p-3.5 text-right font-bold text-app-text">
+                    {tenant.mrr > 0 ? `₹${tenant.mrr.toLocaleString("en-IN")}` : <span className="font-normal text-app-muted">—</span>}
                   </td>
-                  <td className="p-3.5 text-center font-medium text-zinc-700 dark:text-zinc-300">
+                  <td className="p-3.5 text-center font-medium text-app-text">
                     {tenant.screensActive}/{tenant.screensTotal}
                   </td>
                   <td className="p-3.5">
                     <div className="flex flex-col gap-1 w-24">
-                      <span className="text-[10px] text-zinc-450 dark:text-zinc-500 font-medium">
+                      <span className="text-[10px] font-medium text-app-muted">
                         {storageInfo.text}
                       </span>
-                      <div className="w-full bg-zinc-100 dark:bg-zinc-800 h-1 rounded-full overflow-hidden">
-                        <div
-                          className="bg-zinc-850 dark:bg-zinc-200 h-full"
-                          style={{ width: `${storageInfo.percent}%` }}
-                        />
-                      </div>
+                      {storageInfo.percent !== null && (
+                        <div className="h-1 w-full overflow-hidden rounded-full bg-app-surface-alt">
+                          <div
+                            className="h-full bg-app-accent-text"
+                            style={{ width: `${storageInfo.percent}%` }}
+                          />
+                        </div>
+                      )}
                     </div>
                   </td>
-                  <td className="p-3.5 font-mono text-[11px] text-zinc-450 dark:text-zinc-500 truncate max-w-[120px]" title={tenant.customDomain}>
-                    {tenant.customDomain}
+                  <td
+                    className="max-w-[140px] truncate p-3.5 font-mono text-[11px] text-app-muted"
+                    title={tenant.customDomain ?? undefined}
+                  >
+                    {tenant.customDomain ?? "—"}
                   </td>
                 </tr>
               );
@@ -260,29 +464,47 @@ export default function TenantsTable({ tenants, onAddTenantClick }: TenantsTable
       </div>
 
       {/* Pagination Footer */}
-      <div className="p-4 border-t border-zinc-100 dark:border-zinc-800/80 bg-zinc-50/30 dark:bg-zinc-900/30 flex items-center justify-between text-xs text-zinc-500 dark:text-zinc-450 select-none">
-        <span>Showing 1–8 of 186 tenants</span>
+      <div className="flex select-none items-center justify-between border-t border-app-border bg-app-surface-alt p-4 text-caption text-app-muted">
+        <span>
+          {pagination.total === 0
+            ? "No tenants to show"
+            : `Showing ${firstRow}–${lastRow} of ${pagination.total} ${
+                pagination.total === 1 ? "tenant" : "tenants"
+              }`}
+        </span>
         <div className="flex items-center gap-1">
-          <button className="flex items-center gap-1 px-2.5 py-1.5 border border-zinc-200 dark:border-zinc-800 rounded-lg hover:bg-zinc-50 dark:hover:bg-zinc-900 transition-colors text-zinc-700 dark:text-zinc-300 disabled:opacity-50 cursor-pointer" disabled>
+          <button
+            onClick={() => onPageChange(pagination.page - 1)}
+            disabled={pagination.page <= 1}
+            className="flex cursor-pointer items-center gap-1 rounded-lg border border-app-border bg-app-surface px-2.5 py-1.5 text-app-text transition-colors hover:bg-app-surface-alt disabled:cursor-not-allowed disabled:opacity-50"
+          >
             <ChevronLeft className="w-3.5 h-3.5" />
             <span>Previous</span>
           </button>
-          
-          <button className="w-8 h-8 rounded-lg bg-blue-600 dark:bg-blue-500 text-white font-bold flex items-center justify-center cursor-pointer">
-            1
-          </button>
-          <button className="w-8 h-8 rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-700 dark:text-zinc-300 flex items-center justify-center cursor-pointer">
-            2
-          </button>
-          <button className="w-8 h-8 rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-700 dark:text-zinc-300 flex items-center justify-center cursor-pointer">
-            3
-          </button>
-          <span className="px-1 text-zinc-400">...</span>
-          <button className="w-8 h-8 rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-700 dark:text-zinc-300 flex items-center justify-center cursor-pointer">
-            24
-          </button>
 
-          <button className="flex items-center gap-1 px-2.5 py-1.5 border border-zinc-200 dark:border-zinc-800 rounded-lg hover:bg-zinc-50 dark:hover:bg-zinc-900 transition-colors text-zinc-700 dark:text-zinc-300 cursor-pointer">
+          {pageNumbers.map((number, index) => (
+            <React.Fragment key={number}>
+              {index > 0 && number - pageNumbers[index - 1] > 1 && (
+                <span className="px-1 text-app-muted">...</span>
+              )}
+              <button
+                onClick={() => onPageChange(number)}
+                className={`flex h-8 w-8 cursor-pointer items-center justify-center rounded-lg ${
+                  number === pagination.page
+                    ? "bg-app-accent font-bold text-app-accent-on"
+                    : "text-app-text hover:bg-app-surface"
+                }`}
+              >
+                {number}
+              </button>
+            </React.Fragment>
+          ))}
+
+          <button
+            onClick={() => onPageChange(pagination.page + 1)}
+            disabled={pagination.page >= pagination.totalPages}
+            className="flex cursor-pointer items-center gap-1 rounded-lg border border-app-border bg-app-surface px-2.5 py-1.5 text-app-text transition-colors hover:bg-app-surface-alt disabled:cursor-not-allowed disabled:opacity-50"
+          >
             <span>Next</span>
             <ChevronRight className="w-3.5 h-3.5" />
           </button>

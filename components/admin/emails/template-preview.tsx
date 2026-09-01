@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import { Mail, ArrowRight } from "lucide-react";
 
 interface TemplateDetails {
@@ -21,14 +21,7 @@ export default function TemplatePreview({ template, onSave }: TemplatePreviewPro
   const [activeTab, setActiveTab] = useState("Visual Preview");
   const [subject, setSubject] = useState(template.subject);
   const [fromName, setFromName] = useState(template.fromName);
-  const [body, setBody] = useState(template.body);
-
-  // Sync state when selected template changes
-  useEffect(() => {
-    setSubject(template.subject);
-    setFromName(template.fromName);
-    setBody(template.body);
-  }, [template]);
+  const body = template.body;
 
   const tabs = ["HTML Editor", "Visual Preview", "Plain Text", "Send Test"];
 
@@ -37,20 +30,20 @@ export default function TemplatePreview({ template, onSave }: TemplatePreviewPro
   };
 
   return (
-    <div className="flex-1 bg-white dark:bg-zinc-900 border border-zinc-200/80 dark:border-zinc-800/80 rounded-xl shadow-xs overflow-hidden flex flex-col h-full">
+    <div className="flex h-full flex-1 flex-col overflow-hidden rounded-xl border border-app-border bg-app-surface shadow-xs">
       {/* Editor Header */}
-      <div className="p-4 border-b border-zinc-150 dark:border-zinc-800 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+      <div className="flex flex-col gap-3 border-b border-app-border p-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h2 className="text-sm font-bold text-zinc-900 dark:text-zinc-50 leading-snug">
+          <h2 className="text-body font-bold leading-snug text-app-text">
             {template.name}
           </h2>
-          <p className="text-[11px] text-zinc-450 dark:text-zinc-500 mt-0.5">
+          <p className="mt-0.5 text-[11px] text-app-muted">
             Visual preview of the selected template
           </p>
         </div>
 
         {/* Action Tabs */}
-        <div className="flex bg-zinc-50 dark:bg-zinc-850 p-0.5 rounded-lg text-[10px] font-semibold text-zinc-500 select-none">
+        <div className="flex select-none rounded-lg bg-app-surface-alt p-0.5 text-[10px] font-semibold text-app-muted">
           {tabs.map((tab) => {
             const isActive = tab === activeTab;
             return (
@@ -60,8 +53,8 @@ export default function TemplatePreview({ template, onSave }: TemplatePreviewPro
                 onClick={() => setActiveTab(tab)}
                 className={`px-3 py-1 rounded-md transition-all cursor-pointer whitespace-nowrap ${
                   isActive
-                    ? "bg-blue-600 dark:bg-blue-500 text-white shadow-xs"
-                    : "text-zinc-500 dark:text-zinc-400 hover:text-zinc-800 dark:hover:text-zinc-200"
+                    ? "bg-app-accent text-app-accent-on shadow-xs"
+                    : "text-app-muted hover:text-app-text"
                 }`}
               >
                 {tab}
@@ -76,28 +69,28 @@ export default function TemplatePreview({ template, onSave }: TemplatePreviewPro
         {/* Subject & From Name Row */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="flex flex-col gap-1.5">
-            <label className="font-semibold text-zinc-500">Subject</label>
+            <label className="font-semibold text-app-muted">Subject</label>
             <input
               type="text"
               value={subject}
               onChange={(e) => setSubject(e.target.value)}
-              className="w-full px-3 py-2 bg-white dark:bg-zinc-950 border border-zinc-200/80 dark:border-zinc-800/80 rounded-lg text-xs text-zinc-900 dark:text-zinc-100 placeholder-zinc-400 focus:outline-none"
+              className="w-full rounded-lg border border-app-border bg-app-surface-alt px-3 py-2 text-caption text-app-text focus:outline-none focus:ring-2 focus:ring-app-accent-text"
             />
           </div>
 
           <div className="flex flex-col gap-1.5">
-            <label className="font-semibold text-zinc-500">From Name</label>
+            <label className="font-semibold text-app-muted">From Name</label>
             <input
               type="text"
               value={fromName}
               onChange={(e) => setFromName(e.target.value)}
-              className="w-full px-3 py-2 bg-white dark:bg-zinc-950 border border-zinc-200/80 dark:border-zinc-800/80 rounded-lg text-xs text-zinc-900 dark:text-zinc-100 placeholder-zinc-400 focus:outline-none"
+              className="w-full rounded-lg border border-app-border bg-app-surface-alt px-3 py-2 text-caption text-app-text focus:outline-none focus:ring-2 focus:ring-app-accent-text"
             />
           </div>
         </div>
 
         {/* Variables chips list */}
-        <div className="p-3 border border-zinc-200/80 dark:border-zinc-800/80 rounded-lg bg-zinc-50/20 dark:bg-zinc-900/10 space-y-2">
+        <div className="space-y-2 rounded-lg border border-app-border bg-app-surface-alt p-3">
           <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-450 dark:text-zinc-500 block">
             Variables
           </span>
@@ -105,7 +98,7 @@ export default function TemplatePreview({ template, onSave }: TemplatePreviewPro
             {template.variables.map((v) => (
               <span
                 key={v}
-                className="px-2.5 py-0.5 bg-blue-50/50 text-blue-700 dark:bg-blue-950/20 dark:text-blue-400 border border-blue-100/50 rounded-full font-mono text-[9px] font-semibold cursor-pointer select-none"
+                className="cursor-pointer select-none rounded-full border border-app-accent-border bg-app-accent-surface px-2.5 py-0.5 font-mono text-[9px] font-semibold text-app-accent-text"
               >
                 {v}
               </span>
@@ -114,11 +107,11 @@ export default function TemplatePreview({ template, onSave }: TemplatePreviewPro
         </div>
 
         {/* Visual Preview Canvas Frame */}
-        <div className="border border-zinc-200/80 dark:border-zinc-800/80 rounded-xl bg-zinc-50 dark:bg-zinc-950/50 p-6 flex justify-center">
-          <div className="w-full max-w-xl bg-white dark:bg-zinc-900 border border-zinc-200/80 dark:border-zinc-800/80 rounded-xl shadow-xs overflow-hidden flex flex-col p-6 space-y-5">
+        <div className="flex justify-center rounded-xl border border-app-border bg-app-surface-alt p-6">
+          <div className="flex w-full max-w-xl flex-col space-y-5 overflow-hidden rounded-xl border border-app-border bg-app-surface p-6 shadow-xs">
             {/* Header logo/brand */}
             <div className="flex items-center gap-3">
-              <div className="w-9 h-9 bg-zinc-950 dark:bg-zinc-100 text-white dark:text-zinc-950 rounded-lg flex items-center justify-center shadow-xs">
+              <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-app-accent text-app-accent-on shadow-xs">
                 <Mail className="w-4.5 h-4.5" />
               </div>
               <div className="flex flex-col gap-0.5">
@@ -141,7 +134,7 @@ export default function TemplatePreview({ template, onSave }: TemplatePreviewPro
             <div className="pt-2">
               <button
                 type="button"
-                className="px-4 py-2 bg-zinc-950 hover:bg-zinc-850 dark:bg-zinc-50 dark:text-zinc-950 dark:hover:opacity-90 text-white rounded-lg font-semibold flex items-center gap-1.5 shadow-sm transition-all cursor-pointer"
+                className="flex cursor-pointer items-center gap-1.5 rounded-lg bg-app-accent px-4 py-2 font-semibold text-app-accent-on shadow-sm transition-colors hover:bg-app-accent-hover"
               >
                 <span>Upgrade Now</span>
                 <ArrowRight className="w-3.5 h-3.5" />
@@ -163,7 +156,7 @@ export default function TemplatePreview({ template, onSave }: TemplatePreviewPro
       </div>
 
       {/* Editor Footer actions bar */}
-      <div className="p-4 border-t border-zinc-150 dark:border-zinc-800 bg-zinc-50/20 dark:bg-zinc-900/10 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 select-none">
+      <div className="flex select-none flex-col gap-4 border-t border-app-border bg-app-surface-alt p-4 sm:flex-row sm:items-center sm:justify-between">
         <span className="text-[10px] text-zinc-450 dark:text-zinc-500 font-medium">
           Last saved 2 Jul 2026, 4:28 PM IST
         </span>
@@ -171,20 +164,20 @@ export default function TemplatePreview({ template, onSave }: TemplatePreviewPro
         <div className="flex items-center gap-3 text-xs">
           <button
             type="button"
-            className="text-blue-650 hover:underline dark:text-blue-400 font-semibold cursor-pointer"
+            className="cursor-pointer font-semibold text-app-accent-text hover:underline"
           >
             Revert to Default
           </button>
           <button
             type="button"
             onClick={handleSave}
-            className="px-3.5 py-1.5 border border-zinc-200 dark:border-zinc-800 bg-white hover:bg-zinc-50 dark:bg-zinc-900 dark:hover:bg-zinc-800 rounded-lg font-semibold text-zinc-700 dark:text-zinc-300 transition-colors shadow-xs cursor-pointer"
+            className="cursor-pointer rounded-lg border border-app-border bg-app-surface px-3.5 py-1.5 font-semibold text-app-text shadow-xs transition-colors hover:bg-app-surface-alt"
           >
             Save Template
           </button>
           <button
             type="button"
-            className="px-3.5 py-1.5 bg-zinc-950 dark:bg-zinc-50 text-white dark:text-zinc-950 rounded-lg font-semibold hover:opacity-90 transition-opacity shadow-sm cursor-pointer"
+            className="cursor-pointer rounded-lg bg-app-accent px-3.5 py-1.5 font-semibold text-app-accent-on shadow-sm transition-colors hover:bg-app-accent-hover"
           >
             Send Test Email
           </button>

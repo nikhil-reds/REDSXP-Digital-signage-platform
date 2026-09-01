@@ -9,7 +9,7 @@ interface AdminLayoutProps {
 
 export default function AdminLayout({ children }: AdminLayoutProps) {
   return (
-    <div className="flex h-screen overflow-hidden bg-zinc-50 dark:bg-zinc-950 relative">
+    <div className="admin-portal relative flex h-screen overflow-hidden bg-app-canvas font-sans text-app-text">
       <AdminSidebar />
       <div className="flex-1 flex flex-col min-w-0">
         <AdminNavbar />

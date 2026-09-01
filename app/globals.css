@@ -2,23 +2,326 @@
 
 @custom-variant dark (&:where(.dark, .dark *));
 
+/* ==========================================================================
+   REDS brand primitives — see docs/reds-brand-book.md
+   Raw palette values. Do not reference these directly in components; use the
+   semantic --app-* aliases below so light/dark and contrast rules stay correct.
+   ========================================================================== */
+
 :root {
+  /* Foundation */
+  --reds-green: #0bda51;
+  --reds-black: #292929;
+  --reds-offwhite: #f6f6f3;
+
+  /* Green ramp — brand hero at 60 */
+  --reds-green-100: #023112;
+  --reds-green-90: #04531f;
+  --reds-green-80: #06792d;
+  --reds-green-70: #08a03c;
+  --reds-green-60: #0bda51;
+  --reds-green-50: #33f575;
+  --reds-green-40: #64f796;
+  --reds-green-30: #94fab6;
+  --reds-green-20: #c5fcd7;
+  --reds-green-10: #e7feef;
+
+  /* Secondary family */
+  --reds-teal: #1fbf8a;
+  --reds-blue: #0b8793;
+
+  /* Functional — error (never decorative, never adjacent to green) */
+  --reds-red-100: #350d11;
+  --reds-red-90: #581319;
+  --reds-red-80: #811821;
+  --reds-red-70: #a81f2a;
+  --reds-red-60: #d32735;
+  --reds-red-50: #de4f5b;
+  --reds-red-40: #e47c84;
+  --reds-red-30: #eba8ad;
+  --reds-red-20: #f3ced1;
+  --reds-red-10: #faebec;
+
+  /* Functional — warning */
+  --reds-amber-100: #3a2909;
+  --reds-amber-90: #60440b;
+  --reds-amber-80: #8b610e;
+  --reds-amber-70: #b67f11;
+  --reds-amber-60: #e5a015;
+  --reds-amber-50: #ecb341;
+  --reds-amber-40: #efc571;
+  --reds-amber-30: #f3d7a0;
+  --reds-amber-20: #f7e8ca;
+  --reds-amber-10: #fbf5e9;
+
+  /* Cool Gray — hue 220°. The single neutral mood for this app.
+     Warm Gray is deliberately not defined: mixing moods is forbidden. */
+  --reds-cool-100: #212121;
+  --reds-cool-90: #333538;
+  --reds-cool-80: #474b52;
+  --reds-cool-70: #5b616b;
+  --reds-cool-60: #737a87;
+  --reds-cool-50: #8f949e;
+  --reds-cool-40: #acafb4;
+  --reds-cool-30: #c8c9cb;
+  --reds-cool-20: #e1e1e0;
+  --reds-cool-10: #f3f2f2;
+}
+
+/* ==========================================================================
+   Semantic aliases — light
+   Every text/background pairing below clears WCAG AA (4.5:1); ratios noted.
+   ========================================================================== */
+
+:root {
+  --app-canvas: var(--reds-offwhite);
+  --app-surface: #ffffff;
+  --app-surface-alt: var(--reds-cool-10);
+  --app-surface-raised: var(--reds-cool-10);
+  --app-border: var(--reds-cool-20);
+  --app-border-strong: var(--reds-cool-30);
+
+  --app-text: var(--reds-black); /* 13.4:1 on canvas */
+  --app-text-muted: var(--reds-cool-70); /* 5.76:1 on canvas */
+  --app-text-inverse: var(--reds-offwhite);
+
+  /* Green is a surface/bar/fill in light mode — never a text color.
+     #0BDA51 on off-white is 1.74:1. Use --app-accent-text for green type. */
+  --app-accent: var(--reds-green-60);
+  --app-accent-text: var(--reds-green-80); /* 5.13:1 on canvas */
+  --app-accent-surface: var(--reds-green-10);
+  --app-accent-on: var(--reds-black); /* label on an accent fill, 7.73:1 */
+
+  --app-danger: var(--reds-red-60);
+  --app-danger-text: var(--reds-red-80);
+  --app-danger-surface: var(--reds-red-10);
+  --app-danger-on: #ffffff; /* 5.11:1 */
+
+  --app-warning: var(--reds-amber-60);
+  --app-warning-text: var(--reds-amber-80);
+  --app-warning-surface: var(--reds-amber-10);
+  --app-warning-on: var(--reds-black); /* 6.49:1 */
+
+  /* Assistant chat bubble for the operator's own messages. Green is the
+     product's voice, so the user's bubble is neutral. */
+  --app-bubble-user: var(--reds-black); /* 13.4:1 vs canvas */
+  --app-bubble-user-on: var(--reds-offwhite); /* 13.4:1 */
+
+  /* Chart series — Green → Teal → Blue, then Cool Gray steps. Light theme uses
+     the darker green step because Green 60 on white is 1.74:1 and disappears as
+     a line. Red/amber are NOT series colours; they mark threshold breaches. */
+  --chart-1: var(--reds-green-80);
+  --chart-2: var(--reds-blue);
+  --chart-3: var(--reds-teal);
+  --chart-4: var(--reds-cool-80);
+  --chart-5: var(--reds-green-90);
+  --chart-6: var(--reds-cool-50);
+  --chart-grid: var(--reds-cool-20);
+  --chart-axis: var(--reds-cool-70);
+
+  /* Scoped font indirection: overridden per-portal so `font-sans` resolves
+     to Source Sans 3 inside the agent shell and Geist everywhere else. */
+  --app-font-sans: var(--font-geist-sans);
+
   --background: #ffffff;
   --foreground: #171717;
 }
 
+/* ==========================================================================
+   Semantic aliases — dark
+   ========================================================================== */
+
 .dark {
+  --app-canvas: var(--reds-cool-100);
+  --app-surface: var(--reds-black);
+  --app-surface-alt: var(--reds-cool-90);
+  --app-surface-raised: var(--reds-cool-90);
+  --app-border: var(--reds-cool-80);
+  --app-border-strong: var(--reds-cool-70);
+
+  --app-text: var(--reds-offwhite); /* 14.9:1 on canvas */
+  /* Cool 40, not Cool 50: muted text must also clear 4.5:1 on the raised
+     surface (Cool 90), where Cool 50 only reaches 4.04:1.
+     Cool 40 → 7.32:1 canvas, 6.61:1 surface, 5.59:1 raised. */
+  --app-text-muted: var(--reds-cool-40);
+  --app-text-inverse: var(--reds-black);
+
+  /* Green as text is approved on black — 7.73:1 */
+  --app-accent: var(--reds-green-60);
+  --app-accent-text: var(--reds-green-60);
+  --app-accent-surface: var(--reds-cool-90);
+  --app-accent-on: var(--reds-black);
+
+  --app-danger: var(--reds-red-60);
+  --app-danger-text: var(--reds-red-30);
+  --app-danger-surface: var(--reds-red-100);
+  --app-danger-on: #ffffff;
+
+  --app-warning: var(--reds-amber-60);
+  --app-warning-text: var(--reds-amber-40);
+  --app-warning-surface: var(--reds-amber-100);
+  --app-warning-on: var(--reds-black);
+
+  /* Cool 80, not brand black: on the Cool 100 canvas a #292929 bubble is
+     1.1:1 against its own background — the bubble shape would disappear. */
+  --app-bubble-user: var(--reds-cool-80); /* 1.84:1 vs canvas, visible */
+  --app-bubble-user-on: var(--reds-offwhite); /* 8.09:1 */
+
+  --chart-1: var(--reds-green-60);
+  --chart-2: var(--reds-teal);
+  --chart-3: var(--reds-blue);
+  --chart-4: var(--reds-cool-40);
+  --chart-5: var(--reds-green-30);
+  --chart-6: var(--reds-cool-60);
+  --chart-grid: var(--reds-cool-80);
+  --chart-axis: var(--reds-cool-40);
+
   --background: #09090b;
   --foreground: #fafafa;
+}
+
+/* Portals that opt into the brand typeface. Anything outside these keeps Geist. */
+.agent-portal,
+.admin-portal,
+.auth-portal {
+  --app-font-sans: var(--font-source-sans);
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
+
+  /* Brand ramps, for the rare case a component needs a specific step */
+  --color-reds-green: var(--reds-green-60);
+  --color-reds-green-100: var(--reds-green-100);
+  --color-reds-green-90: var(--reds-green-90);
+  --color-reds-green-80: var(--reds-green-80);
+  --color-reds-green-70: var(--reds-green-70);
+  --color-reds-green-60: var(--reds-green-60);
+  --color-reds-green-50: var(--reds-green-50);
+  --color-reds-green-40: var(--reds-green-40);
+  --color-reds-green-30: var(--reds-green-30);
+  --color-reds-green-20: var(--reds-green-20);
+  --color-reds-green-10: var(--reds-green-10);
+  --color-reds-teal: var(--reds-teal);
+  --color-reds-blue: var(--reds-blue);
+  --color-reds-black: var(--reds-black);
+  --color-reds-offwhite: var(--reds-offwhite);
+  --color-reds-cool-100: var(--reds-cool-100);
+  --color-reds-cool-90: var(--reds-cool-90);
+  --color-reds-cool-80: var(--reds-cool-80);
+  --color-reds-cool-70: var(--reds-cool-70);
+  --color-reds-cool-60: var(--reds-cool-60);
+  --color-reds-cool-50: var(--reds-cool-50);
+  --color-reds-cool-40: var(--reds-cool-40);
+  --color-reds-cool-30: var(--reds-cool-30);
+  --color-reds-cool-20: var(--reds-cool-20);
+  --color-reds-cool-10: var(--reds-cool-10);
+  --color-reds-red: var(--reds-red-60);
+  --color-reds-amber: var(--reds-amber-60);
+
+  /* Semantic — what components should actually use */
+  --color-app-canvas: var(--app-canvas);
+  --color-app-surface: var(--app-surface);
+  --color-app-surface-alt: var(--app-surface-alt);
+  --color-app-surface-raised: var(--app-surface-raised);
+  --color-app-border: var(--app-border);
+  --color-app-border-strong: var(--app-border-strong);
+  --color-app-text: var(--app-text);
+  --color-app-muted: var(--app-text-muted);
+  --color-app-inverse: var(--app-text-inverse);
+  --color-app-accent: var(--app-accent);
+  --color-app-accent-text: var(--app-accent-text);
+  --color-app-accent-surface: var(--app-accent-surface);
+  --color-app-accent-on: var(--app-accent-on);
+  --color-app-danger: var(--app-danger);
+  --color-app-danger-text: var(--app-danger-text);
+  --color-app-danger-surface: var(--app-danger-surface);
+  --color-app-danger-on: var(--app-danger-on);
+  --color-app-warning: var(--app-warning);
+  --color-app-warning-text: var(--app-warning-text);
+  --color-app-warning-surface: var(--app-warning-surface);
+  --color-app-warning-on: var(--app-warning-on);
+  --color-app-bubble-user: var(--app-bubble-user);
+  --color-app-bubble-user-on: var(--app-bubble-user-on);
+
+  /* Typefaces — Sora for headlines/buttons, Source Sans 3 for body & UI */
+  --font-sans: var(--app-font-sans);
+  --font-heading: var(--font-sora);
+  --font-body: var(--font-source-sans);
   --font-mono: var(--font-geist-mono);
 
+  /* Type scale — size/line-height pairs are fixed by the brand book.
+     The scale starts at 12px; there is no smaller step. */
+  --text-caption: 12px;
+  --text-caption--line-height: 16px;
+  --text-body: 14px;
+  --text-body--line-height: 18px;
+  --text-lead: 16px;
+  --text-lead--line-height: 22px;
+  --text-h6: 20px;
+  --text-h6--line-height: 26px;
+  --text-h5: 24px;
+  --text-h5--line-height: 32px;
+  --text-h4: 32px;
+  --text-h4--line-height: 40px;
+  --text-h3: 42px;
+  --text-h3--line-height: 50px;
+  --text-h2: 48px;
+  --text-h2--line-height: 52px;
+  --text-h1: 60px;
+  --text-h1--line-height: 64px;
+  --text-display: 84px;
+  --text-display--line-height: 88px;
+
+  /* Alias used by the admin pages' <h1>. It was referenced on 10 pages but never
+     defined, so those titles fell back to the inherited 16px body size. Mapped to
+     the H5 step, which is what the brand book assigns to page titles. */
+  --text-page-title: 24px;
+  --text-page-title--line-height: 32px;
+
+  /* Sora is drawn tight; headlines need a touch of tracking, never less. */
+  --tracking-headline: 0.01em;
+
   --animate-shake: shake 0.4s ease-in-out;
+
+  /* Overlay motion. `animate-fadeIn` was referenced by all 13 modals but never
+     defined, so no modal actually animated. Defined here once. */
+  --animate-fadeIn: fadeIn 0.15s ease-out;
+  --animate-scaleIn: scaleIn 0.15s ease-out;
+  --animate-slideInRight: slideInRight 0.2s ease-out;
+
+  @keyframes fadeIn {
+    from {
+      opacity: 0;
+    }
+
+    to {
+      opacity: 1;
+    }
+  }
+
+  @keyframes scaleIn {
+    from {
+      opacity: 0;
+      transform: scale(0.97);
+    }
+
+    to {
+      opacity: 1;
+      transform: scale(1);
+    }
+  }
+
+  @keyframes slideInRight {
+    from {
+      transform: translateX(100%);
+    }
+
+    to {
+      transform: translateX(0);
+    }
+  }
 
   @keyframes shake {
 
@@ -40,15 +343,28 @@
   }
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
-}
+/* No prefers-color-scheme override here on purpose. ThemeProvider (and the
+   pre-paint script in app/layout.tsx) already add `.dark` when the user's
+   choice — or their system setting — resolves to dark. A media query on :root
+   fought that: on a dark-preferring OS it forced --foreground to near-white
+   even while the app was in light mode, so any element relying on inherited
+   colour rendered near-white text on a light surface. */
 
 body {
   background: var(--background);
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
 }
+
+@media (prefers-reduced-motion: reduce) {
+
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+

@@ -12,6 +12,7 @@ import {
   AlertTriangle,
   XOctagon
 } from "lucide-react";
+import { StatGrid, StatTile } from "@/components/ui";
 
 export default function BillingStatsGrid() {
   const stats = [
@@ -21,7 +22,7 @@ export default function BillingStatsGrid() {
       change: "+12.8%",
       changeType: "up",
       icon: TrendingUp,
-      iconColor: "text-emerald-500"
+      tone: "accent" as const
     },
     {
       name: "ARR",
@@ -29,7 +30,7 @@ export default function BillingStatsGrid() {
       change: "Annualized",
       changeType: "neutral",
       icon: Calendar,
-      iconColor: "text-zinc-400 dark:text-zinc-500"
+      tone: "neutral" as const
     },
     {
       name: "Net Revenue",
@@ -37,7 +38,7 @@ export default function BillingStatsGrid() {
       change: "Jun 2026",
       changeType: "neutral",
       icon: Receipt,
-      iconColor: "text-zinc-400 dark:text-zinc-500"
+      tone: "neutral" as const
     },
     {
       name: "ARPU",
@@ -45,7 +46,7 @@ export default function BillingStatsGrid() {
       change: "Per tenant",
       changeType: "neutral",
       icon: User,
-      iconColor: "text-zinc-400 dark:text-zinc-500"
+      tone: "neutral" as const
     },
     {
       name: "LTV",
@@ -53,7 +54,7 @@ export default function BillingStatsGrid() {
       change: "Lifetime value",
       changeType: "neutral",
       icon: DollarSign,
-      iconColor: "text-zinc-400 dark:text-zinc-500"
+      tone: "neutral" as const
     },
     {
       name: "Churn",
@@ -61,7 +62,7 @@ export default function BillingStatsGrid() {
       change: "-0.4 pp",
       changeType: "up", // green drop is good
       icon: TrendingDown,
-      iconColor: "text-emerald-500"
+      tone: "accent" as const
     },
     {
       name: "Trial Conv.",
@@ -69,7 +70,7 @@ export default function BillingStatsGrid() {
       change: "Conversion",
       changeType: "neutral",
       icon: Percent,
-      iconColor: "text-zinc-400 dark:text-zinc-500"
+      tone: "neutral" as const
     },
     {
       name: "Outstanding",
@@ -77,7 +78,7 @@ export default function BillingStatsGrid() {
       change: "At risk",
       changeType: "danger",
       icon: AlertTriangle,
-      iconColor: "text-red-500"
+      tone: "danger" as const
     },
     {
       name: "Failed Pmts",
@@ -85,58 +86,19 @@ export default function BillingStatsGrid() {
       change: "Tenants",
       changeType: "danger",
       icon: XOctagon,
-      iconColor: "text-red-500"
+      tone: "danger" as const
     }
   ];
 
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-      {stats.map((stat) => {
-        const Icon = stat.icon;
-        const isDanger = stat.changeType === "danger";
-
-        return (
-          <div
-            key={stat.name}
-            className="bg-white dark:bg-zinc-900 border border-zinc-200/80 dark:border-zinc-800/80 p-4 rounded-lg shadow-xs hover:shadow-sm transition-all duration-200 flex flex-col justify-between"
-          >
-            <div className="flex justify-between items-start">
-              <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-400 dark:text-zinc-500">
-                {stat.name}
-              </span>
-              <Icon className={`w-4 h-4 ${stat.iconColor}`} />
-            </div>
-
-            <div className="mt-3.5">
-              <span
-                className={`text-lg font-bold tracking-tight text-zinc-900 dark:text-zinc-50 ${
-                  isDanger ? "text-red-650 dark:text-red-500" : ""
-                }`}
-              >
-                {stat.value}
-              </span>
-
-              <div className="mt-1 flex items-center">
-                {stat.changeType === "up" && (
-                  <span className="text-[11px] font-semibold text-emerald-600 dark:text-emerald-500 flex items-center">
-                    {stat.change}
-                  </span>
-                )}
-                {stat.changeType === "danger" && (
-                  <span className="text-[11px] font-semibold text-red-650 dark:text-red-400">
-                    {stat.change}
-                  </span>
-                )}
-                {stat.changeType === "neutral" && (
-                  <span className="text-[11px] text-zinc-400 dark:text-zinc-500">
-                    {stat.change}
-                  </span>
-                )}
-              </div>
-            </div>
-          </div>
-        );
-      })}
-    </div>
+    <StatGrid columns={3}>
+      {stats.map((stat) => (
+        <StatTile key={stat.name} label={stat.name} value={stat.value} icon={stat.icon} tone={stat.tone}>
+          <span className={stat.changeType === "danger" ? "text-caption font-semibold text-app-danger-text" : stat.changeType === "up" ? "text-caption font-semibold text-app-accent-text" : "text-caption text-app-muted"}>
+            {stat.change}
+          </span>
+        </StatTile>
+      ))}
+    </StatGrid>
   );
 }

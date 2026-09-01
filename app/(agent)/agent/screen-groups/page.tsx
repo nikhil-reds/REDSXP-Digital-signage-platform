@@ -1,11 +1,21 @@
 "use client";
 
 import React, { useCallback, useEffect, useState } from "react";
-import { Search, Layers, List, Grid, Plus, ChevronDown } from "lucide-react";
+import { Layers, List, Grid, Plus } from "lucide-react";
 import GroupsGrid, { ScreenGroup } from "@/components/agent/screen-groups/groups-grid";
 import GroupsTable from "@/components/agent/screen-groups/groups-table";
 import GroupEditModal from "@/components/agent/screen-groups/group-edit-modal";
 import { fetchScreenGroups } from "@/components/agent/screen-groups/api";
+import {
+  Button,
+  Card,
+  EmptyState,
+  PageShell,
+  SearchInput,
+  SegmentedControl,
+  SkeletonCardGrid,
+  SkeletonTable,
+} from "@/components/ui";
 
 export default function AgentScreenGroupsPage() {
   const [groups, setGroups] = useState<ScreenGroup[]>([]);
@@ -14,6 +24,10 @@ export default function AgentScreenGroupsPage() {
   const [search, setSearch] = useState("");
   const [selectedGroup, setSelectedGroup] = useState<ScreenGroup | null>(null);
   const [isCreatingGroup, setIsCreatingGroup] = useState(false);
+  // Plan §2: skeleton on first load only — a refetch keeps the current content
+  // on screen rather than replacing it with grey bars.
+  const isFirstLoad = isLoading && groups.length === 0;
+
 
   const loadGroups = useCallback(() => {
     return fetchScreenGroups()
@@ -27,10 +41,11 @@ export default function AgentScreenGroupsPage() {
   }, [loadGroups]);
 
   // Search filter
-  const filteredGroups = groups.filter((g) =>
-    g.name.toLowerCase().includes(search.toLowerCase()) ||
-    g.playlist.toLowerCase().includes(search.toLowerCase()) ||
-    g.schedule.toLowerCase().includes(search.toLowerCase())
+  const filteredGroups = groups.filter(
+    (g) =>
+      g.name.toLowerCase().includes(search.toLowerCase()) ||
+      g.playlist.toLowerCase().includes(search.toLowerCase()) ||
+      g.schedule.toLowerCase().includes(search.toLowerCase()),
   );
 
   const handleSaved = () => {
@@ -40,83 +55,67 @@ export default function AgentScreenGroupsPage() {
   };
 
   return (
-    <div className="py-6 px-8 space-y-6 mx-auto font-sans">
-      
+    <PageShell>
       {/* Header Section */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b border-[#E2E6EC] dark:border-[#283243] pb-5 shrink-0">
-        <div className="flex flex-col gap-0.5">
-          <h1 className="text-xl font-bold text-zinc-900 dark:text-zinc-50 tracking-tight">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b border-app-border pb-5 shrink-0">
+        <div>
+          <h1 className="font-heading text-h5 font-semibold tracking-headline text-app-text">
             Screen Groups
           </h1>
-          <p className="text-xs text-[#657080] dark:text-[#9AA7B7]">
+          <p className="text-body text-app-muted mt-1">
             Organize screens into functional categories to deploy and schedule content loops in bulk.
           </p>
         </div>
 
-        <div className="flex items-center gap-2.5 self-start sm:self-auto">
-          {/* View Toggles */}
-          <div className="flex items-center gap-0.5 p-0.5 border border-[#E2E6EC] dark:border-[#283243] rounded-lg bg-white dark:bg-[#111722] shadow-xs">
-            <button
-              onClick={() => setViewMode("grid")}
-              className={`p-1.5 rounded-md transition-all duration-200 cursor-pointer ${
-                viewMode === "grid"
-                  ? "bg-[#F6F7F9] dark:bg-[#171F2C] text-[#2859D9] dark:text-[#6F96FF]"
-                  : "text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300"
-              }`}
-              title="Grid View"
-            >
-              <Grid className="w-4 h-4" />
-            </button>
-            <button
-              onClick={() => setViewMode("table")}
-              className={`p-1.5 rounded-md transition-all duration-200 cursor-pointer ${
-                viewMode === "table"
-                  ? "bg-[#F6F7F9] dark:bg-[#171F2C] text-[#2859D9] dark:text-[#6F96FF]"
-                  : "text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300"
-              }`}
-              title="Table List View"
-            >
-              <List className="w-4 h-4" />
-            </button>
-          </div>
-
-          {/* Create Group Button */}
-          <button
-            onClick={() => setIsCreatingGroup(true)}
-            className="flex items-center gap-1.5 bg-[#2859D9] dark:bg-[#6F96FF] text-white dark:text-[#111722] px-3.5 py-1.5 rounded-lg text-xs font-bold hover:opacity-90 transition-opacity shadow-sm cursor-pointer"
-          >
-            <Plus className="w-3.5 h-3.5" />
-            <span>Create Group</span>
-          </button>
-        </div>
-      </div>
-
-      {/* Search Input bar */}
-      <div className="p-4 bg-white dark:bg-[#111722] border border-[#E2E6EC] dark:border-[#283243] rounded-xl flex items-center gap-3">
-        <div className="relative w-full max-w-md">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-zinc-400" />
-          <input
-            type="text"
-            placeholder="Search group name, assigned playlists, schedules..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="w-full pl-9 pr-3 py-1.5 bg-[#F6F7F9] dark:bg-[#171F2C]/50 border border-[#E2E6EC] dark:border-[#283243] rounded-lg text-xs text-[#18202B] dark:text-[#F2F5F8] placeholder-zinc-400 focus:outline-none"
+        <div className="flex items-center gap-2 self-start sm:self-auto">
+          <SegmentedControl
+            value={viewMode}
+            onChange={setViewMode}
+            options={[
+              { value: "grid", label: "Grid view", icon: Grid },
+              { value: "table", label: "Table list view", icon: List },
+            ]}
           />
+
+          <Button variant="primary" size="sm" icon={Plus} onClick={() => setIsCreatingGroup(true)}>
+            Create Group
+          </Button>
         </div>
       </div>
+
+      {/* Search bar */}
+      <Card size="widget" padded>
+        <SearchInput
+          placeholder="Search group name, assigned playlists, schedules…"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          className="w-full max-w-md"
+        />
+      </Card>
 
       {/* Render Area */}
       <div className="flex-1">
-        {isLoading ? (
-          <div className="flex items-center justify-center text-xs font-semibold text-zinc-400 dark:text-zinc-500 min-h-[300px]">
-            Loading screen groups…
-          </div>
+        {isFirstLoad ? (
+          viewMode === "grid" ? (
+            <SkeletonCardGrid count={6} columns={3} label="Loading screen groups…" />
+          ) : (
+            <Card size="panel" className="overflow-hidden">
+              <SkeletonTable rows={6} cols={9} label="Loading screen groups…" />
+            </Card>
+          )
         ) : groups.length === 0 ? (
-          <div className="flex flex-col items-center justify-center gap-2 text-center min-h-[300px] border border-dashed border-[#E2E6EC] dark:border-[#283243] rounded-xl">
-            <Layers className="w-6 h-6 text-zinc-400 dark:text-zinc-500" />
-            <p className="text-xs font-semibold text-zinc-500 dark:text-zinc-400">No screen groups yet.</p>
-            <p className="text-[11px] text-zinc-400 dark:text-zinc-500">Create a group to organize screens and bulk-deploy content.</p>
-          </div>
+          <Card size="panel" className="min-h-[300px] flex items-center justify-center">
+            <EmptyState
+              icon={Layers}
+              title="No screen groups yet"
+              description="Create a group to organize screens and bulk-deploy content."
+              action={
+                <Button variant="primary" size="sm" icon={Plus} onClick={() => setIsCreatingGroup(true)}>
+                  Create Group
+                </Button>
+              }
+            />
+          </Card>
         ) : viewMode === "grid" ? (
           <GroupsGrid groups={filteredGroups} onEditGroup={(g) => setSelectedGroup(g)} />
         ) : (
@@ -135,7 +134,6 @@ export default function AgentScreenGroupsPage() {
           onSaved={handleSaved}
         />
       )}
-
-    </div>
+    </PageShell>
   );
 }

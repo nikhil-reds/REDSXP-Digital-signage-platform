@@ -6,7 +6,6 @@ import {
   ShieldAlert,
   ShieldCheck,
   MoreHorizontal,
-  ChevronDown,
   UserCheck,
   LogOut,
   Ban,
@@ -32,7 +31,7 @@ const initialUsers: AdminUser[] = [
 ];
 
 export default function AdminUsers() {
-  const [users, setUsers] = useState<AdminUser[]>(initialUsers);
+  const users = initialUsers;
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
 
   const toggleSelectAll = () => {
@@ -63,25 +62,25 @@ export default function AdminUsers() {
     <div className="space-y-4">
       {/* Header section with Invite Admin button */}
       <div className="flex justify-between items-center gap-4">
-        <h2 className="text-sm font-bold text-zinc-900 dark:text-zinc-50">Admin Users</h2>
-        <button className="flex items-center gap-1.5 bg-zinc-950 text-white dark:bg-zinc-50 dark:text-zinc-950 px-3.5 py-1.5 rounded-lg text-xs font-semibold hover:opacity-90 transition-opacity shadow-xs cursor-pointer">
+        <h2 className="text-body font-bold text-app-text">Admin Users</h2>
+        <button className="flex cursor-pointer items-center gap-1.5 rounded-lg bg-app-accent px-3.5 py-1.5 text-caption font-semibold text-app-accent-on shadow-xs transition-colors hover:bg-app-accent-hover">
           <UserPlus className="w-3.5 h-3.5" />
           <span>Invite Admin</span>
         </button>
       </div>
 
       {/* Users table wrapper */}
-      <div className="bg-white dark:bg-zinc-900 border border-zinc-200/80 dark:border-zinc-800/80 rounded-xl overflow-hidden shadow-xs">
+      <div className="overflow-hidden rounded-xl border border-app-border bg-app-surface shadow-xs">
         <div className="overflow-x-auto">
           <table className="w-full text-left text-xs border-collapse">
             <thead>
-              <tr className="bg-zinc-50/50 dark:bg-zinc-800/40 text-zinc-450 dark:text-zinc-550 font-bold border-b border-zinc-150 dark:border-zinc-800 select-none">
+              <tr className="select-none border-b border-app-border bg-app-surface-alt font-bold text-app-muted">
                 <th className="p-3.5 w-10 text-center">
                   <input
                     type="checkbox"
                     checked={users.length > 0 && selectedIds.length === users.length}
                     onChange={toggleSelectAll}
-                    className="rounded border-zinc-300 dark:border-zinc-750 accent-zinc-950 dark:accent-zinc-50 w-3.5 h-3.5 cursor-pointer"
+                    className="h-3.5 w-3.5 cursor-pointer rounded border-app-border accent-app-accent-text"
                   />
                 </th>
                 <th className="p-3.5 font-bold">Name</th>
@@ -93,7 +92,7 @@ export default function AdminUsers() {
                 <th className="p-3.5 text-center font-bold">Actions</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-zinc-100 dark:divide-zinc-850">
+            <tbody className="divide-y divide-app-border">
               {users.map((user) => {
                 const isSelected = selectedIds.includes(user.id);
                 const initials = getInitials(user.name);
@@ -101,8 +100,8 @@ export default function AdminUsers() {
                 return (
                   <tr
                     key={user.id}
-                    className={`hover:bg-zinc-50/30 dark:hover:bg-zinc-900/20 transition-colors ${
-                      isSelected ? "bg-blue-50/10 dark:bg-blue-950/5" : ""
+                    className={`transition-colors hover:bg-app-surface-alt ${
+                      isSelected ? "bg-app-accent-surface" : ""
                     }`}
                   >
                     <td className="p-3.5 text-center">
@@ -110,20 +109,20 @@ export default function AdminUsers() {
                         type="checkbox"
                         checked={isSelected}
                         onChange={() => toggleSelect(user.id)}
-                        className="rounded border-zinc-300 dark:border-zinc-750 accent-zinc-950 dark:accent-zinc-50 w-3.5 h-3.5 cursor-pointer"
+                        className="h-3.5 w-3.5 cursor-pointer rounded border-app-border accent-app-accent-text"
                       />
                     </td>
                     <td className="p-3.5">
                       <div className="flex items-center gap-3">
-                        <div className="w-7 h-7 rounded-full bg-zinc-100 dark:bg-zinc-800 text-zinc-850 dark:text-zinc-300 font-bold flex items-center justify-center text-[10px] select-none shadow-xs shrink-0">
+                        <div className="flex h-7 w-7 shrink-0 select-none items-center justify-center rounded-full bg-app-accent-surface text-[10px] font-bold text-app-accent-text shadow-xs">
                           {initials}
                         </div>
-                        <span className="font-semibold text-zinc-900 dark:text-zinc-50">
+                        <span className="font-semibold text-app-text">
                           {user.name}
                         </span>
                       </div>
                     </td>
-                    <td className="p-3.5 text-zinc-550 dark:text-zinc-400">
+                    <td className="p-3.5 text-app-muted">
                       {user.email}
                     </td>
                     <td className="p-3.5">
@@ -168,7 +167,7 @@ export default function AdminUsers() {
 
       {/* Bulk action toolbar footer */}
       {selectedIds.length > 0 && (
-        <div className="p-3 bg-zinc-50 dark:bg-zinc-900 border border-zinc-200/80 dark:border-zinc-800/80 rounded-xl flex items-center justify-between shadow-xs select-none">
+        <div className="flex select-none items-center justify-between rounded-xl border border-app-border bg-app-surface-alt p-3 shadow-xs">
           <span className="text-[10px] text-zinc-450 font-bold">
             {selectedIds.length} users selected
           </span>

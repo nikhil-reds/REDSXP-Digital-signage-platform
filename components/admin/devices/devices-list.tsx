@@ -53,19 +53,19 @@ export default function DevicesList({
   });
 
   return (
-    <div className="flex-1 flex flex-col min-w-0 bg-white dark:bg-zinc-900 border border-zinc-200/80 dark:border-zinc-800/80 rounded-xl overflow-hidden shadow-xs">
+    <div className="flex min-w-0 flex-1 flex-col overflow-hidden rounded-xl border border-app-border bg-app-surface shadow-xs">
       {/* Search and Filters panel */}
-      <div className="p-4 border-b border-zinc-150 dark:border-zinc-800 space-y-3 bg-zinc-50/20 dark:bg-zinc-900/10">
+      <div className="space-y-3 border-b border-app-border bg-app-surface-alt p-4">
         {/* Row 1: Search and Dropdowns 1-3 */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-2.5">
           <div className="relative w-full">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-zinc-400" />
+            <Search className="absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-app-muted" />
             <input
               type="text"
               placeholder="Search device name, serial, tenant..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="w-full pl-8.5 pr-3 py-1.5 bg-white dark:bg-zinc-950 border border-zinc-200/80 dark:border-zinc-800/80 rounded-lg text-xs text-zinc-900 dark:text-zinc-100 placeholder-zinc-400 focus:outline-none"
+              className="w-full rounded-lg border border-app-border bg-app-surface py-1.5 pl-8.5 pr-3 text-caption text-app-text placeholder:text-app-muted focus:outline-none focus:ring-2 focus:ring-app-accent-text"
             />
           </div>
 
@@ -74,7 +74,7 @@ export default function DevicesList({
             <select
               value={tenantFilter}
               onChange={(e) => setTenantFilter(e.target.value)}
-              className="w-full pl-8 pr-8 py-1.5 border border-zinc-200 dark:border-zinc-850 rounded-lg bg-white dark:bg-zinc-950 text-xs text-zinc-700 dark:text-zinc-300 font-medium focus:outline-none appearance-none cursor-pointer"
+              className="w-full cursor-pointer appearance-none rounded-lg border border-app-border bg-app-surface py-1.5 pl-8 pr-8 text-caption font-medium text-app-text focus:outline-none focus:ring-2 focus:ring-app-accent-text"
             >
               <option value="All">All Tenants</option>
               <option value="Café Coffee Day">Café Coffee Day</option>
@@ -91,7 +91,7 @@ export default function DevicesList({
             <select
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value)}
-              className="w-full pl-8 pr-8 py-1.5 border border-zinc-200 dark:border-zinc-850 rounded-lg bg-white dark:bg-zinc-950 text-xs text-zinc-700 dark:text-zinc-300 font-medium focus:outline-none appearance-none cursor-pointer"
+              className="w-full cursor-pointer appearance-none rounded-lg border border-app-border bg-app-surface py-1.5 pl-8 pr-8 text-caption font-medium text-app-text focus:outline-none focus:ring-2 focus:ring-app-accent-text"
             >
               <option value="All">All Status</option>
               <option value="Online">Online</option>
@@ -104,7 +104,7 @@ export default function DevicesList({
 
           {/* Models Dropdown */}
           <div className="relative">
-            <select className="w-full pl-8 pr-8 py-1.5 border border-zinc-200 dark:border-zinc-850 rounded-lg bg-white dark:bg-zinc-950 text-xs text-zinc-700 dark:text-zinc-300 font-medium focus:outline-none appearance-none cursor-pointer">
+            <select className="w-full cursor-pointer appearance-none rounded-lg border border-app-border bg-app-surface py-1.5 pl-8 pr-8 text-caption font-medium text-app-text focus:outline-none focus:ring-2 focus:ring-app-accent-text">
               <option>All Models</option>
             </select>
             <Cpu className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-zinc-400" />
@@ -116,7 +116,7 @@ export default function DevicesList({
         <div className="flex items-center gap-2.5 max-w-sm">
           {/* Versions Dropdown */}
           <div className="relative w-1/2">
-            <select className="w-full pl-8 pr-8 py-1.5 border border-zinc-200 dark:border-zinc-850 rounded-lg bg-white dark:bg-zinc-950 text-xs text-zinc-700 dark:text-zinc-300 font-medium focus:outline-none appearance-none cursor-pointer">
+            <select className="w-full cursor-pointer appearance-none rounded-lg border border-app-border bg-app-surface py-1.5 pl-8 pr-8 text-caption font-medium text-app-text focus:outline-none focus:ring-2 focus:ring-app-accent-text">
               <option>All Versions</option>
             </select>
             <Layers className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-zinc-400" />
@@ -125,7 +125,7 @@ export default function DevicesList({
 
           {/* Location Dropdown */}
           <div className="relative w-1/2">
-            <select className="w-full pl-8 pr-8 py-1.5 border border-zinc-200 dark:border-zinc-850 rounded-lg bg-white dark:bg-zinc-950 text-xs text-zinc-700 dark:text-zinc-300 font-medium focus:outline-none appearance-none cursor-pointer">
+            <select className="w-full cursor-pointer appearance-none rounded-lg border border-app-border bg-app-surface py-1.5 pl-8 pr-8 text-caption font-medium text-app-text focus:outline-none focus:ring-2 focus:ring-app-accent-text">
               <option>Location</option>
             </select>
             <MapPin className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-zinc-400" />
@@ -137,34 +137,34 @@ export default function DevicesList({
       {/* KPI Cards Row */}
       <div className="p-4 grid grid-cols-3 gap-3.5">
         {/* Online Card */}
-        <div className="p-3.5 rounded-lg border border-emerald-100 bg-emerald-50/20 dark:bg-emerald-950/10 dark:border-emerald-900/30 flex flex-col justify-between h-20 shadow-xs">
-          <div className="flex justify-between items-center text-emerald-700 dark:text-emerald-400 font-semibold text-[10px] uppercase tracking-wider">
+        <div className="flex h-20 flex-col justify-between rounded-lg border border-app-accent-border bg-app-accent-surface p-3.5 shadow-xs">
+          <div className="flex items-center justify-between text-[10px] font-semibold uppercase tracking-wider text-app-accent-text">
             <span>Online</span>
             <Wifi className="w-3.5 h-3.5" />
           </div>
-          <span className="text-xl font-bold text-emerald-600 dark:text-emerald-400 tracking-tight leading-none">
+          <span className="text-xl font-bold leading-none tracking-tight text-app-accent-text">
             4,517
           </span>
         </div>
 
         {/* Delayed Card */}
-        <div className="p-3.5 rounded-lg border border-amber-100 bg-amber-50/20 dark:bg-amber-950/10 dark:border-amber-900/30 flex flex-col justify-between h-20 shadow-xs">
-          <div className="flex justify-between items-center text-amber-700 dark:text-amber-400 font-semibold text-[10px] uppercase tracking-wider">
+        <div className="flex h-20 flex-col justify-between rounded-lg border border-app-border bg-app-warning-surface p-3.5 shadow-xs">
+          <div className="flex items-center justify-between text-[10px] font-semibold uppercase tracking-wider text-app-warning-text">
             <span>Delayed</span>
             <Clock className="w-3.5 h-3.5" />
           </div>
-          <span className="text-xl font-bold text-amber-600 dark:text-amber-400 tracking-tight leading-none">
+          <span className="text-xl font-bold leading-none tracking-tight text-app-warning-text">
             96
           </span>
         </div>
 
         {/* Offline Card */}
-        <div className="p-3.5 rounded-lg border border-rose-100 bg-rose-50/20 dark:bg-rose-950/10 dark:border-rose-900/30 flex flex-col justify-between h-20 shadow-xs">
-          <div className="flex justify-between items-center text-rose-705 dark:text-rose-400 font-semibold text-[10px] uppercase tracking-wider">
+        <div className="flex h-20 flex-col justify-between rounded-lg border border-app-danger-border bg-app-danger-surface p-3.5 shadow-xs">
+          <div className="flex items-center justify-between text-[10px] font-semibold uppercase tracking-wider text-app-danger-text">
             <span>Offline</span>
             <WifiOff className="w-3.5 h-3.5" />
           </div>
-          <span className="text-xl font-bold text-rose-650 dark:text-rose-450 tracking-tight leading-none">
+          <span className="text-xl font-bold leading-none tracking-tight text-app-danger-text">
             249
           </span>
         </div>
@@ -174,7 +174,7 @@ export default function DevicesList({
       <div className="overflow-x-auto flex-1 min-h-0">
         <table className="w-full text-left text-xs border-collapse">
           <thead>
-            <tr className="bg-zinc-50/50 dark:bg-zinc-800/40 text-zinc-450 dark:text-zinc-550 font-bold border-b border-zinc-150 dark:border-zinc-800 select-none">
+            <tr className="select-none border-b border-app-border bg-app-surface-alt font-bold text-app-muted">
               <th className="p-3.5">
                 <span className="flex items-center gap-1 cursor-pointer hover:text-zinc-855 dark:hover:text-zinc-200">
                   Device Name <ArrowUpDown className="w-3 h-3 text-zinc-400" />
@@ -187,46 +187,46 @@ export default function DevicesList({
               <th className="p-3.5">Location</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-zinc-100 dark:divide-zinc-850">
+          <tbody className="divide-y divide-app-border">
             {filteredDevices.map((device) => {
               const isSelected = selectedDeviceId === device.id;
               return (
                 <tr
                   key={device.id}
                   onClick={() => onSelectDevice(device)}
-                  className={`hover:bg-zinc-50/30 dark:hover:bg-zinc-900/20 transition-all cursor-pointer ${
-                    isSelected ? "bg-blue-50/20 dark:bg-blue-950/10 font-medium" : ""
+                  className={`cursor-pointer transition-all hover:bg-app-surface-alt ${
+                    isSelected ? "bg-app-accent-surface font-medium" : ""
                   }`}
                 >
-                  <td className="p-3.5 text-zinc-900 dark:text-zinc-100 font-semibold">
+                  <td className="p-3.5 font-semibold text-app-text">
                     {device.name}
                   </td>
-                  <td className="p-3.5 text-zinc-550 dark:text-zinc-400">{device.tenant}</td>
-                  <td className="p-3.5 font-mono text-[10px] text-zinc-400">{device.serial}</td>
-                  <td className="p-3.5 text-zinc-450">{device.model}</td>
+                  <td className="p-3.5 text-app-muted">{device.tenant}</td>
+                  <td className="p-3.5 font-mono text-[10px] text-app-muted">{device.serial}</td>
+                  <td className="p-3.5 text-app-muted">{device.model}</td>
                   <td className="p-3.5">
                     <span
                       className={`text-[9px] px-2 py-0.5 rounded-full font-bold border inline-flex items-center gap-1.5 ${
                         device.status === "Online"
-                          ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-950/20 dark:text-emerald-400 border-emerald-100/50"
+                          ? "border-app-accent-border bg-app-accent-surface text-app-accent-text"
                           : device.status === "Delayed"
-                          ? "bg-amber-50 text-amber-700 dark:bg-amber-950/20 dark:text-amber-400 border-amber-100/50"
-                          : "bg-rose-50 text-rose-700 dark:bg-rose-950/20 dark:text-rose-400 border-rose-100/50"
+                          ? "border-app-border bg-app-warning-surface text-app-warning-text"
+                          : "border-app-danger-border bg-app-danger-surface text-app-danger-text"
                       }`}
                     >
                       <span
                         className={`w-1 h-1 rounded-full ${
                           device.status === "Online"
-                            ? "bg-emerald-500"
+                            ? "bg-app-accent-text"
                             : device.status === "Delayed"
-                            ? "bg-amber-500"
-                            : "bg-rose-500"
+                            ? "bg-app-warning"
+                            : "bg-app-danger-text"
                         }`}
                       />
                       {device.status}
                     </span>
                   </td>
-                  <td className="p-3.5 text-zinc-500 truncate max-w-[120px]">{device.location}</td>
+                  <td className="max-w-[120px] truncate p-3.5 text-app-muted">{device.location}</td>
                 </tr>
               );
             })}
@@ -235,14 +235,14 @@ export default function DevicesList({
       </div>
 
       {/* Pagination Footer */}
-      <div className="p-4 border-t border-zinc-100 dark:border-zinc-800/80 bg-zinc-50/30 dark:bg-zinc-900/30 flex items-center justify-between text-xs text-zinc-500 dark:text-zinc-450 select-none">
+      <div className="flex select-none items-center justify-between border-t border-app-border bg-app-surface-alt p-4 text-caption text-app-muted">
         <span>1-4 of 4,862 devices</span>
         <div className="flex items-center gap-1">
           <button className="flex items-center justify-center p-1.5 border border-zinc-200 dark:border-zinc-800 rounded-lg hover:bg-zinc-50 dark:hover:bg-zinc-900 transition-colors cursor-pointer text-zinc-500">
             <ChevronLeft className="w-3.5 h-3.5" />
           </button>
           
-          <button className="w-8 h-8 rounded-lg bg-zinc-950 dark:bg-zinc-50 text-white dark:text-zinc-950 font-bold flex items-center justify-center cursor-pointer">
+          <button className="flex h-8 w-8 cursor-pointer items-center justify-center rounded-lg bg-app-accent font-bold text-app-accent-on">
             1
           </button>
           <button className="w-8 h-8 rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-700 dark:text-zinc-300 flex items-center justify-center cursor-pointer">

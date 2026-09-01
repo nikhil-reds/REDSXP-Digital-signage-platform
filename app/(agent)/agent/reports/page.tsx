@@ -1,10 +1,10 @@
 "use client";
 
 import React, { useState } from "react";
-import { FileText, Archive, Sparkles, Filter } from "lucide-react";
-import ReportConfigurator from "@/components/agent/reports/report-configurator";
+import ReportConfigurator, { ReportConfig } from "@/components/agent/reports/report-configurator";
 import RecentReports, { GeneratedReport } from "@/components/agent/reports/recent-reports";
 import GenerationProgress from "@/components/agent/reports/generation-progress";
+import { PageShell } from "@/components/ui";
 
 const initialReports: GeneratedReport[] = [
   {
@@ -44,9 +44,9 @@ const initialReports: GeneratedReport[] = [
 export default function AgentReportsPage() {
   const [reports, setReports] = useState<GeneratedReport[]>(initialReports);
   const [isGenerating, setIsGenerating] = useState(false);
-  const [pendingConfig, setPendingConfig] = useState<any>(null);
+  const [pendingConfig, setPendingConfig] = useState<ReportConfig | null>(null);
 
-  const handleTriggerGenerate = (config: any) => {
+  const handleTriggerGenerate = (config: ReportConfig) => {
     setPendingConfig(config);
     setIsGenerating(true);
   };
@@ -55,7 +55,8 @@ export default function AgentReportsPage() {
     setIsGenerating(false);
 
     // Format new report item
-    const typeTag = pendingConfig.category.split(" ")[0]; // e.g. "SLA", "Proof", etc.
+    if (!pendingConfig) return;
+    const typeTag = pendingConfig.category.split(" ")[0];
     const newReport: GeneratedReport = {
       id: `rep-${Date.now()}`,
       title: `${typeTag} Report (${pendingConfig.target})`,
@@ -79,15 +80,15 @@ export default function AgentReportsPage() {
   };
 
   return (
-    <div className="py-6 px-8 h-full flex flex-col min-h-0 overflow-hidden font-sans">
+    <PageShell className="h-full flex flex-col min-h-0 overflow-hidden">
       
       {/* Header Section */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b border-[#E2E6EC] dark:border-[#283243] pb-5 shrink-0">
-        <div className="flex flex-col gap-0.5">
-          <h1 className="text-xl font-bold text-zinc-900 dark:text-zinc-55 tracking-tight flex items-center gap-2">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b border-app-border pb-5 shrink-0">
+        <div>
+          <h1 className="font-heading text-h5 font-semibold tracking-headline text-app-text">
             Custom Report Center
           </h1>
-          <p className="text-xs text-[#657080] dark:text-[#9AA7B7]">
+          <p className="text-body text-app-muted mt-1">
             Compile audit feeds, SLA connection logs, and proof-of-play loop metrics into downloadable PDF and CSV documents.
           </p>
         </div>
@@ -123,6 +124,6 @@ export default function AgentReportsPage() {
         />
       )}
 
-    </div>
+    </PageShell>
   );
 }

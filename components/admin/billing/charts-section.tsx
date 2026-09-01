@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React from "react";
 import {
   ResponsiveContainer,
   LineChart,
@@ -28,21 +28,6 @@ const planContributionData = [
 ];
 
 export default function BillingChartsSection() {
-  const [mounted, setMounted] = useState(false);
-
-  useEffect(() => {
-    setMounted(true);
-  }, []);
-
-  if (!mounted) {
-    return (
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <div className="bg-white dark:bg-zinc-900 border border-zinc-200/80 dark:border-zinc-800/80 p-5 rounded-xl h-80 animate-pulse" />
-        <div className="bg-white dark:bg-zinc-900 border border-zinc-200/80 dark:border-zinc-800/80 p-5 rounded-xl h-80 animate-pulse" />
-      </div>
-    );
-  }
-
   const formatCurrency = (value: number) => {
     if (value >= 1000000) {
       return `${(value / 1000000).toFixed(1)}M`;
@@ -56,19 +41,19 @@ export default function BillingChartsSection() {
   return (
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
       {/* 1. Revenue Trend Line Chart */}
-      <div className="bg-white dark:bg-zinc-900 border border-zinc-200/80 dark:border-zinc-800/80 p-5 rounded-lg shadow-xs flex flex-col justify-between">
+      <div className="flex flex-col justify-between rounded-xl border border-app-border bg-app-surface p-5 shadow-xs">
         <div className="flex justify-between items-start">
           <div>
-            <h2 className="text-sm font-bold text-zinc-900 dark:text-zinc-50">Revenue Trend</h2>
-            <p className="text-xs text-zinc-450 mt-0.5">MRR vs Net Revenue · June 2026</p>
+            <h2 className="text-body font-bold text-app-text">Revenue Trend</h2>
+            <p className="mt-0.5 text-caption text-app-muted">MRR vs Net Revenue · June 2026</p>
           </div>
           {/* Legend indicator */}
-          <div className="flex gap-3 text-[10px] font-semibold text-zinc-450">
+          <div className="flex gap-3 text-[10px] font-semibold text-app-muted">
             <span className="flex items-center gap-1.5">
-              <span className="w-2 h-2 rounded-full bg-blue-600" /> MRR
+              <span className="h-2 w-2 rounded-full bg-app-accent" /> MRR
             </span>
             <span className="flex items-center gap-1.5">
-              <span className="w-2 h-2 rounded-full bg-teal-500" /> Net
+              <span className="h-2 w-2 rounded-full bg-app-warning" /> Net
             </span>
           </div>
         </div>
@@ -76,51 +61,51 @@ export default function BillingChartsSection() {
         <div className="h-60 mt-6 w-full text-xs">
           <ResponsiveContainer width="100%" height="100%">
             <LineChart data={trendData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--color-zinc-150)" className="dark:stroke-zinc-800/40" />
-              <XAxis dataKey="name" tickLine={false} axisLine={false} stroke="#888888" />
+              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--app-border)" />
+              <XAxis dataKey="name" tickLine={false} axisLine={false} stroke="var(--app-muted)" />
               <YAxis
                 tickFormatter={formatCurrency}
                 tickLine={false}
                 axisLine={false}
-                stroke="#888888"
+                stroke="var(--app-muted)"
                 domain={[0, 2000000]}
                 ticks={[0, 500000, 1000000, 1500000, 2000000]}
               />
               <Tooltip
-                formatter={(value: any) => [`₹${Number(value || 0).toLocaleString("en-IN")}`, ""]}
+                formatter={(value) => [`₹${Number(value || 0).toLocaleString("en-IN")}`, ""]}
                 contentStyle={{
-                  background: "var(--background)",
-                  border: "1px solid var(--color-zinc-200)",
+                  background: "var(--app-surface)",
+                  border: "1px solid var(--app-border)",
                   borderRadius: "8px"
                 }}
               />
-              <Line type="monotone" dataKey="mrr" stroke="#2563eb" strokeWidth={2} dot={{ r: 3 }} />
-              <Line type="monotone" dataKey="net" stroke="#14b8a6" strokeWidth={2} dot={{ r: 3 }} />
+              <Line type="monotone" dataKey="mrr" stroke="var(--chart-1)" strokeWidth={2} dot={{ r: 3 }} />
+              <Line type="monotone" dataKey="net" stroke="var(--chart-2)" strokeWidth={2} dot={{ r: 3 }} />
             </LineChart>
           </ResponsiveContainer>
         </div>
       </div>
 
       {/* 2. Revenue by Plan Stacked Area Chart */}
-      <div className="bg-white dark:bg-zinc-900 border border-zinc-200/80 dark:border-zinc-800/80 p-5 rounded-lg shadow-xs flex flex-col justify-between">
+      <div className="flex flex-col justify-between rounded-xl border border-app-border bg-app-surface p-5 shadow-xs">
         <div className="flex justify-between items-start">
           <div>
-            <h2 className="text-sm font-bold text-zinc-900 dark:text-zinc-50">Revenue by Plan</h2>
-            <p className="text-xs text-zinc-450 mt-0.5">Stacked contribution · June 2026</p>
+            <h2 className="text-body font-bold text-app-text">Revenue by Plan</h2>
+            <p className="mt-0.5 text-caption text-app-muted">Stacked contribution · June 2026</p>
           </div>
           {/* Legend indicators */}
-          <div className="flex gap-2.5 text-[9px] font-semibold text-zinc-450">
+          <div className="flex gap-2.5 text-[9px] font-semibold text-app-muted">
             <span className="flex items-center gap-1">
               <span className="w-1.5 h-1.5 rounded-full bg-amber-500" /> Starter
             </span>
             <span className="flex items-center gap-1">
-              <span className="w-1.5 h-1.5 rounded-full bg-teal-500" /> Growth
+              <span className="h-1.5 w-1.5 rounded-full bg-app-accent" /> Growth
             </span>
             <span className="flex items-center gap-1">
-              <span className="w-1.5 h-1.5 rounded-full bg-blue-600" /> Business
+              <span className="h-1.5 w-1.5 rounded-full bg-app-danger" /> Business
             </span>
             <span className="flex items-center gap-1">
-              <span className="w-1.5 h-1.5 rounded-full bg-zinc-900 dark:bg-zinc-100" /> Enterprise
+              <span className="h-1.5 w-1.5 rounded-full bg-app-text" /> Enterprise
             </span>
           </div>
         </div>
@@ -128,28 +113,28 @@ export default function BillingChartsSection() {
         <div className="h-60 mt-6 w-full text-xs">
           <ResponsiveContainer width="100%" height="100%">
             <AreaChart data={planContributionData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--color-zinc-150)" className="dark:stroke-zinc-800/40" />
-              <XAxis dataKey="name" tickLine={false} axisLine={false} stroke="#888888" />
+              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--app-border)" />
+              <XAxis dataKey="name" tickLine={false} axisLine={false} stroke="var(--app-muted)" />
               <YAxis
                 tickFormatter={formatCurrency}
                 tickLine={false}
                 axisLine={false}
-                stroke="#888888"
+                stroke="var(--app-muted)"
                 domain={[0, 2000000]}
                 ticks={[0, 500000, 1000000, 1500000, 2000000]}
               />
               <Tooltip
-                formatter={(value: any) => [`₹${Number(value || 0).toLocaleString("en-IN")}`, ""]}
+                formatter={(value) => [`₹${Number(value || 0).toLocaleString("en-IN")}`, ""]}
                 contentStyle={{
-                  background: "var(--background)",
-                  border: "1px solid var(--color-zinc-200)",
+                  background: "var(--app-surface)",
+                  border: "1px solid var(--app-border)",
                   borderRadius: "8px"
                 }}
               />
-              <Area type="monotone" dataKey="starter" stackId="1" stroke="#f59e0b" fill="#f59e0b" fillOpacity={0.15} />
-              <Area type="monotone" dataKey="growth" stackId="1" stroke="#14b8a6" fill="#14b8a6" fillOpacity={0.2} />
-              <Area type="monotone" dataKey="business" stackId="1" stroke="#2563eb" fill="#2563eb" fillOpacity={0.2} />
-              <Area type="monotone" dataKey="enterprise" stackId="1" stroke="#0f172a" fill="#0f172a" fillOpacity={0.25} />
+              <Area type="monotone" dataKey="starter" stackId="1" stroke="var(--app-warning)" fill="var(--app-warning)" fillOpacity={0.15} />
+              <Area type="monotone" dataKey="growth" stackId="1" stroke="var(--chart-1)" fill="var(--chart-1)" fillOpacity={0.2} />
+              <Area type="monotone" dataKey="business" stackId="1" stroke="var(--chart-2)" fill="var(--chart-2)" fillOpacity={0.2} />
+              <Area type="monotone" dataKey="enterprise" stackId="1" stroke="var(--app-text)" fill="var(--app-text)" fillOpacity={0.2} />
             </AreaChart>
           </ResponsiveContainer>
         </div>

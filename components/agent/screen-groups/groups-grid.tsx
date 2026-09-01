@@ -1,7 +1,15 @@
 "use client";
 
 import React from "react";
-import { Monitor, Layers, PlaySquare, Calendar, MapPin, AlertTriangle, Edit2, Play } from "lucide-react";
+import { PlaySquare, Calendar, MapPin, AlertTriangle, Edit2 } from "lucide-react";
+import {
+  Card,
+  CardBody,
+  CardFooter,
+  CardHeader,
+  IconButton,
+  type Tone,
+} from "@/components/ui";
 
 export interface ScreenGroup {
   id: string;
@@ -20,91 +28,110 @@ interface GroupsGridProps {
   onEditGroup: (group: ScreenGroup) => void;
 }
 
+/** Uptime → tone. Green is healthy, amber degraded, red failing. */
+function uptimeTone(pct: number): Tone {
+  if (pct >= 95) return "accent";
+  if (pct >= 85) return "warning";
+  return "danger";
+}
+
+const TONE_TEXT: Record<Tone, string> = {
+  neutral: "text-app-muted",
+  accent: "text-app-accent-text",
+  warning: "text-app-warning-text",
+  danger: "text-app-danger-text",
+};
+
 export default function GroupsGrid({ groups, onEditGroup }: GroupsGridProps) {
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+    <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
       {groups.map((group) => {
         const isWarning = group.alertsCount > 0;
         return (
-          <div
-            key={group.id}
-            className="bg-white dark:bg-[#111722] border border-[#E2E6EC] dark:border-[#283243] rounded-xl shadow-xs hover:shadow-sm hover:border-[#2859D9]/20 dark:hover:border-[#6F96FF]/20 transition-all duration-200 p-5 flex flex-col justify-between"
-          >
-            {/* Header */}
-            <div className="flex justify-between items-start gap-4 pb-3 border-b border-[#E2E6EC] dark:border-[#283243]">
+          <Card key={group.id} size="panel" className="flex flex-col">
+            <CardHeader divided>
               <div className="min-w-0">
-                <span className="text-[10px] font-bold uppercase tracking-wider text-[#657080] dark:text-[#9AA7B7]">
+                <span className="block text-caption font-semibold uppercase tracking-headline text-app-muted">
                   Screen Group
                 </span>
-                <h3 className="text-sm font-bold text-zinc-900 dark:text-white truncate leading-snug mt-0.5">
+                <h3 className="font-heading text-h6 font-semibold tracking-headline text-app-text truncate mt-0.5">
                   {group.name}
                 </h3>
               </div>
-              <button
+              <IconButton
+                icon={Edit2}
+                variant="secondary"
+                size="sm"
                 onClick={() => onEditGroup(group)}
-                className="p-1.5 rounded-lg border border-[#E2E6EC] dark:border-[#283243] hover:bg-[#F6F7F9] dark:hover:bg-zinc-800 text-zinc-500 hover:text-[#2859D9] dark:hover:text-[#6F96FF] cursor-pointer shrink-0 transition-colors"
-                title="Edit Group Config"
-              >
-                <Edit2 className="w-3.5 h-3.5" />
-              </button>
-            </div>
+                aria-label={`Edit ${group.name}`}
+                title="Edit group config"
+              />
+            </CardHeader>
 
-            {/* Core Stats Row */}
-            <div className="grid grid-cols-3 gap-2.5 my-4 bg-[#F6F7F9] dark:bg-[#171F2C] p-3 rounded-lg border border-[#E2E6EC] dark:border-[#283243] text-center select-none">
-              <div>
-                <span className="block text-xs font-bold text-zinc-900 dark:text-zinc-50">{group.screensCount}</span>
-                <span className="text-[9px] text-zinc-400 dark:text-zinc-500 font-semibold uppercase tracking-wide">Screens</span>
+            <CardBody className="flex-1">
+              {/* Core Stats Row */}
+              <div className="grid grid-cols-3 gap-2.5 bg-app-surface-alt p-3 rounded-lg border border-app-border text-center select-none">
+                <div>
+                  <span className="block text-body font-semibold text-app-text">
+                    {group.screensCount}
+                  </span>
+                  <span className="text-caption text-app-muted font-semibold uppercase tracking-headline">
+                    Screens
+                  </span>
+                </div>
+                <div className="border-x border-app-border">
+                  <span
+                    className={`block text-body font-semibold ${TONE_TEXT[uptimeTone(group.onlinePercentage)]}`}
+                  >
+                    {group.onlinePercentage}%
+                  </span>
+                  <span className="text-caption text-app-muted font-semibold uppercase tracking-headline">
+                    Online
+                  </span>
+                </div>
+                <div>
+                  <span
+                    className={`block text-body font-semibold ${
+                      isWarning ? "text-app-danger-text" : "text-app-muted"
+                    }`}
+                  >
+                    {group.alertsCount}
+                  </span>
+                  <span className="text-caption text-app-muted font-semibold uppercase tracking-headline">
+                    Alerts
+                  </span>
+                </div>
               </div>
-              <div className="border-x border-[#E2E6EC] dark:border-[#283243]">
-                <span className={`block text-xs font-bold ${
-                  group.onlinePercentage >= 95
-                    ? "text-emerald-500"
-                    : group.onlinePercentage >= 85
-                    ? "text-amber-500"
-                    : "text-red-500"
-                }`}>
-                  {group.onlinePercentage}%
-                </span>
-                <span className="text-[9px] text-zinc-400 dark:text-zinc-500 font-semibold uppercase tracking-wide">Online</span>
-              </div>
-              <div>
-                <span className={`block text-xs font-bold ${isWarning ? "text-red-500" : "text-zinc-400"}`}>
-                  {group.alertsCount}
-                </span>
-                <span className="text-[9px] text-zinc-400 dark:text-zinc-500 font-semibold uppercase tracking-wide">Alerts</span>
-              </div>
-            </div>
 
-            {/* Details Fields */}
-            <div className="space-y-2 text-xs text-zinc-600 dark:text-zinc-300">
-              <div className="flex items-center gap-2">
-                <PlaySquare className="w-4 h-4 text-[#2859D9] dark:text-[#6F96FF] shrink-0" />
-                <span className="text-zinc-400 font-medium">Playlist:</span>
-                <span className="font-bold text-zinc-800 dark:text-zinc-100 truncate">{group.playlist}</span>
+              {/* Details Fields — icons are neutral; colour carries meaning only */}
+              <div className="space-y-2 mt-4">
+                <div className="flex items-center gap-2 text-body">
+                  <PlaySquare className="w-4 h-4 text-app-muted shrink-0" />
+                  <span className="text-app-muted">Playlist:</span>
+                  <span className="font-semibold text-app-text truncate">{group.playlist}</span>
+                </div>
+                <div className="flex items-center gap-2 text-body">
+                  <Calendar className="w-4 h-4 text-app-muted shrink-0" />
+                  <span className="text-app-muted">Schedule:</span>
+                  <span className="font-semibold text-app-text truncate">{group.schedule}</span>
+                </div>
+                <div className="flex items-center gap-2 text-body">
+                  <MapPin className="w-4 h-4 text-app-muted shrink-0" />
+                  <span className="text-app-muted">Locations:</span>
+                  <span className="font-semibold text-app-text">{group.locationsCount} outlets</span>
+                </div>
               </div>
-              <div className="flex items-center gap-2">
-                <Calendar className="w-4 h-4 text-purple-500 shrink-0" />
-                <span className="text-zinc-400 font-medium">Schedule:</span>
-                <span className="font-bold text-zinc-800 dark:text-zinc-100 truncate">{group.schedule}</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <MapPin className="w-4 h-4 text-amber-500 shrink-0" />
-                <span className="text-zinc-400 font-medium">Locations:</span>
-                <span className="font-bold text-zinc-800 dark:text-zinc-100">{group.locationsCount} outlets</span>
-              </div>
-            </div>
+            </CardBody>
 
-            {/* Footer last deployment */}
-            <div className="border-t border-[#E2E6EC] dark:border-[#283243] mt-4 pt-3 flex justify-between items-center text-[10px] text-zinc-400 dark:text-zinc-500">
-              <span>Last Sync: {group.lastDeployment}</span>
+            <CardFooter>
+              <span className="text-caption text-app-muted">Last Sync: {group.lastDeployment}</span>
               {isWarning && (
-                <span className="text-[9px] font-bold text-red-500 flex items-center gap-0.5 animate-pulse">
+                <span className="text-caption font-semibold text-app-danger-text flex items-center gap-1">
                   <AlertTriangle className="w-3 h-3" /> Incidents Active
                 </span>
               )}
-            </div>
-
-          </div>
+            </CardFooter>
+          </Card>
         );
       })}
     </div>

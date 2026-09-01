@@ -102,7 +102,7 @@ export default function PreviewCanvas({
   }, [playing, currentClipKey, muted, activeClips]);
 
   return (
-    <main className="flex-1 flex flex-col items-center justify-center gap-3 min-h-0 min-w-0 px-6 py-4 bg-[#F6F7F9] dark:bg-[#090D14]">
+    <main className="flex-1 flex flex-col items-center justify-center gap-3 min-h-0 min-w-0 px-6 py-4 bg-app-canvas">
       <div
         className="relative bg-black rounded-xl overflow-hidden shadow-2xl ring-1 ring-black/10 dark:ring-white/5 transition-[aspect-ratio] duration-200"
         style={{
@@ -189,7 +189,7 @@ export default function PreviewCanvas({
             >
               {showLabel && (
                 <span
-                  className="absolute left-1 top-1 max-w-[calc(100%-8px)] rounded px-1 py-0.5 text-[8px] font-bold text-white leading-none whitespace-nowrap overflow-hidden text-ellipsis"
+                  className="absolute left-1 top-1 max-w-[calc(100%-8px)] rounded px-1 py-0.5 text-caption font-semibold text-reds-offwhite leading-none whitespace-nowrap overflow-hidden text-ellipsis"
                   style={{ background: zone.color, letterSpacing: 0 }}
                   title={zone.name}
                 >
@@ -201,39 +201,39 @@ export default function PreviewCanvas({
         })}
 
         {safeActionOn && (
-          <div className="absolute inset-[5%] border border-dashed border-[#6F96FF]/80 pointer-events-none">
-            <span className="absolute top-0.5 left-1 text-[8.5px] font-bold text-[#6F96FF] tracking-wide">
+          <div className="absolute inset-[5%] border border-dashed border-reds-blue pointer-events-none">
+            <span className="absolute top-0.5 left-1 text-caption font-semibold text-reds-blue tracking-headline">
               ACTION SAFE
             </span>
           </div>
         )}
         {safeTitleOn && (
-          <div className="absolute inset-[10%] border border-dashed border-emerald-500/85 pointer-events-none">
-            <span className="absolute top-0.5 left-1 text-[8.5px] font-bold text-emerald-500 tracking-wide">
+          <div className="absolute inset-[10%] border border-dashed border-reds-teal pointer-events-none">
+            <span className="absolute top-0.5 left-1 text-caption font-semibold text-reds-teal tracking-headline">
               TITLE SAFE
             </span>
           </div>
         )}
         {safeBleedOn && (
-          <div className="absolute -inset-px border-2 border-red-500/60 rounded-xl pointer-events-none">
-            <span className="absolute bottom-0.5 right-1.5 text-[8.5px] font-bold text-red-500 tracking-wide">
+          <div className="absolute -inset-px border-2 border-app-danger rounded-xl pointer-events-none">
+            <span className="absolute bottom-0.5 right-1.5 text-caption font-semibold text-app-danger tracking-headline">
               BLEED
             </span>
           </div>
         )}
 
-        <span className="absolute top-2.5 right-2.5 text-[9.5px] font-bold text-white bg-black/55 border border-white/25 rounded px-1.5 py-0.5 tracking-wide">
+        <span className="absolute top-2.5 right-2.5 text-caption font-semibold text-reds-offwhite bg-black/70 border border-white/25 rounded px-1.5 py-0.5 tracking-wide">
           {displayName} · {displayRes}
         </span>
 
         {warning && (
-          <span className="absolute top-2.5 left-2.5 inline-flex items-center gap-1 text-[10px] font-bold text-white bg-amber-500/90 rounded px-2 py-0.5">
+          <span className="absolute top-2.5 left-2.5 inline-flex items-center gap-1 text-caption font-semibold text-app-warning-on bg-app-warning rounded px-2 py-0.5">
             ⚠ {warningText}
           </span>
         )}
 
         <div className="absolute left-0 right-0 bottom-0 h-[3px] bg-white/15">
-          <div className="h-full bg-[#2859D9] dark:bg-[#6F96FF]" style={{ width: `${clipProgressPct}%` }} />
+          <div className="h-full bg-app-accent" style={{ width: `${clipProgressPct}%` }} />
         </div>
       </div>
 
@@ -241,14 +241,14 @@ export default function PreviewCanvas({
         <button
           onClick={onRestart}
           title="Restart"
-          className="w-8 h-8 rounded-full border border-[#E2E6EC] dark:border-[#283243] bg-white dark:bg-[#111722] text-zinc-450 flex items-center justify-center hover:bg-[#F6F7F9] dark:hover:bg-[#18202E] hover:text-zinc-700 dark:hover:text-zinc-200 cursor-pointer transition-colors"
+          className="w-8 h-8 rounded-full border border-app-border bg-app-surface text-app-muted flex items-center justify-center hover:bg-app-surface-alt hover:text-app-text cursor-pointer transition-colors"
         >
           <RotateCcw className="w-3 h-3" />
         </button>
         <button
           onClick={onPlayPause}
           title="Play / Pause (Space)"
-          className="w-10 h-10 rounded-full border-none bg-[#2859D9] dark:bg-[#6F96FF] text-white dark:text-[#111722] flex items-center justify-center shadow-md hover:brightness-110 cursor-pointer transition-[filter]"
+          className="w-10 h-10 rounded-full border-none bg-app-accent text-app-accent-on flex items-center justify-center shadow-xs hover:opacity-90 cursor-pointer transition-opacity"
         >
           {playing ? <Pause className="w-3.5 h-3.5 fill-current" /> : <Play className="w-3.5 h-3.5 fill-current ml-0.5" />}
         </button>
@@ -257,30 +257,30 @@ export default function PreviewCanvas({
           disabled={!hasVideo}
           title={muted ? "Unmute video" : "Mute video"}
           aria-label={muted ? "Unmute video" : "Mute video"}
-          className="w-8 h-8 rounded-full border border-[#E2E6EC] dark:border-[#283243] bg-white dark:bg-[#111722] text-zinc-450 flex items-center justify-center hover:bg-[#F6F7F9] dark:hover:bg-[#18202E] hover:text-zinc-700 dark:hover:text-zinc-200 cursor-pointer transition-colors disabled:opacity-35 disabled:cursor-not-allowed disabled:hover:text-zinc-450 disabled:hover:bg-white dark:disabled:hover:bg-[#111722]"
+          className="w-8 h-8 rounded-full border border-app-border bg-app-surface text-app-muted flex items-center justify-center hover:bg-app-surface-alt hover:text-app-text cursor-pointer transition-colors disabled:opacity-40 disabled:pointer-events-none"
         >
           {muted ? <VolumeX className="w-3.5 h-3.5" /> : <Volume2 className="w-3.5 h-3.5" />}
         </button>
-        <span className="font-mono text-xs text-zinc-450 min-w-[96px] text-center">
-          <span className="text-zinc-900 dark:text-zinc-100 font-semibold">{timeLabel}</span> / {totalLabel}
+        <span className="text-body text-app-muted min-w-[110px] text-center">
+          <span className="text-app-text font-semibold">{timeLabel}</span> / {totalLabel}
         </span>
-        <div className="w-px h-5 bg-[#E2E6EC] dark:bg-[#283243]" />
+        <div className="w-px h-5 bg-app-border" />
         <div className="flex items-center gap-2">
-          <label className="inline-flex items-center gap-1 text-[10.5px] font-semibold text-zinc-450 cursor-pointer">
-            <input type="checkbox" checked={safeTitleOn} onChange={onToggleSafeTitle} className="accent-emerald-500 cursor-pointer" />
+          <label className="inline-flex items-center gap-1 text-caption font-semibold text-app-muted cursor-pointer">
+            <input type="checkbox" checked={safeTitleOn} onChange={onToggleSafeTitle} className="accent-[var(--reds-teal)] cursor-pointer" />
             Title Safe
           </label>
-          <label className="inline-flex items-center gap-1 text-[10.5px] font-semibold text-zinc-450 cursor-pointer">
+          <label className="inline-flex items-center gap-1 text-caption font-semibold text-app-muted cursor-pointer">
             <input
               type="checkbox"
               checked={safeActionOn}
               onChange={onToggleSafeAction}
-              className="accent-[#2859D9] dark:accent-[#6F96FF] cursor-pointer"
+              className="accent-[var(--reds-blue)] cursor-pointer"
             />
             Action Safe
           </label>
-          <label className="inline-flex items-center gap-1 text-[10.5px] font-semibold text-zinc-450 cursor-pointer">
-            <input type="checkbox" checked={safeBleedOn} onChange={onToggleSafeBleed} className="accent-red-500 cursor-pointer" />
+          <label className="inline-flex items-center gap-1 text-caption font-semibold text-app-muted cursor-pointer">
+            <input type="checkbox" checked={safeBleedOn} onChange={onToggleSafeBleed} className="accent-[var(--app-danger)] cursor-pointer" />
             Bleed
           </label>
         </div>

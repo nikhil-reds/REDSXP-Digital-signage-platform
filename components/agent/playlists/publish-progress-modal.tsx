@@ -2,6 +2,7 @@
 
 import React from "react";
 import { AlertTriangle, CheckCircle2, Loader2 } from "lucide-react";
+import { Button, Modal } from "@/components/ui";
 
 interface PublishProgressModalProps {
   open: boolean;
@@ -36,26 +37,67 @@ export default function PublishProgressModal({
   renderStatus,
   renderUrl,
 }: PublishProgressModalProps) {
-  if (!open) return null;
-
   const succeeded = !saving && !error;
 
+  const title = error ? "Publish failed" : succeeded ? "Published successfully" : "Publishing loop…";
+
+  const description = error
+    ? error
+    : succeeded
+      ? `“${playlistName}” is live and syncing to your display targets.`
+      : `Saving “${playlistName}” and pushing it to deployment.`;
+
+  const rows: [string, React.ReactNode][] = [
+    ["Playlist", <span key="n" className="truncate">{playlistName}</span>],
+    ["Clips", itemCount],
+    ["Loop Duration", totalLabel],
+    [
+      "Display",
+      <>
+        {displayName} · {displayRes}
+      </>,
+    ],
+    ["Output", deviceName],
+    ["Render", <span key="r" className="capitalize">{renderStatus?.replaceAll("_", " ") ?? "Queued"}</span>],
+  ];
+  if (renderUrl) rows.push(["Video", <span key="v" className="truncate">{renderUrl}</span>]);
+
   return (
-    <div
-      onClick={saving ? undefined : succeeded ? onDone : onClose}
-      className="fixed inset-0 bg-black/55 dark:bg-black/75 backdrop-blur-[2px] flex items-center justify-center z-[70] animate-fadeIn font-sans"
+    <Modal
+      open={open}
+      onClose={saving ? () => {} : succeeded ? onDone : onClose}
+      title={title}
+      description={description}
+      size="sm"
+      footer={
+        error ? (
+          <>
+            <Button variant="secondary" onClick={onClose}>
+              Close
+            </Button>
+            <Button variant="primary" onClick={onRetry}>
+              Retry
+            </Button>
+          </>
+        ) : succeeded ? (
+          <Button variant="primary" onClick={onDone}>
+            Done
+          </Button>
+        ) : (
+          <Button variant="secondary" disabled>
+            Publishing…
+          </Button>
+        )
+      }
     >
-      <div
-        onClick={(e) => e.stopPropagation()}
-        className="w-96 max-w-[92vw] bg-white dark:bg-[#111722] border border-[#E2E6EC] dark:border-[#283243] rounded-2xl shadow-2xl p-6 flex flex-col items-center gap-4 text-center"
-      >
-        <div
+      <div className="flex flex-col items-center gap-4">
+        <span
           className={`w-12 h-12 rounded-full flex items-center justify-center ${
             error
-              ? "bg-red-50 dark:bg-red-950/20 text-red-500"
+              ? "bg-app-danger-surface text-app-danger-text"
               : succeeded
-              ? "bg-emerald-50 dark:bg-emerald-950/20 text-emerald-500"
-              : "bg-[#2859D9]/10 dark:bg-[#6F96FF]/10 text-[#2859D9] dark:text-[#6F96FF]"
+                ? "bg-app-accent-surface text-app-accent-text"
+                : "bg-app-surface-alt text-app-muted"
           }`}
         >
           {error ? (
@@ -65,77 +107,17 @@ export default function PublishProgressModal({
           ) : (
             <Loader2 className="w-6 h-6 animate-spin" />
           )}
-        </div>
+        </span>
 
-        <div>
-          <div className="text-sm font-bold text-zinc-900 dark:text-zinc-100">
-            {error ? "Publish failed" : succeeded ? "Published successfully" : "Publishing loop…"}
-          </div>
-          <div className="text-xs text-zinc-450 mt-1">
-            {error
-              ? error
-              : succeeded
-              ? `"${playlistName}" is live and syncing to your display targets.`
-              : `Saving "${playlistName}" and pushing it to deployment.`}
-          </div>
-        </div>
-
-        <div className="w-full border border-[#E2E6EC] dark:border-[#283243] rounded-lg bg-[#F6F7F9] dark:bg-[#0D1320] px-3.5 py-3 grid grid-cols-[auto_1fr] gap-x-3 gap-y-1.5 text-left text-[11px]">
-          <span className="text-zinc-450">Playlist</span>
-          <span className="font-semibold text-zinc-900 dark:text-zinc-100 truncate">{playlistName}</span>
-          <span className="text-zinc-450">Clips</span>
-          <span className="font-mono">{itemCount}</span>
-          <span className="text-zinc-450">Loop Duration</span>
-          <span className="font-mono">{totalLabel}</span>
-          <span className="text-zinc-450">Display</span>
-          <span className="font-semibold">
-            {displayName} · <span className="font-mono">{displayRes}</span>
-          </span>
-          <span className="text-zinc-450">Output</span>
-          <span className="font-semibold">{deviceName}</span>
-          <span className="text-zinc-450">Render</span>
-          <span className="font-semibold capitalize">{renderStatus?.replaceAll("_", " ") ?? "Queued"}</span>
-          {renderUrl && (
-            <>
-              <span className="text-zinc-450">Video</span>
-              <span className="font-mono truncate">{renderUrl}</span>
-            </>
-          )}
-        </div>
-
-        <div className="flex gap-2 w-full">
-          {error ? (
-            <>
-              <button
-                onClick={onClose}
-                className="flex-1 h-9 rounded-lg border border-[#E2E6EC] dark:border-[#283243] bg-white dark:bg-[#111722] text-xs font-bold text-zinc-700 dark:text-zinc-300 hover:bg-[#F6F7F9] dark:hover:bg-[#18202E] cursor-pointer transition-colors"
-              >
-                Close
-              </button>
-              <button
-                onClick={onRetry}
-                className="flex-1 h-9 rounded-lg border-none bg-[#2859D9] dark:bg-[#6F96FF] text-white dark:text-[#111722] text-xs font-bold hover:opacity-90 cursor-pointer transition-opacity"
-              >
-                Retry
-              </button>
-            </>
-          ) : succeeded ? (
-            <button
-              onClick={onDone}
-              className="flex-1 h-9 rounded-lg border-none bg-[#2859D9] dark:bg-[#6F96FF] text-white dark:text-[#111722] text-xs font-bold hover:opacity-90 cursor-pointer transition-opacity"
-            >
-              Done
-            </button>
-          ) : (
-            <button
-              disabled
-              className="flex-1 h-9 rounded-lg border border-[#E2E6EC] dark:border-[#283243] bg-[#F6F7F9] dark:bg-[#18202E] text-xs font-bold text-zinc-450 cursor-not-allowed"
-            >
-              Publishing…
-            </button>
-          )}
+        <div className="w-full border border-app-border rounded-lg bg-app-surface-alt px-3.5 py-3 grid grid-cols-[auto_1fr] gap-x-3 gap-y-1.5 text-left text-caption">
+          {rows.map(([label, value]) => (
+            <React.Fragment key={label}>
+              <span className="text-app-muted">{label}</span>
+              <span className="font-semibold text-app-text min-w-0">{value}</span>
+            </React.Fragment>
+          ))}
         </div>
       </div>
-    </div>
+    </Modal>
   );
 }

@@ -31,13 +31,13 @@ export default function FeatureFlags() {
 
   return (
     <div className="space-y-4">
-      <h2 className="text-sm font-bold text-zinc-900 dark:text-zinc-50">Global Feature Flags</h2>
+      <h2 className="text-body font-bold text-app-text">Global Feature Flags</h2>
 
-      <div className="bg-white dark:bg-zinc-900 border border-zinc-200/80 dark:border-zinc-800/80 rounded-xl overflow-hidden shadow-xs">
+      <div className="overflow-hidden rounded-xl border border-app-border bg-app-surface shadow-xs">
         <div className="overflow-x-auto">
           <table className="w-full text-left text-xs border-collapse">
             <thead>
-              <tr className="bg-zinc-50/50 dark:bg-zinc-800/40 text-zinc-450 dark:text-zinc-550 font-bold border-b border-zinc-150 dark:border-zinc-800 select-none">
+              <tr className="select-none border-b border-app-border bg-app-surface-alt font-bold text-app-muted">
                 <th className="p-3.5">Flag Name</th>
                 <th className="p-3.5">Description</th>
                 <th className="p-3.5">Status</th>
@@ -46,18 +46,18 @@ export default function FeatureFlags() {
                 <th className="p-3.5 text-center">Actions</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-zinc-100 dark:divide-zinc-850">
+            <tbody className="divide-y divide-app-border">
               {flags.map((flag) => (
                 <tr
                   key={flag.id}
-                  className="hover:bg-zinc-50/30 dark:hover:bg-zinc-900/30 transition-colors"
+                  className="transition-colors hover:bg-app-surface-alt"
                 >
                   {/* Flag Name */}
-                  <td className="p-3.5 font-mono text-[11px] font-semibold text-zinc-900 dark:text-zinc-100">
+                  <td className="p-3.5 font-mono text-[11px] font-semibold text-app-text">
                     {flag.name}
                   </td>
                   {/* Description */}
-                  <td className="p-3.5 text-zinc-550 dark:text-zinc-400">
+                  <td className="p-3.5 text-app-muted">
                     {flag.description}
                   </td>
                   {/* Status Toggle */}
@@ -69,19 +69,19 @@ export default function FeatureFlags() {
                         onChange={() => handleToggle(flag.id)}
                         className="sr-only peer"
                       />
-                      <div className="w-7 h-4 bg-zinc-200 peer-focus:outline-none rounded-full peer dark:bg-zinc-800 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-zinc-300 after:border after:rounded-full after:h-3 after:w-3 after:transition-all dark:border-zinc-600 peer-checked:bg-zinc-950 dark:peer-checked:bg-zinc-100" />
+                      <div className="peer h-4 w-7 rounded-full bg-app-border after:absolute after:left-[2px] after:top-[2px] after:h-3 after:w-3 after:rounded-full after:border after:border-app-border after:bg-app-surface after:transition-all after:content-[''] peer-checked:bg-app-accent peer-checked:after:translate-x-full peer-focus:outline-none" />
                     </label>
                   </td>
                   {/* Rollout Progress Bar */}
                   <td className="p-3.5 w-44">
                     <div className="flex items-center gap-3">
-                      <div className="w-full bg-zinc-100 dark:bg-zinc-800 h-1.5 rounded-full overflow-hidden">
+                      <div className="h-1.5 w-full overflow-hidden rounded-full bg-app-surface-alt">
                         <div
-                          className="bg-zinc-850 dark:bg-zinc-200 h-full rounded-full"
+                          className="h-full rounded-full bg-app-accent"
                           style={{ width: `${flag.rollout}%` }}
                         />
                       </div>
-                      <span className="font-mono text-[10px] text-zinc-850 dark:text-zinc-200 font-bold shrink-0">
+                      <span className="shrink-0 font-mono text-[10px] font-bold text-app-text">
                         {flag.rollout}%
                       </span>
                     </div>
@@ -89,17 +89,17 @@ export default function FeatureFlags() {
                   {/* Tenant Overrides */}
                   <td className="p-3.5 text-center">
                     {flag.overrides > 0 ? (
-                      <span className="text-[10px] px-2 py-0.5 rounded-full font-semibold border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 text-zinc-650 dark:text-zinc-300">
+                      <span className="rounded-full border border-app-border bg-app-surface-alt px-2 py-0.5 text-[10px] font-semibold text-app-muted">
                         {flag.overrides} overrides
                       </span>
                     ) : (
-                      <span className="text-zinc-400 dark:text-zinc-500 font-medium">—</span>
+                      <span className="font-medium text-app-muted">—</span>
                     )}
                   </td>
                   {/* Actions */}
                   <td className="p-3.5">
                     <div className="flex items-center justify-center">
-                      <button className="flex items-center gap-1 text-[11px] font-bold text-zinc-805 hover:text-zinc-950 dark:text-zinc-300 dark:hover:text-zinc-100 transition-colors border border-zinc-200/60 dark:border-zinc-800 px-2.5 py-1 rounded-lg hover:bg-zinc-50 dark:hover:bg-zinc-800 cursor-pointer shadow-xs">
+                      <button className="flex cursor-pointer items-center gap-1 rounded-lg border border-app-border px-2.5 py-1 text-[11px] font-bold text-app-text shadow-xs transition-colors hover:bg-app-surface-alt">
                         <Edit2 className="w-3 h-3 text-zinc-500" />
                         <span>Edit</span>
                       </button>

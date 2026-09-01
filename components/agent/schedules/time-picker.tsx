@@ -81,52 +81,52 @@ export default function TimePicker({ value, onChange, label }: TimePickerProps) 
   return (
     <div className="relative" ref={containerRef}>
       {label && (
-        <label className="block text-[10px] font-bold uppercase tracking-wider text-zinc-400 dark:text-zinc-500 mb-1.5">
+        <label className="block text-caption font-semibold uppercase tracking-headline text-app-muted mb-1.5">
           {label}
         </label>
       )}
       <button
         type="button"
         onClick={() => setIsOpen((v) => !v)}
-        className="w-full flex items-center gap-2 px-3.5 py-1.5 bg-[#F6F7F9] dark:bg-[#171F2C]/50 border border-[#E2E6EC] dark:border-[#283243] rounded-lg text-xs text-zinc-800 dark:text-zinc-200 focus:outline-none cursor-pointer font-mono font-bold hover:border-[#2859D9]/40 transition-colors"
+        className="w-full flex items-center gap-2 px-3.5 py-1.5 bg-app-surface-alt border border-app-border rounded-lg text-xs text-app-text focus:outline-none cursor-pointer font-semibold hover:border-app-accent-text transition-colors"
       >
-        <ClockIcon className="w-3.5 h-3.5 text-[#2859D9] dark:text-[#6F96FF] shrink-0" />
+        <ClockIcon className="w-3.5 h-3.5 text-app-accent-text shrink-0" />
         {hour12.toString().padStart(2, "0")}:{minute.toString().padStart(2, "0")} {period}
       </button>
 
       {isOpen && (
-        <div className="absolute z-30 mt-2 left-0 bg-white dark:bg-[#111722] border border-[#E2E6EC] dark:border-[#283243] rounded-2xl shadow-2xl p-4 w-[228px] animate-fadeIn">
+        <div className="absolute z-30 mt-2 left-0 bg-app-surface border border-app-border rounded-lg shadow-xs p-4 w-[228px] animate-fadeIn">
           {/* Digital readout + AM/PM toggle */}
           <div className="flex items-center justify-between mb-3">
-            <div className="flex items-baseline gap-1 font-mono font-bold text-xl text-zinc-900 dark:text-white">
+            <div className="flex items-baseline gap-1 font-semibold text-xl text-app-text">
               <button
                 type="button"
                 onClick={() => setMode("hour")}
-                className={`px-1.5 py-0.5 rounded-md transition-colors ${mode === "hour" ? "bg-[#2859D9]/10 text-[#2859D9] dark:text-[#6F96FF]" : "hover:bg-zinc-100 dark:hover:bg-zinc-800"}`}
+                className={`px-1.5 py-0.5 rounded-md transition-colors ${mode === "hour" ? "bg-app-accent-surface text-app-accent-text" : "hover:bg-app-surface-alt"}`}
               >
                 {hour12.toString().padStart(2, "0")}
               </button>
-              <span className="text-zinc-300 dark:text-zinc-600">:</span>
+              <span className="text-app-muted">:</span>
               <button
                 type="button"
                 onClick={() => setMode("minute")}
-                className={`px-1.5 py-0.5 rounded-md transition-colors ${mode === "minute" ? "bg-[#2859D9]/10 text-[#2859D9] dark:text-[#6F96FF]" : "hover:bg-zinc-100 dark:hover:bg-zinc-800"}`}
+                className={`px-1.5 py-0.5 rounded-md transition-colors ${mode === "minute" ? "bg-app-accent-surface text-app-accent-text" : "hover:bg-app-surface-alt"}`}
               >
                 {minute.toString().padStart(2, "0")}
               </button>
             </div>
-            <div className="flex flex-col gap-0.5 border border-[#E2E6EC] dark:border-[#283243] rounded-md overflow-hidden">
+            <div className="flex flex-col gap-0.5 border border-app-border rounded-md overflow-hidden">
               <button
                 type="button"
                 onClick={() => setPeriod("AM")}
-                className={`px-2 py-0.5 text-[9px] font-bold transition-colors cursor-pointer ${period === "AM" ? "bg-[#2859D9] dark:bg-[#6F96FF] text-white dark:text-[#111722]" : "text-zinc-400 hover:bg-zinc-50 dark:hover:bg-zinc-800"}`}
+                className={`px-2 py-0.5 text-caption font-semibold transition-colors cursor-pointer ${period === "AM" ? "bg-app-accent text-app-accent-on" : "text-app-muted hover:bg-app-surface-alt"}`}
               >
                 AM
               </button>
               <button
                 type="button"
                 onClick={() => setPeriod("PM")}
-                className={`px-2 py-0.5 text-[9px] font-bold transition-colors cursor-pointer ${period === "PM" ? "bg-[#2859D9] dark:bg-[#6F96FF] text-white dark:text-[#111722]" : "text-zinc-400 hover:bg-zinc-50 dark:hover:bg-zinc-800"}`}
+                className={`px-2 py-0.5 text-caption font-semibold transition-colors cursor-pointer ${period === "PM" ? "bg-app-accent text-app-accent-on" : "text-app-muted hover:bg-app-surface-alt"}`}
               >
                 PM
               </button>
@@ -135,12 +135,12 @@ export default function TimePicker({ value, onChange, label }: TimePickerProps) 
 
           {/* Analog clock face */}
           <div
-            className="relative mx-auto rounded-full bg-[#F6F7F9] dark:bg-[#171F2C]/50 border border-[#E2E6EC] dark:border-[#283243] shadow-inner"
+            className="relative mx-auto rounded-full bg-app-surface-alt border border-app-border"
             style={{ width: CENTER * 2, height: CENTER * 2 }}
           >
             {/* Hand */}
             <div
-              className="absolute bg-[#2859D9] dark:bg-[#6F96FF] rounded-full pointer-events-none"
+              className="absolute bg-app-accent rounded-full pointer-events-none"
               style={{
                 width: 2,
                 height: handLength,
@@ -151,7 +151,7 @@ export default function TimePicker({ value, onChange, label }: TimePickerProps) 
               }}
             />
             <div
-              className="absolute w-2.5 h-2.5 rounded-full bg-[#2859D9] dark:bg-[#6F96FF] pointer-events-none"
+              className="absolute w-2.5 h-2.5 rounded-full bg-app-accent pointer-events-none"
               style={{ left: CENTER - 5, top: CENTER - 5 }}
             />
 
@@ -165,10 +165,10 @@ export default function TimePicker({ value, onChange, label }: TimePickerProps) 
                   key={markValue}
                   type="button"
                   onClick={() => (mode === "hour" ? setHour(markValue) : setMinute(markValue))}
-                  className={`absolute w-6 h-6 -ml-3 -mt-3 rounded-full flex items-center justify-center text-[9px] font-bold transition-colors cursor-pointer ${
+                  className={`absolute w-6 h-6 -ml-3 -mt-3 rounded-full flex items-center justify-center text-caption font-semibold transition-colors cursor-pointer ${
                     isSelected
-                      ? "bg-[#2859D9] dark:bg-[#6F96FF] text-white dark:text-[#111722] shadow-sm"
-                      : "text-zinc-600 dark:text-zinc-300 hover:bg-[#2859D9]/10"
+                      ? "bg-app-accent text-app-accent-on"
+                      : "text-app-text hover:bg-app-accent-surface"
                   }`}
                   style={{ left: x, top: y }}
                 >
@@ -178,7 +178,7 @@ export default function TimePicker({ value, onChange, label }: TimePickerProps) 
             })}
           </div>
 
-          <label className="mt-3 flex items-center justify-between gap-3 text-[10px] font-bold uppercase tracking-wider text-zinc-400 dark:text-zinc-500">
+          <label className="mt-3 flex items-center justify-between gap-3 text-caption font-semibold uppercase tracking-headline text-app-muted">
             Minute
             <input
               type="number"
@@ -187,14 +187,14 @@ export default function TimePicker({ value, onChange, label }: TimePickerProps) 
               step={1}
               value={minute}
               onChange={(e) => setMinute(parseInt(e.target.value, 10) || 0)}
-              className="w-20 px-2 py-1 bg-[#F6F7F9] dark:bg-[#171F2C]/50 border border-[#E2E6EC] dark:border-[#283243] rounded-lg text-xs text-zinc-800 dark:text-zinc-200 focus:outline-none font-mono"
+              className="w-20 px-2 py-1 bg-app-surface-alt border border-app-border rounded-lg text-xs text-app-text focus:outline-none font-mono"
             />
           </label>
 
           <button
             type="button"
             onClick={() => setIsOpen(false)}
-            className="w-full mt-3 py-1.5 bg-[#2859D9] dark:bg-[#6F96FF] text-white dark:text-[#111722] text-[10px] font-bold rounded-lg hover:opacity-90 transition-opacity cursor-pointer"
+            className="w-full mt-3 py-1.5 bg-app-accent text-app-accent-on text-caption font-semibold rounded-lg hover:opacity-90 transition-opacity cursor-pointer"
           >
             Done
           </button>

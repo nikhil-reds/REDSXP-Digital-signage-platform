@@ -114,20 +114,20 @@ export default function PlaylistTimeline({
   const trackContentHeight = rulerHeight + tracksHeight;
 
   return (
-    <div className="h-[300px] max-h-[42vh] min-h-[220px] flex flex-col bg-white dark:bg-[#111722] border-t border-[#E2E6EC] dark:border-[#283243] font-sans">
-      <div className="flex flex-wrap items-center justify-between gap-2 px-3.5 py-2 border-b border-[#E2E6EC] dark:border-[#283243] shrink-0">
+    <div className="h-[300px] max-h-[42vh] min-h-[220px] flex flex-col bg-app-surface border-t border-app-border font-sans">
+      <div className="flex flex-wrap items-center justify-between gap-2 px-3.5 py-2 border-b border-app-border shrink-0">
         <div className="flex items-center gap-3 min-w-0">
-          <span className="text-xs font-bold text-zinc-900 dark:text-zinc-100">Timeline</span>
-          <span className="font-mono text-[11px] text-zinc-450 truncate">
+          <span className="text-body font-semibold text-app-text">Timeline</span>
+          <span className="text-caption text-app-muted truncate">
             {itemCount} clips · {totalLabel} total loop
           </span>
         </div>
         <div className="flex items-center gap-2.5 shrink-0">
-          <span className="inline-flex items-center gap-1 text-[10.5px] font-semibold text-zinc-450">Snap on</span>
+          <span className="inline-flex items-center gap-1 text-caption font-semibold text-app-muted">Snap on</span>
           <div className="flex items-center gap-1.5">
             <button
               onClick={onZoomOut}
-              className="w-[22px] h-[22px] rounded border border-[#E2E6EC] dark:border-[#283243] bg-white dark:bg-[#111722] text-zinc-450 text-sm leading-none hover:bg-[#F6F7F9] dark:hover:bg-[#18202E] hover:text-zinc-700 dark:hover:text-zinc-200 cursor-pointer"
+              className="w-[22px] h-[22px] rounded border border-app-border bg-app-surface text-app-muted text-body leading-none hover:bg-app-surface-alt hover:text-app-text cursor-pointer"
             >
               −
             </button>
@@ -137,12 +137,12 @@ export default function PlaylistTimeline({
               max={60}
               value={zoom}
               onChange={onZoomChange}
-              className="w-[120px] cursor-pointer accent-[#2859D9] dark:accent-[#6F96FF]"
+              className="w-[120px] cursor-pointer accent-[var(--app-accent)]"
               aria-label="Timeline zoom"
             />
             <button
               onClick={onZoomIn}
-              className="w-[22px] h-[22px] rounded border border-[#E2E6EC] dark:border-[#283243] bg-white dark:bg-[#111722] text-zinc-450 text-sm leading-none hover:bg-[#F6F7F9] dark:hover:bg-[#18202E] hover:text-zinc-700 dark:hover:text-zinc-200 cursor-pointer"
+              className="w-[22px] h-[22px] rounded border border-app-border bg-app-surface text-app-muted text-body leading-none hover:bg-app-surface-alt hover:text-app-text cursor-pointer"
             >
               +
             </button>
@@ -152,12 +152,12 @@ export default function PlaylistTimeline({
 
       <div className="flex-1 min-h-0 overflow-y-auto">
         <div className="grid grid-cols-[96px_1fr] min-h-full">
-          <div className="sticky left-0 z-20 border-r border-[#E2E6EC] dark:border-[#283243] bg-white dark:bg-[#111722]">
+          <div className="sticky left-0 z-20 border-r border-app-border bg-app-surface">
             <div style={{ height: `${rulerHeight}px` }} />
             {zoneLanes.map((zone) => (
               <div
                 key={zone.id}
-                className="flex items-center px-2.5 text-[10.5px] font-bold text-zinc-900 dark:text-zinc-100 border-b border-[#E2E6EC] dark:border-[#283243]"
+                className="flex items-center px-2.5 text-caption font-semibold text-app-text border-b border-app-border"
                 style={{ height: `${zoneLaneHeight}px` }}
               >
                 <span className="inline-flex items-center gap-1.5 min-w-0">
@@ -169,7 +169,7 @@ export default function PlaylistTimeline({
             {lockedTracks.map((t) => (
               <div
                 key={t.name}
-                className="flex items-center justify-between px-2.5 text-[10px] font-semibold text-zinc-450 opacity-45 border-b border-[#E2E6EC] dark:border-[#283243]"
+                className="flex items-center justify-between px-2.5 text-caption font-semibold text-app-muted opacity-60 border-b border-app-border"
                 style={{ height: `${lockedTrackHeight}px` }}
               >
                 <span className="truncate">{t.name}</span>
@@ -182,26 +182,26 @@ export default function PlaylistTimeline({
             <div className="relative" style={{ width: `${timelineWidth}px`, minWidth: "100%", height: `${trackContentHeight}px` }}>
             <div
               onClick={onRulerClick}
-              className="sticky top-0 z-[7] relative border-b border-[#E2E6EC] dark:border-[#283243] cursor-pointer bg-white dark:bg-[#111722]"
+              className="sticky top-0 z-[7] relative border-b border-app-border cursor-pointer bg-app-surface"
               style={{ height: `${rulerHeight}px` }}
             >
               {ticks.map((tk, i) => (
                 <div key={i} className="absolute top-0 bottom-0 flex flex-col justify-end" style={{ left: `${tk.left}px` }}>
-                  <span className="font-mono text-[9px] text-zinc-450 translate-x-[3px] mb-1.5">{tk.label}</span>
-                  <div className="absolute left-0 bottom-0 w-px h-[5px] bg-zinc-450" />
+                  <span className="text-caption text-app-muted translate-x-[3px] mb-1.5">{tk.label}</span>
+                  <div className="absolute left-0 bottom-0 w-px h-[5px] bg-app-muted" />
                 </div>
               ))}
             </div>
 
             <div
               onClick={onLaneClick}
-              className="relative bg-[#F6F7F9] dark:bg-[#0D1320] border-b border-[#E2E6EC] dark:border-[#283243]"
+              className="relative bg-app-surface-alt border-b border-app-border"
               style={{ height: `${zoneLaneAreaHeight}px` }}
             >
               {zoneLanes.map((zone, i) => (
                 <div
                   key={zone.id}
-                  className="absolute left-0 right-0 border-b border-[#E2E6EC] dark:border-[#283243]"
+                  className="absolute left-0 right-0 border-b border-app-border"
                   style={{
                     top: `${i * zoneLaneHeight}px`,
                     height: `${zoneLaneHeight}px`,
@@ -219,11 +219,11 @@ export default function PlaylistTimeline({
                     title={c.tooltip}
                     className={`absolute h-9 rounded-lg box-border overflow-hidden cursor-grab flex flex-col justify-center gap-0.5 px-2.5 border-[1.5px] hover:brightness-110 ${
                       c.selected
-                        ? "border-[#2859D9] dark:border-[#6F96FF] ring-2 ring-[#2859D9]/30 dark:ring-[#6F96FF]/30"
+                        ? "border-app-accent-text ring-2 ring-app-accent-text/40"
                         : c.warning
-                        ? "border-amber-500 shadow-sm"
-                        : "border-white/15 shadow-sm"
-                    } ${c.dragging ? "shadow-lg" : ""}`}
+                        ? "border-app-warning"
+                        : "border-white/15"
+                    } ${c.dragging ? "shadow-md" : ""}`}
                     style={{
                       left: `${c.left}px`,
                       top: `${c.laneIndex * zoneLaneHeight + 8}px`,
@@ -238,12 +238,12 @@ export default function PlaylistTimeline({
                       <span className="shrink-0 text-white/95 inline-flex">
                         <Icon className="w-2.5 h-2.5" />
                       </span>
-                      <span className="text-[11px] font-bold text-white whitespace-nowrap overflow-hidden text-ellipsis [text-shadow:0_1px_2px_rgba(0,0,0,0.35)]">
+                      <span className="text-caption font-semibold text-reds-offwhite whitespace-nowrap overflow-hidden text-ellipsis [text-shadow:0_1px_2px_rgba(0,0,0,0.35)]">
                         {c.name}
                       </span>
-                      {c.warning && <span className="shrink-0 text-[10px]">⚠</span>}
+                      {c.warning && <span className="shrink-0 text-caption">⚠</span>}
                     </div>
-                    <div className="font-mono text-[9.5px] text-white/85 whitespace-nowrap overflow-hidden text-ellipsis">
+                    <div className="text-caption text-reds-offwhite/85 whitespace-nowrap overflow-hidden text-ellipsis">
                       {c.durLabel} · {c.type} · {c.transitionName}
                     </div>
                     {c.resizable && (
@@ -264,7 +264,7 @@ export default function PlaylistTimeline({
                   key={tm.key}
                   onClick={tm.onClick}
                   title={tm.tooltip}
-                  className="absolute w-5 h-5 -ml-2.5 rounded-full border-[1.5px] border-[#E2E6EC] dark:border-[#283243] bg-white dark:bg-[#111722] text-zinc-450 cursor-pointer z-[6] flex items-center justify-center p-0 shadow-sm hover:border-[#2859D9] dark:hover:border-[#6F96FF] hover:text-[#2859D9] dark:hover:text-[#6F96FF] hover:scale-125 transition-transform"
+                  className="absolute w-5 h-5 -ml-2.5 rounded-full border-[1.5px] border-app-border bg-app-surface text-app-muted cursor-pointer z-[6] flex items-center justify-center p-0 shadow-xs hover:border-app-accent-text hover:text-app-accent-text hover:scale-125 transition-transform"
                   style={{ left: `${tm.left}px`, top: `${tm.laneIndex * zoneLaneHeight + 17}px` }}
                 >
                   <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor">
@@ -276,34 +276,34 @@ export default function PlaylistTimeline({
 
               {selActionsVisible && (
                 <div
-                  className="absolute -top-0.5 z-[8] flex gap-0.5 bg-white dark:bg-[#111722] border border-[#E2E6EC] dark:border-[#283243] rounded-md p-0.5 shadow-md"
+                  className="absolute -top-0.5 z-[8] flex gap-0.5 bg-app-surface border border-app-border rounded-md p-0.5 shadow-xs"
                   style={{ left: `${selActionsLeft}px`, top: `${selActionsTop}px` }}
                 >
                   <button
                     onClick={onSelLeft}
                     title="Move earlier"
-                    className="w-5 h-[18px] rounded text-zinc-450 hover:bg-[#F6F7F9] dark:hover:bg-[#18202E] hover:text-zinc-700 dark:hover:text-zinc-200 flex items-center justify-center cursor-pointer"
+                    className="w-5 h-[18px] rounded text-app-muted hover:bg-app-surface-alt hover:text-app-text flex items-center justify-center cursor-pointer"
                   >
                     <ArrowLeft className="w-2.5 h-2.5" />
                   </button>
                   <button
                     onClick={onSelRight}
                     title="Move later"
-                    className="w-5 h-[18px] rounded text-zinc-450 hover:bg-[#F6F7F9] dark:hover:bg-[#18202E] hover:text-zinc-700 dark:hover:text-zinc-200 flex items-center justify-center cursor-pointer"
+                    className="w-5 h-[18px] rounded text-app-muted hover:bg-app-surface-alt hover:text-app-text flex items-center justify-center cursor-pointer"
                   >
                     <ArrowRight className="w-2.5 h-2.5" />
                   </button>
                   <button
                     onClick={onSelDuplicate}
                     title="Duplicate"
-                    className="w-5 h-[18px] rounded text-zinc-450 hover:bg-[#F6F7F9] dark:hover:bg-[#18202E] hover:text-zinc-700 dark:hover:text-zinc-200 flex items-center justify-center cursor-pointer"
+                    className="w-5 h-[18px] rounded text-app-muted hover:bg-app-surface-alt hover:text-app-text flex items-center justify-center cursor-pointer"
                   >
                     <Copy className="w-2.5 h-2.5" />
                   </button>
                   <button
                     onClick={onSelDelete}
                     title="Delete (⌫)"
-                    className="w-5 h-[18px] rounded text-zinc-450 hover:bg-red-500/15 hover:text-red-500 flex items-center justify-center cursor-pointer"
+                    className="w-5 h-[18px] rounded text-app-muted hover:bg-app-danger-surface hover:text-app-danger-text flex items-center justify-center cursor-pointer"
                   >
                     <Trash2 className="w-2.5 h-2.5" />
                   </button>
@@ -314,7 +314,7 @@ export default function PlaylistTimeline({
             {lockedTracks.map((t) => (
               <div
                 key={t.name}
-                className="border-b border-[#E2E6EC] dark:border-[#283243] opacity-60"
+                className="border-b border-app-border opacity-60"
                 style={{
                   height: `${lockedTrackHeight}px`,
                   background:
@@ -327,22 +327,22 @@ export default function PlaylistTimeline({
               className="absolute top-0 bottom-0 w-0 z-10 pointer-events-none"
               style={{ left: `${playheadLeft}px` }}
             >
-              <div className="absolute -left-px top-0 bottom-0 w-0.5 bg-red-500" />
-              <div className="absolute -left-[5.5px] top-0 w-0 h-0 border-l-[6px] border-l-transparent border-r-[6px] border-r-transparent border-t-[8px] border-t-red-500" />
+              <div className="absolute -left-px top-0 bottom-0 w-0.5 bg-app-danger" />
+              <div className="absolute -left-[5.5px] top-0 w-0 h-0 border-l-[6px] border-l-transparent border-r-[6px] border-r-transparent border-t-[8px] border-t-app-danger" />
             </div>
             </div>
           </div>
         </div>
       </div>
 
-      <div className="flex items-center gap-2.5 px-3.5 py-1.5 border-t border-[#E2E6EC] dark:border-[#283243] shrink-0">
-        <span className="text-[9.5px] font-bold tracking-wide text-zinc-450 shrink-0">OVERVIEW</span>
-        <div className="flex-1 h-2.5 rounded-md bg-[#F6F7F9] dark:bg-[#0D1320] flex overflow-hidden gap-px">
+      <div className="flex items-center gap-2.5 px-3.5 py-1.5 border-t border-app-border shrink-0">
+        <span className="text-caption font-semibold tracking-headline text-app-muted shrink-0">OVERVIEW</span>
+        <div className="flex-1 h-2.5 rounded-md bg-app-surface-alt flex overflow-hidden gap-px">
           {overviewBlocks.map((ob) => (
             <div key={ob.key} style={{ width: `${ob.widthPct}%`, background: ob.bg, opacity: ob.opacity }} />
           ))}
         </div>
-        <span className="font-mono text-[10px] text-zinc-450 shrink-0">{totalLabel}</span>
+        <span className="text-caption text-app-muted shrink-0">{totalLabel}</span>
       </div>
     </div>
   );

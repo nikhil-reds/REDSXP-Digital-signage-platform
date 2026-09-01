@@ -38,9 +38,9 @@ export default function InvoicesTable() {
   });
 
   return (
-    <div className="bg-white dark:bg-zinc-900 border border-zinc-200/80 dark:border-zinc-800/80 rounded-xl overflow-hidden shadow-xs flex flex-col">
+    <div className="flex flex-col overflow-hidden rounded-xl border border-app-border bg-app-surface shadow-xs">
       {/* Tabs list */}
-      <div className="flex border-b border-zinc-150 dark:border-zinc-800 bg-zinc-50/50 dark:bg-zinc-900/50 p-2 gap-1 overflow-x-auto select-none">
+      <div className="flex select-none gap-1 overflow-x-auto border-b border-app-border bg-app-surface-alt p-2">
         {tabs.map((tab) => {
           const isActive = tab === activeTab;
           return (
@@ -49,8 +49,8 @@ export default function InvoicesTable() {
               onClick={() => setActiveTab(tab)}
               className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer whitespace-nowrap ${
                 isActive
-                  ? "bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-50 shadow-xs border border-zinc-200/50 dark:border-zinc-700/50"
-                  : "text-zinc-500 hover:text-zinc-800 dark:text-zinc-400 dark:hover:text-zinc-200"
+                  ? "border border-app-border bg-app-surface text-app-text shadow-xs"
+                  : "text-app-muted hover:bg-app-surface hover:text-app-text"
               }`}
             >
               {tab}
@@ -60,15 +60,15 @@ export default function InvoicesTable() {
       </div>
 
       {/* Toolbar / Filters */}
-      <div className="p-4 border-b border-zinc-150 dark:border-zinc-800 flex flex-wrap gap-3 items-center justify-between">
+      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-app-border p-4">
         <div className="relative w-full max-w-xs">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-zinc-400" />
+          <Search className="absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-app-muted" />
           <input
             type="text"
             placeholder="Search invoices..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="w-full pl-8.5 pr-3 py-1.5 bg-zinc-50 dark:bg-zinc-950 border border-zinc-200/80 dark:border-zinc-800/80 rounded-lg text-xs text-zinc-900 dark:text-zinc-100 placeholder-zinc-400 focus:outline-none focus:ring-1 focus:ring-zinc-950 dark:focus:ring-zinc-50"
+            className="w-full rounded-lg border border-app-border bg-app-surface-alt py-1.5 pl-8.5 pr-3 text-caption text-app-text placeholder:text-app-muted focus:outline-none focus:ring-2 focus:ring-app-accent-text"
           />
         </div>
 
@@ -78,31 +78,31 @@ export default function InvoicesTable() {
             <select
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value)}
-              className="pl-3 pr-8 py-1.5 border border-zinc-200 dark:border-zinc-800 rounded-lg bg-white dark:bg-zinc-950 text-xs text-zinc-700 dark:text-zinc-300 font-medium focus:outline-none appearance-none cursor-pointer"
+              className="cursor-pointer appearance-none rounded-lg border border-app-border bg-app-surface py-1.5 pl-3 pr-8 text-caption font-medium text-app-text focus:outline-none focus:ring-2 focus:ring-app-accent-text"
             >
               <option value="All">Status: All</option>
               <option value="Paid">Paid</option>
               <option value="Failed">Failed</option>
               <option value="Due">Due</option>
             </select>
-            <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 w-3 h-3 text-zinc-400 pointer-events-none" />
+            <ChevronDown className="pointer-events-none absolute right-2.5 top-1/2 h-3 w-3 -translate-y-1/2 text-app-muted" />
           </div>
 
           {/* Date Select */}
-          <button className="flex items-center gap-1.5 px-3 py-1.5 border border-zinc-200 dark:border-zinc-800 rounded-lg bg-white dark:bg-zinc-950 text-xs text-zinc-700 dark:text-zinc-300 font-semibold shadow-xs hover:bg-zinc-50 dark:hover:bg-zinc-900 transition-colors cursor-pointer">
+          <button className="flex cursor-pointer items-center gap-1.5 rounded-lg border border-app-border bg-app-surface px-3 py-1.5 text-caption font-semibold text-app-text shadow-xs transition-colors hover:bg-app-surface-alt">
             <Calendar className="w-3.5 h-3.5 text-zinc-400" />
             <span>Date</span>
             <ChevronDown className="w-3 h-3 text-zinc-400" />
           </button>
 
           {/* Export CSV */}
-          <button className="flex items-center gap-1 px-3 py-1.5 border border-zinc-200 dark:border-zinc-800 rounded-lg bg-white dark:bg-zinc-950 text-xs text-zinc-700 dark:text-zinc-300 font-semibold shadow-xs hover:bg-zinc-50 dark:hover:bg-zinc-900 transition-colors cursor-pointer">
+          <button className="flex cursor-pointer items-center gap-1 rounded-lg border border-app-border bg-app-surface px-3 py-1.5 text-caption font-semibold text-app-text shadow-xs transition-colors hover:bg-app-surface-alt">
             <Download className="w-3.5 h-3.5 text-zinc-500" />
             <span>Export CSV</span>
           </button>
 
           {/* Export PDF */}
-          <button className="flex items-center gap-1 px-3 py-1.5 border border-zinc-200 dark:border-zinc-800 rounded-lg bg-white dark:bg-zinc-950 text-xs text-zinc-700 dark:text-zinc-300 font-semibold shadow-xs hover:bg-zinc-50 dark:hover:bg-zinc-900 transition-colors cursor-pointer">
+          <button className="flex cursor-pointer items-center gap-1 rounded-lg border border-app-border bg-app-surface px-3 py-1.5 text-caption font-semibold text-app-text shadow-xs transition-colors hover:bg-app-surface-alt">
             <FileText className="w-3.5 h-3.5 text-zinc-500" />
             <span>Export PDF</span>
           </button>
@@ -113,7 +113,7 @@ export default function InvoicesTable() {
       <div className="overflow-x-auto">
         <table className="w-full text-left text-xs border-collapse">
           <thead>
-            <tr className="bg-zinc-50/50 dark:bg-zinc-800/40 text-zinc-450 dark:text-zinc-550 font-bold border-b border-zinc-150 dark:border-zinc-800 select-none">
+            <tr className="select-none border-b border-app-border bg-app-surface-alt font-bold text-app-muted">
               <th className="p-3.5">Invoice ID</th>
               <th className="p-3.5">Tenant</th>
               <th className="p-3.5 text-right">Amount (₹)</th>
@@ -124,7 +124,7 @@ export default function InvoicesTable() {
               <th className="p-3.5 text-center">Actions</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-zinc-100 dark:divide-zinc-850">
+          <tbody className="divide-y divide-app-border">
             {filteredInvoices.map((inv) => {
               const isFailed = inv.status === "Payment Failed";
               const isDue = inv.status === "Due";
@@ -132,8 +132,8 @@ export default function InvoicesTable() {
               return (
                 <tr
                   key={inv.id}
-                  className={`hover:bg-zinc-50/30 dark:hover:bg-zinc-900/30 transition-colors ${
-                    isFailed ? "bg-rose-50/30 dark:bg-rose-950/10" : isDue ? "bg-amber-50/20 dark:bg-amber-950/10" : ""
+                  className={`transition-colors hover:bg-app-surface-alt ${
+                    isFailed ? "bg-app-danger-surface" : isDue ? "bg-app-warning-surface" : ""
                   }`}
                 >
                   <td className="p-3.5 font-semibold text-zinc-900 dark:text-zinc-100">
@@ -149,15 +149,15 @@ export default function InvoicesTable() {
                     <span
                       className={`text-[10px] px-2 py-0.5 rounded-full font-semibold border inline-flex items-center gap-1 ${
                         inv.status === "Paid"
-                          ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-950/20 dark:text-emerald-400 border-emerald-100/50 dark:border-emerald-900/20"
+                          ? "border-app-accent-border bg-app-accent-surface text-app-accent-text"
                           : inv.status === "Payment Failed"
-                          ? "bg-rose-50 text-rose-700 dark:bg-rose-950/20 dark:text-rose-400 border-rose-100/50 dark:border-rose-900/20"
-                          : "bg-amber-50 text-amber-700 dark:bg-amber-950/20 dark:text-amber-400 border-amber-100/50 dark:border-amber-900/20"
+                          ? "border-app-danger-border bg-app-danger-surface text-app-danger-text"
+                          : "border-app-border bg-app-warning-surface text-app-warning-text"
                       }`}
                     >
                       <span
                         className={`w-1 h-1 rounded-full ${
-                          inv.status === "Paid" ? "bg-emerald-500" : inv.status === "Payment Failed" ? "bg-rose-500" : "bg-amber-500"
+                          inv.status === "Paid" ? "bg-app-accent-text" : inv.status === "Payment Failed" ? "bg-app-danger-text" : "bg-app-warning"
                         }`}
                       />
                       {inv.status}
@@ -214,7 +214,7 @@ export default function InvoicesTable() {
       </div>
 
       {/* Pagination Footer */}
-      <div className="p-4 border-t border-zinc-100 dark:border-zinc-800/80 bg-zinc-50/30 dark:bg-zinc-900/30 flex items-center justify-between text-xs text-zinc-500 dark:text-zinc-450 select-none">
+      <div className="flex select-none items-center justify-between border-t border-app-border bg-app-surface-alt p-4 text-caption text-app-muted">
         <span>Showing 5 of 248 invoices</span>
         <div className="flex items-center gap-1">
           <button className="flex items-center gap-1 px-2.5 py-1.5 border border-zinc-200 dark:border-zinc-800 rounded-lg hover:bg-zinc-50 dark:hover:bg-zinc-900 transition-colors text-zinc-700 dark:text-zinc-300 disabled:opacity-50 cursor-pointer" disabled>
@@ -222,7 +222,7 @@ export default function InvoicesTable() {
             <span>Previous</span>
           </button>
           
-          <button className="w-8 h-8 rounded-lg bg-blue-600 dark:bg-blue-500 text-white font-bold flex items-center justify-center cursor-pointer">
+          <button className="flex h-8 w-8 cursor-pointer items-center justify-center rounded-lg bg-app-accent font-bold text-app-accent-on">
             1
           </button>
           <button className="w-8 h-8 rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-700 dark:text-zinc-300 flex items-center justify-center cursor-pointer">

@@ -1,10 +1,11 @@
 "use client";
 
 import React, { useState } from "react";
-import { Search, Filter, ShieldAlert, Cpu, Bell, ChevronDown } from "lucide-react";
+import { Filter } from "lucide-react";
+import { PageShell, SearchInput, Select, Toolbar } from "@/components/ui";
 import AlertsStatsBanner, { AlertIncident } from "@/components/agent/alerts/alerts-stats-banner";
 import AlertsTable from "@/components/agent/alerts/alerts-table";
-import AlertsActionModal from "@/components/agent/alerts/alerts-action-modal";
+import AlertsActionModal, { AlertActionData } from "@/components/agent/alerts/alerts-action-modal";
 
 const initialIncidents: AlertIncident[] = [
   {
@@ -114,26 +115,26 @@ export default function AgentAlertsPage() {
     setModalType("ticket");
   };
 
-  const handleModalConfirm = (data?: any) => {
+  const handleModalConfirm = (data?: AlertActionData) => {
     if (modalType === "reboot") {
       alert(`Reboot signal sent successfully to device player: ${targetDevice}`);
     } else if (modalType === "ticket") {
-      alert(`IT Support Ticket submitted successfully:\nCategory: ${data.category}\nSubject: ${data.subject}`);
+      if (data) alert(`IT Support Ticket submitted successfully:\nCategory: ${data.category}\nSubject: ${data.subject}`);
     }
     setModalType(null);
     setTargetAlert(null);
   };
 
   return (
-    <div className="py-6 px-8 space-y-6 mx-auto font-sans">
+    <PageShell>
       
       {/* Header Section */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b border-[#E2E6EC] dark:border-[#283243] pb-5 shrink-0">
-        <div className="flex flex-col gap-0.5">
-          <h1 className="text-xl font-bold text-zinc-900 dark:text-zinc-55 tracking-tight flex items-center gap-2">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b border-app-border pb-5 shrink-0">
+        <div>
+          <h1 className="font-heading text-h5 font-semibold tracking-headline text-app-text">
             Alerts & Incidents Cockpit
           </h1>
-          <p className="text-xs text-[#657080] dark:text-[#9AA7B7]">
+          <p className="text-body text-app-muted mt-1">
             Diagnose hardware heat alarms, offline heartbeat timeouts, storage limit events, and network sync lags.
           </p>
         </div>
@@ -143,52 +144,34 @@ export default function AgentAlertsPage() {
       <AlertsStatsBanner alerts={incidents} />
 
       {/* Query Filters */}
-      <div className="p-4 bg-white dark:bg-[#111722] border border-[#E2E6EC] dark:border-[#283243] rounded-xl grid grid-cols-1 sm:grid-cols-3 gap-3 shrink-0">
-        {/* Search */}
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-zinc-400" />
-          <input
-            type="text"
-            placeholder="Search alerts, devices..."
+      <Toolbar className="grid grid-cols-1 gap-3 rounded-xl border border-app-border bg-app-surface p-4 sm:grid-cols-3">
+          <SearchInput
+            placeholder="Search alerts or devices…"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="w-full pl-9 pr-3 py-1.5 bg-[#F6F7F9] dark:bg-[#171F2C]/50 border border-[#E2E6EC] dark:border-[#283243] rounded-lg text-xs text-[#18202B] dark:text-[#F2F5F8] placeholder-zinc-450 focus:outline-none"
           />
-        </div>
-
-        {/* Status Selector */}
-        <div className="relative">
-          <select
+          <Select
+            icon={Filter}
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value)}
-            className="w-full pl-8 pr-8 py-1.5 border border-[#E2E6EC] dark:border-[#283243] rounded-lg bg-[#F6F7F9] dark:bg-[#171F2C]/50 text-xs text-zinc-700 dark:text-zinc-300 font-bold focus:outline-none appearance-none cursor-pointer"
           >
             <option value="All">All Incident States</option>
             <option value="Active">Active</option>
             <option value="Acknowledged">Acknowledged</option>
             <option value="Resolved">Resolved</option>
-          </select>
-          <Filter className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-zinc-400" />
-          <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-zinc-400 pointer-events-none" />
-        </div>
-
-        {/* Group Selector */}
-        <div className="relative">
-          <select
+          </Select>
+          <Select
+            icon={Filter}
             value={groupFilter}
             onChange={(e) => setGroupFilter(e.target.value)}
-            className="w-full pl-8 pr-8 py-1.5 border border-[#E2E6EC] dark:border-[#283243] rounded-lg bg-[#F6F7F9] dark:bg-[#171F2C]/50 text-xs text-zinc-700 dark:text-zinc-300 font-bold focus:outline-none appearance-none cursor-pointer"
           >
             <option value="All">All Screen Groups</option>
             <option value="Flagship">Flagship Outlets</option>
             <option value="Menu Boards">Menu Boards</option>
             <option value="Mall Stores">Mall Stores</option>
             <option value="Airport Outlets">Airport Outlets</option>
-          </select>
-          <Filter className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-zinc-400" />
-          <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-zinc-400 pointer-events-none" />
-        </div>
-      </div>
+          </Select>
+      </Toolbar>
 
       {/* Main Incidents table */}
       <div className="flex-1">
@@ -215,6 +198,6 @@ export default function AgentAlertsPage() {
         />
       )}
 
-    </div>
+    </PageShell>
   );
 }
