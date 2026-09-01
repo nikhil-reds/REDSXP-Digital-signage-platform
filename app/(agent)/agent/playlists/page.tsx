@@ -2,16 +2,21 @@
 
 import React, { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { AlertTriangle, Loader2, Plus } from "lucide-react";
+import { AlertTriangle, Plus } from "lucide-react";
 import PlaylistsTable from "@/components/agent/playlists/playlists-table";
 import { PlaylistSummary } from "@/components/agent/playlists/types";
 import { deletePlaylist, fetchPlaylists } from "@/components/agent/playlists/api";
-import { Button, Card, EmptyState, PageShell, SearchInput } from "@/components/ui";
+import { Button, Card, EmptyState, PageShell, SearchInput, SkeletonTable } from "@/components/ui";
 
 export default function AgentPlaylistsPage() {
   const router = useRouter();
   const [playlists, setPlaylists] = useState<PlaylistSummary[]>([]);
   const [loading, setLoading] = useState(true);
+  // Plan §2: skeleton on first load only — a refetch keeps the current content
+  // on screen rather than replacing it with grey bars.
+  const isFirstLoad = loading && playlists.length === 0;
+
+
   const [error, setError] = useState<string | null>(null);
   const [search, setSearch] = useState("");
   const [reloadKey, setReloadKey] = useState(0);
@@ -93,12 +98,9 @@ export default function AgentPlaylistsPage() {
 
       {/* Table / states */}
       <div className="flex-1">
-        {loading ? (
-          <Card size="panel" className="min-h-[300px] flex items-center justify-center">
-            <span className="flex items-center gap-2 text-body font-semibold text-app-muted">
-              <Loader2 className="w-4 h-4 animate-spin" />
-              Loading playlists…
-            </span>
+        {isFirstLoad ? (
+          <Card size="panel" className="overflow-hidden">
+            <SkeletonTable rows={6} cols={5} label="Loading playlists…" />
           </Card>
         ) : error ? (
           <Card size="panel" className="min-h-[300px] flex items-center justify-center">
