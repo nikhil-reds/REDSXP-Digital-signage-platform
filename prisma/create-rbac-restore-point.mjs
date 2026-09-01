@@ -1,3 +1,21 @@
+/**
+ * Writes a tested rollback for the two RBAC migrations, before you apply them.
+ *
+ *   node prisma/create-rbac-restore-point.mjs ./rbac-restore-point.sql
+ *
+ * Snapshots roles, permissions, _RolePermissions and users.role_id -- every
+ * table 20260901120000_reconcile_role_permission_schema and
+ * 20260901123000_backfill_rbac_roles_permissions write to -- and emits a single
+ * SQL file that puts both the data and the table shape back.
+ *
+ * Use it together with prisma/verify-rbac-backfill.mjs:
+ *
+ *   1. node prisma/create-rbac-restore-point.mjs ./rollback.sql   # escape hatch
+ *   2. node prisma/verify-rbac-backfill.mjs                       # dry run, rolls back
+ *   3. npx prisma migrate deploy && npm run db:seed               # apply
+ *
+ * Reads DATABASE_URL from the environment, falling back to .env.
+ */
 import fs from "node:fs";
 import pg from "pg";
 

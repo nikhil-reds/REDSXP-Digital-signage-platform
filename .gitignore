@@ -44,3 +44,5 @@ next-env.d.ts
 /scratch
 
 .claude
+# Scratch dir for local one-off scripts and generated files.
+tmp/
