@@ -13,6 +13,45 @@ behind `origin/main`**. Nothing is merged. `ui/change` is `origin/main` minus tw
 
 ---
 
+## Progress
+
+Branch `rbac/integration`, off `origin/main`.
+
+| Phase | State | Commit |
+| --- | --- | --- |
+| 0 — Port | **Done** | `c5e0b71` |
+| 1 — Schema, backfill, seed | **Done, applied to the dev database** | `c390394`, `c9c1e6b` |
+| 2 — Unify auth helpers | Not started | — |
+| 3 — Session identity + proxy fix | **Done** | `0580253` |
+| 4 — Enforcement sweep | Not started | — |
+| 5 — Machine auth for device routes | Not started | — |
+| 6 — UI gating | Not started | — |
+| 7 — Role assignment | Not started | — |
+| 8 — Audit + tests | Not started | — |
+
+Phase 1 is applied to the dev database: 38 permissions keyed, `permissions.key` NOT NULL,
+ADMIN promoted to SYSTEM with 12 links, four per-tenant `AGENT_ADMIN` roles created with 26 links
+each, the legacy global `AGENT` role dropped, and **0 of 8 users left without permissions**. A
+tested rollback for it lives in the session scratchpad; regenerate one anywhere with
+`prisma/create-rbac-restore-point.mjs`.
+
+Two things found while doing the work, both corrected in place:
+
+- **The `SUPER_ADMIN` name fallback was a privilege-escalation path.** `requireAdmin`, the login
+  route and `usePermissions` all treated `role.name === "SUPER_ADMIN"` as equivalent to SYSTEM
+  scope. Since `Role` is unique per `(tenantId, name)`, a tenant could create a role with that
+  exact name and pass the platform-admin gate. All three now test `scope` only, as does `proxy.ts`.
+- **The seed was resetting the super admin's password on every run**, because `passwordHash` sat in
+  the upsert's `update` branch. It is now set only on create.
+
+Still open, and **not** caused by this work: every `/admin/*` page except `/admin/roles` sits on its
+route-level loading fallback in the in-app preview browser, including `billing`, `settings` and
+`tenants`, none of which this branch touches. The server is provably fine for all of them — 200,
+complete SSR HTML, valid `text/x-component` RSC payloads — so this is a client-side hydration
+condition, not an API or authorization problem. Unresolved and worth its own ticket.
+
+---
+
 ## 0. Where the system actually stands
 
 | Layer | State | Where |
