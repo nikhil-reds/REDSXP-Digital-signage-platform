@@ -18,7 +18,15 @@ import {
   Users,
   X,
 } from "lucide-react";
-import { Button, PageShell, StatGrid, StatTile } from "@/components/ui";
+import {
+  Button,
+  FieldLabel,
+  Modal,
+  PageShell,
+  StatGrid,
+  StatTile,
+  TextInput,
+} from "@/components/ui";
 
 type AdminUser = {
   id: string;
@@ -213,7 +221,13 @@ export default function UsersPage() {
   );
 }
 
-function AddAdminModal({ onClose, onCreated }: { onClose: () => void; onCreated: (message: string) => Promise<void> }) {
+function AddAdminModal({
+  onClose,
+  onCreated,
+}: {
+  onClose: () => void;
+  onCreated: (message: string) => Promise<void>;
+}) {
   const [form, setForm] = useState({ firstName: "", lastName: "", email: "", password: "" });
   const [showPassword, setShowPassword] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
@@ -224,9 +238,15 @@ function AddAdminModal({ onClose, onCreated }: { onClose: () => void; onCreated:
     setIsSaving(true);
     setError(null);
     try {
-      const response = await fetch("/api/admin/users", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(form) });
+      const response = await fetch("/api/admin/users", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(form),
+      });
       const result = await response.json();
-      if (!response.ok) throw new Error(result.errors?.[0] || result.message || "Unable to create administrator.");
+      if (!response.ok) {
+        throw new Error(result.errors?.[0] || result.message || "Unable to create administrator.");
+      }
       await onCreated(result.message);
     } catch (saveError) {
       setError(saveError instanceof Error ? saveError.message : "Unable to create administrator.");
@@ -235,7 +255,112 @@ function AddAdminModal({ onClose, onCreated }: { onClose: () => void; onCreated:
     }
   };
 
-  const update = (key: keyof typeof form, value: string) => setForm((current) => ({ ...current, [key]: value }));
+  const update = (key: keyof typeof form, value: string) =>
+    setForm((current) => ({ ...current, [key]: value }));
 
-  return <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm" role="dialog" aria-modal="true" aria-labelledby="add-admin-title" onMouseDown={(event) => { if (event.target === event.currentTarget && !isSaving) onClose(); }}><div className="w-full max-w-lg rounded-2xl border border-zinc-200 bg-white shadow-2xl dark:border-zinc-800 dark:bg-zinc-950"><div className="flex items-start justify-between border-b border-zinc-100 p-5 dark:border-zinc-800"><div><h2 id="add-admin-title" className="text-lg font-bold text-zinc-900 dark:text-zinc-50">Add administrator</h2><p className="mt-1 text-sm text-zinc-500">Create secure access to the platform administration panel.</p></div><button disabled={isSaving} onClick={onClose} aria-label="Close dialog" className="rounded-lg p-1.5 text-zinc-400 hover:bg-zinc-100 hover:text-zinc-700 dark:hover:bg-zinc-800"><X className="h-5 w-5" /></button></div><form onSubmit={submit} className="space-y-4 p-5">{error && <div className="flex items-start gap-2 rounded-lg border border-red-200 bg-red-50 p-3 text-xs text-red-700 dark:border-red-900 dark:bg-red-950/30 dark:text-red-300"><AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />{error}</div>}<div className="grid grid-cols-2 gap-3">{(["firstName", "lastName"] as const).map((key) => <label key={key} className="space-y-1.5 text-xs font-semibold text-zinc-700 dark:text-zinc-300"><span>{key === "firstName" ? "First name" : "Last name"}</span><input required autoFocus={key === "firstName"} value={form[key]} onChange={(event) => update(key, event.target.value)} className="w-full rounded-lg border border-zinc-200 bg-zinc-50 px-3 py-2.5 text-sm font-normal text-zinc-900 outline-none focus:ring-1 focus:ring-zinc-900 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-100 dark:focus:ring-zinc-100" /></label>)}</div><label className="block space-y-1.5 text-xs font-semibold text-zinc-700 dark:text-zinc-300"><span>Email address</span><input required type="email" value={form.email} onChange={(event) => update("email", event.target.value)} placeholder="admin@company.com" className="w-full rounded-lg border border-zinc-200 bg-zinc-50 px-3 py-2.5 text-sm font-normal text-zinc-900 outline-none focus:ring-1 focus:ring-zinc-900 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-100 dark:focus:ring-zinc-100" /></label><label className="block space-y-1.5 text-xs font-semibold text-zinc-700 dark:text-zinc-300"><span>Initial password</span><div className="flex gap-2"><div className="relative flex-1"><input required minLength={12} type={showPassword ? "text" : "password"} value={form.password} onChange={(event) => update("password", event.target.value)} className="w-full rounded-lg border border-zinc-200 bg-zinc-50 px-3 py-2.5 pr-10 text-sm font-normal text-zinc-900 outline-none focus:ring-1 focus:ring-zinc-900 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-100 dark:focus:ring-zinc-100" /><button type="button" onClick={() => setShowPassword((value) => !value)} aria-label={showPassword ? "Hide password" : "Show password"} className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-400">{showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}</button></div><button type="button" onClick={() => { update("password", generatePassword()); setShowPassword(true); }} className="rounded-lg border border-zinc-200 px-3 text-xs font-semibold text-zinc-700 hover:bg-zinc-50 dark:border-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-800">Generate</button></div><span className="block text-[11px] font-normal leading-relaxed text-zinc-500">At least 12 characters with uppercase, lowercase, number, and symbol.</span></label><div className="rounded-lg border border-zinc-200 bg-zinc-50 p-3 text-xs leading-relaxed text-zinc-600 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-400"><strong className="text-zinc-800 dark:text-zinc-200">Administrator access</strong> grants full access to platform settings and user management.</div><div className="flex justify-end gap-2 pt-2"><button type="button" disabled={isSaving} onClick={onClose} className="rounded-lg border border-zinc-200 px-4 py-2.5 text-sm font-semibold text-zinc-700 hover:bg-zinc-50 dark:border-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-900">Cancel</button><button disabled={isSaving} className="inline-flex min-w-32 items-center justify-center gap-2 rounded-lg bg-zinc-950 px-4 py-2.5 text-sm font-semibold text-white disabled:opacity-60 dark:bg-zinc-50 dark:text-zinc-950">{isSaving && <Loader2 className="h-4 w-4 animate-spin" />}{isSaving ? "Creating…" : "Create admin"}</button></div></form></div></div>;
+  return (
+    <Modal
+      open
+      onClose={() => {
+        if (!isSaving) onClose();
+      }}
+      title="Add administrator"
+      description="Create secure access to the platform administration panel."
+      className="border-t-4 border-t-app-accent"
+      footer={
+        <>
+          <Button type="button" variant="secondary" disabled={isSaving} onClick={onClose}>
+            Cancel
+          </Button>
+          {/* The footer sits outside the <form>, so submit by id instead. */}
+          <Button type="submit" form="add-admin-form" variant="primary" disabled={isSaving}>
+            {isSaving && <Loader2 className="h-4 w-4 animate-spin" />}
+            {isSaving ? "Creating…" : "Create admin"}
+          </Button>
+        </>
+      }
+    >
+      <form id="add-admin-form" onSubmit={submit} className="space-y-4">
+        {error && (
+          <div className="flex items-start gap-2 rounded-lg border border-app-danger-border bg-app-danger-surface p-3 text-body text-app-danger-text">
+            <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
+            <span>{error}</span>
+          </div>
+        )}
+
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          {(["firstName", "lastName"] as const).map((key) => (
+            <div key={key}>
+              <FieldLabel htmlFor={key}>
+                {key === "firstName" ? "First name" : "Last name"}
+              </FieldLabel>
+              <TextInput
+                id={key}
+                required
+                value={form[key]}
+                onChange={(event) => update(key, event.target.value)}
+                placeholder={key === "firstName" ? "Priya" : "Sharma"}
+              />
+            </div>
+          ))}
+        </div>
+
+        <div>
+          <FieldLabel htmlFor="email">Email address</FieldLabel>
+          <TextInput
+            id="email"
+            required
+            type="email"
+            value={form.email}
+            onChange={(event) => update("email", event.target.value)}
+            placeholder="admin@company.com"
+          />
+        </div>
+
+        <div>
+          <FieldLabel htmlFor="password">Initial password</FieldLabel>
+          <div className="flex gap-2">
+            <div className="relative flex-1">
+              <TextInput
+                id="password"
+                required
+                minLength={12}
+                type={showPassword ? "text" : "password"}
+                value={form.password}
+                onChange={(event) => update("password", event.target.value)}
+                className="pr-10"
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword((value) => !value)}
+                aria-label={showPassword ? "Hide password" : "Show password"}
+                className="absolute right-3 top-1/2 -translate-y-1/2 cursor-pointer text-app-muted transition-colors hover:text-app-text"
+              >
+                {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+              </button>
+            </div>
+            <Button
+              type="button"
+              variant="secondary"
+              size="sm"
+              onClick={() => {
+                update("password", generatePassword());
+                setShowPassword(true);
+              }}
+            >
+              Generate
+            </Button>
+          </div>
+          <p className="mt-1.5 text-caption leading-relaxed text-app-muted">
+            At least 12 characters with uppercase, lowercase, number, and symbol.
+          </p>
+        </div>
+
+        <div className="rounded-lg border border-app-border bg-app-surface-alt p-3 text-caption leading-relaxed text-app-muted">
+          <strong className="font-semibold text-app-text">Administrator access</strong> grants full
+          access to platform settings and user management.
+        </div>
+      </form>
+    </Modal>
+  );
 }
