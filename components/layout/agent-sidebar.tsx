@@ -89,7 +89,7 @@ export default function AgentSidebar({
         } ${isCollapsed ? "md:w-20" : "md:w-64"}`}
       >
       {/* Brand Header */}
-      <div className="p-4 border-b border-app-border flex items-center justify-between">
+      <div className="px-4 py-6 border-b border-app-border flex items-center justify-between">
         <div className="flex items-center gap-3 overflow-hidden">
           {isVisuallyCollapsed ? (
             <div className="w-6 h-6 flex items-center justify-center shrink-0">
@@ -106,9 +106,9 @@ export default function AgentSidebar({
             <NextImage
               src="/reds-xos-logo.png"
               alt="REDS XOS Logo"
-              width={132}
-              height={28}
-              className="h-7 w-auto object-contain"
+              width={79}
+              height={17}
+              className="h-[17px] w-auto object-contain"
               priority
             />
           )}
