@@ -56,13 +56,13 @@ export default function AdminSidebar() {
   return (
     <aside className="flex h-screen w-64 shrink-0 flex-col border-r border-app-border bg-app-surface font-sans">
       {/* Brand Header */}
-      <div className="flex items-center gap-3 border-b border-app-border p-4">
+      <div className="flex items-center gap-3 border-b border-app-border px-4 py-6">
         <NextImage
           src="/reds-xos-logo.png"
           alt="REDS XOS Logo"
-          width={132}
-          height={28}
-          className="h-7 w-auto object-contain"
+          width={79}
+          height={17}
+          className="h-[17px] w-auto object-contain"
           priority
         />
       </div>
