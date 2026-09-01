@@ -1,6 +1,6 @@
 import bcrypt from "bcryptjs";
 import { PrismaPg } from "@prisma/adapter-pg";
-import { PrismaClient, RoleScope, TenantStatus, UserStatus } from "../app/generated/prisma/client";
+import { FeatureKind, PrismaClient, RoleScope, TenantStatus, UserStatus } from "../app/generated/prisma/client";
 
 import fs from "node:fs";
 import path from "node:path";
@@ -238,7 +238,10 @@ export async function main() {
   });
 
   console.log(`✅ Seeded Super Admin User (${superAdminUser.email}).`);
-  console.log("🎉 RBAC Seeding completed successfully!");
+
+  await seedPlansAndFeatures();
+
+  console.log("🎉 Seeding completed successfully!");
 }
 
 if (require.main === module) {
@@ -250,4 +253,112 @@ if (require.main === module) {
     .finally(async () => {
       await prisma.$disconnect();
     });
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// Plans & features — docs/plans-and-features-plan.md
+// ═══════════════════════════════════════════════════════════════════════════
+
+/** Entitlements are billing-owned. Flags are engineering-owned and temporary. */
+export const FEATURE_CATALOGUE = [
+  { key: "custom_branding", name: "Custom Branding", kind: FeatureKind.ENTITLEMENT, description: "Replace the REDS logo and accent colour with the workspace's own" },
+  { key: "custom_domain", name: "Custom Domain", kind: FeatureKind.ENTITLEMENT, description: "Serve the workspace from its own hostname" },
+  { key: "api_access", name: "API Access", kind: FeatureKind.ENTITLEMENT, description: "Programmatic access to media, playlists, and schedules" },
+  { key: "proof_of_play_export", name: "Proof-of-Play Export", kind: FeatureKind.ENTITLEMENT, description: "Export per-asset playback logs for advertiser reporting" },
+  { key: "priority_support", name: "Priority Support", kind: FeatureKind.ENTITLEMENT, description: "Guaranteed response times and a named contact" },
+
+  { key: "sensor_triggered_content", name: "Sensor-Triggered Content", kind: FeatureKind.FLAG, description: "Play content based on sensor input events", enabled: true, rolloutPct: 100 },
+  { key: "ai_content_suggestions", name: "AI Content Suggestions", kind: FeatureKind.FLAG, description: "AI-generated playlist recommendations", enabled: true, rolloutPct: 25 },
+  { key: "bulk_device_commands", name: "Bulk Device Commands", kind: FeatureKind.FLAG, description: "Send commands to multiple devices at once", enabled: true, rolloutPct: 100 },
+  { key: "advanced_analytics_v2", name: "Advanced Analytics v2", kind: FeatureKind.FLAG, description: "New analytics engine with drill-down", enabled: true, rolloutPct: 50 },
+  { key: "white_label_email", name: "White-Label Email", kind: FeatureKind.FLAG, description: "Send transactional emails from the tenant domain", enabled: true, rolloutPct: 100 },
+];
+
+/**
+ * Prices in paise-free rupees, matching what /admin/plans has always displayed.
+ * A null quota means unlimited. "Free" is the fallback for tenants with no
+ * subscription — see decision D1 in the plan: without it, every existing
+ * workspace loses everything the moment gating ships.
+ */
+export const PLAN_CATALOGUE = [
+  {
+    name: "Free", description: "Default plan for workspaces without a subscription",
+    priceMonthly: 0, priceYearly: 0, sortOrder: 0, isDefault: true,
+    maxDevices: 2, maxStorageGb: 5, maxUsers: 2, maxRules: 0, analyticsRetentionDays: 7,
+    features: [] as string[],
+  },
+  {
+    name: "Starter", description: "For a single site getting started",
+    priceMonthly: 4999, priceYearly: 49990, sortOrder: 1, isDefault: false,
+    maxDevices: 5, maxStorageGb: 50, maxUsers: 2, maxRules: 0, analyticsRetentionDays: 30,
+    features: [],
+  },
+  {
+    name: "Growth", description: "For a growing network across a few locations",
+    priceMonthly: 12999, priceYearly: 129990, sortOrder: 2, isDefault: false,
+    maxDevices: 25, maxStorageGb: 250, maxUsers: 5, maxRules: 5, analyticsRetentionDays: 90,
+    features: ["custom_branding", "api_access", "proof_of_play_export"],
+  },
+  {
+    name: "Business", description: "For multi-site operators with reporting needs",
+    priceMonthly: 29999, priceYearly: 299990, sortOrder: 3, isDefault: false,
+    maxDevices: 100, maxStorageGb: 2048, maxUsers: 15, maxRules: 25, analyticsRetentionDays: 365,
+    features: ["custom_branding", "custom_domain", "api_access", "priority_support"],
+  },
+  {
+    name: "Enterprise", description: "Negotiated limits and support",
+    priceMonthly: 0, priceYearly: 0, sortOrder: 4, isDefault: false,
+    maxDevices: null, maxStorageGb: null, maxUsers: null, maxRules: null, analyticsRetentionDays: 1095,
+    features: ["custom_branding", "custom_domain", "api_access", "proof_of_play_export", "priority_support"],
+  },
+];
+
+export async function seedPlansAndFeatures() {
+  console.log("🌱 Seeding plans and features...");
+
+  for (const feature of FEATURE_CATALOGUE) {
+    const { key, ...rest } = feature;
+    await prisma.feature.upsert({
+      where: { key },
+      update: rest,
+      create: { key, ...rest },
+    });
+  }
+  console.log(`✅ Seeded ${FEATURE_CATALOGUE.length} features.`);
+
+  const featureIdByKey = new Map(
+    (await prisma.feature.findMany({ select: { id: true, key: true } })).map((f) => [f.key, f.id]),
+  );
+
+  for (const { features, ...planData } of PLAN_CATALOGUE) {
+    const plan = await prisma.plan.upsert({
+      where: { name: planData.name },
+      update: planData,
+      create: planData,
+    });
+
+    // `set` rather than `connect`: the seed owns the plan's entitlements, so a
+    // re-run has to remove links it no longer declares, not just add missing ones.
+    await prisma.planFeature.deleteMany({ where: { planId: plan.id } });
+    if (features.length > 0) {
+      await prisma.planFeature.createMany({
+        data: features.map((key) => ({ planId: plan.id, featureId: featureIdByKey.get(key)! })),
+        skipDuplicates: true,
+      });
+    }
+  }
+  console.log(`✅ Seeded ${PLAN_CATALOGUE.length} plans and their entitlements.`);
+
+  // Decision D1: every tenant needs a plan, or gating locks out the whole
+  // platform. Tenants with no subscription resolve to the default plan at read
+  // time (lib/features.ts), so no rows are written here — but say so loudly,
+  // because "6 tenants on the Free plan" is a billing fact someone should see.
+  const unsubscribed = await prisma.tenant.count({
+    where: { subscriptions: { none: { status: { in: ["ACTIVE", "TRIAL", "PAST_DUE"] } } } },
+  });
+  if (unsubscribed > 0) {
+    console.log(
+      `ℹ  ${unsubscribed} tenant(s) have no active subscription and resolve to the Free plan.`,
+    );
+  }
 }

@@ -41,6 +41,7 @@ model Tenant {
   invoices           Invoice[]
   tickets            Ticket[]
   roles              Role[]
+  featureOverrides   TenantFeature[]
 
   @@map("tenants")
 }
@@ -394,16 +395,75 @@ model Plan {
   priceMonthly Int      @map("price_monthly")
   priceYearly  Int      @map("price_yearly")
   currency     String   @default("INR")
-  maxDevices   Int      @map("max_devices")
-  maxStorageGb Int      @map("max_storage_gb")
-  maxUsers     Int      @map("max_users")
-  maxRules     Int      @map("max_rules")
-  createdAt    DateTime @default(now()) @map("created_at")
-  updatedAt    DateTime @updatedAt @map("updated_at")
+  /// Quotas: null means unlimited. Deliberately not a -1 sentinel, which
+  /// someone eventually compares with `<` and silently caps Enterprise at -1.
+  maxDevices             Int? @map("max_devices")
+  maxStorageGb           Int? @map("max_storage_gb")
+  maxUsers               Int? @map("max_users")
+  maxRules               Int? @map("max_rules")
+  analyticsRetentionDays Int? @map("analytics_retention_days")
+  /// Fallback plan for tenants with no subscription. Exactly one row carries it.
+  isDefault Boolean  @default(false) @map("is_default")
+  sortOrder Int      @default(0) @map("sort_order")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
 
   subscriptions Subscription[]
+  features      PlanFeature[]
 
   @@map("plans")
+}
+
+/// A gated capability. ENTITLEMENT is billing-owned and permanent; FLAG is
+/// engineering-owned, carries a global switch plus rollout, and is deleted once
+/// the rollout finishes. Both resolve through lib/features.ts.
+model Feature {
+  id          String      @id @default(uuid())
+  key         String      @unique // snake_case, e.g. "proof_of_play_export"
+  name        String
+  description String?
+  kind        FeatureKind @default(ENTITLEMENT)
+  /// FLAG only. The kill switch — false beats every plan and every override.
+  enabled Boolean? @map("enabled")
+  /// FLAG only. 0-100, bucketed on a stable hash of the tenant id.
+  rolloutPct Int?     @map("rollout_pct")
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+
+  plans     PlanFeature[]
+  overrides TenantFeature[]
+
+  @@map("features")
+}
+
+model PlanFeature {
+  planId    String   @map("plan_id")
+  featureId String   @map("feature_id")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  plan    Plan    @relation(fields: [planId], references: [id], onDelete: Cascade)
+  feature Feature @relation(fields: [featureId], references: [id], onDelete: Cascade)
+
+  @@id([planId, featureId])
+  @@map("plan_features")
+}
+
+/// Per-tenant escape hatch, for pilots and off-plan contracts. `enabled` is an
+/// explicit on/off — the absence of a row is the "no opinion" case, so this
+/// stays a boolean rather than a tri-state.
+model TenantFeature {
+  tenantId  String   @map("tenant_id")
+  featureId String   @map("feature_id")
+  enabled   Boolean
+  note      String?
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  tenant  Tenant  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  feature Feature @relation(fields: [featureId], references: [id], onDelete: Cascade)
+
+  @@id([tenantId, featureId])
+  @@map("tenant_features")
 }
 
 model Subscription {
@@ -595,4 +655,9 @@ enum TicketStatus {
 enum RoleScope {
   SYSTEM
   TENANT
+}
+
+enum FeatureKind {
+  ENTITLEMENT
+  FLAG
 }
