@@ -9,6 +9,7 @@ import {
   CardFooter,
   CardHeader,
   CardHeading,
+  SkeletonChart,
 } from "@/components/ui";
 
 // Recharts measures the DOM, so the charts are client-only. Loading them this
@@ -17,8 +18,8 @@ const OverviewCharts = dynamic(() => import("./overview-charts"), {
   ssr: false,
   loading: () => (
     <>
-      <Card size="panel" className="h-80 animate-pulse" />
-      <Card size="panel" className="h-80 animate-pulse" />
+      <SkeletonChart className="h-80" label="Loading trend chart…" />
+      <SkeletonChart className="h-80" label="Loading activity chart…" />
     </>
   ),
 });
