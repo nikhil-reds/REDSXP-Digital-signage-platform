@@ -38,6 +38,11 @@ import {
   TableCard,
   Td,
   TextInput,
+  SkeletonCardGrid,
+  SkeletonChart,
+  SkeletonStatGrid,
+  SkeletonTable,
+  SkeletonText,
   Th,
   Toolbar,
   Tr,
@@ -265,6 +270,25 @@ export default function CardGalleryPage() {
             action={<Button variant="primary" size="sm" icon={Plus}>New report</Button>}
           />
         </Card>
+
+        {/* ---- Skeletons ---- */}
+        <SectionHeader
+          title="Skeletons"
+          description="Fill is bg-app-border, not surface-alt: surface-alt is #f3f2f2 on a #ffffff surface and reads as nothing in the light theme."
+        />
+        <SkeletonStatGrid columns={4} />
+        <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+          <SkeletonChart className="h-72" />
+          <Card size="panel" padded>
+            <CardHeading size="panel" title="Text lines" />
+            <SkeletonText lines={4} className="mt-4" />
+          </Card>
+        </div>
+        <Card size="panel" className="overflow-hidden">
+          <SkeletonTable rows={4} cols={5} />
+        </Card>
+        <SkeletonCardGrid count={4} columns={4} />
+
       </PageShell>
 
       <Modal
