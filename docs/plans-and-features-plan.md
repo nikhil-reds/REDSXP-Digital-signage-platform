@@ -10,6 +10,50 @@ check and a permission check are different questions and both have to pass.
 
 ---
 
+## Progress
+
+All ten steps are built on `rbac/integration` and applied to the dev database.
+
+| Step | State | Commit |
+| --- | --- | --- |
+| 1 — Schema + migration + nullable quotas | **Done** | `ce161fe` |
+| 2 — Seed plans and features | **Done** | `ce161fe` |
+| 3 — `lib/features.ts` + `requireFeature` | **Done** | `ce161fe` |
+| 4 — Plans + features admin APIs | **Done** | `41edc99` |
+| 5 — Plan Comparison on real data | **Done** | `cddce10` |
+| 6 — Flag table + overrides drawer | **Done** | `cddce10` |
+| 7 — Remove the Admin Users mockup | **Done** | `cddce10` |
+| 8 — `/api/features`, provider, hook, gate | **Done** | `cddce10` |
+| 9 — Gate the first feature end to end | **Done** | `ace2b88` |
+| 10 — Quota enforcement | **Done** for devices + storage | `ace2b88` |
+
+Decisions as resolved: **D1** — a Free plan carries `isDefault`, and tenants
+with no subscription resolve to it, so the six unsubscribed workspaces kept
+working. **D3** — autosave per toggle; the dead "Review Changes" / "Publish
+Changes" buttons are gone. **D2** and **D4** are still open.
+
+Two things found while building, beyond the audit below:
+
+- **`POST`/`GET /api/screens` were completely open.** GET read `?tenantId` and
+  fell through to `where: undefined`, returning every tenant's devices to any
+  caller; POST fell back to "the first tenant in the table", creating devices
+  in a stranger's workspace, or invented a `Default Tenant`. Both now take the
+  tenant from the session. That is the RBAC plan's Phase 4 for these two
+  routes — the other sixteen still need it.
+- **`prisma migrate diff` wants to drop live columns.** `devices.mac_address`,
+  `last_heartbeat_at`, `timezone`, `screen_resolution`, `app_install_path`,
+  `display_count` and `player_registrations.pairing_code` (+ its unique index),
+  `arch`, `build_version` and friends exist in the database but not in
+  `schema.prisma`. None of it is in the features migration, and its header says
+  so. Someone has to decide whether to re-declare those fields or drop them;
+  until then `prisma migrate dev` will keep offering to delete them.
+
+Still not done from §8: `maxUsers` and `maxRules` have no enforcement point yet
+(no tenant-user endpoint — that is the RBAC plan's Phase 7 — and no
+sensor-rules table at all).
+
+---
+
 ## 1. What the page is today
 
 Every number on `/admin/plans` is a literal in a component file. Nothing reads the database, nothing
