@@ -1,71 +1,170 @@
 "use client";
 
 import React, { useState } from "react";
-import { Search, ChevronDown, Download, LayoutGrid, ArrowUpDown, ChevronLeft, ChevronRight } from "lucide-react";
+import {
+  Search,
+  ChevronDown,
+  Download,
+  ArrowUpDown,
+  ChevronLeft,
+  ChevronRight,
+  Loader2,
+  AlertCircle,
+  RefreshCw,
+} from "lucide-react";
 
-interface Tenant {
+export interface Tenant {
   id: string;
   name: string;
+  slug: string;
   status: "Active" | "Trial" | "Past Due" | "Suspended";
-  plan: "Enterprise" | "Business" | "Growth";
+  plan: string | null;
   mrr: number;
   screensActive: number;
   screensTotal: number;
-  storageUsed: number; // in GB
-  storageTotal: number; // in GB
-  customDomain: string;
+  storageUsedGb: number;
+  storageLimitGb: number | null;
+  customDomain: string | null;
+  createdAt: string;
+}
+
+export interface TenantsPagination {
+  page: number;
+  pageSize: number;
+  total: number;
+  totalPages: number;
+}
+
+export interface TenantsSummary {
+  total: number;
+  active: number;
+  trial: number;
+  pastDue: number;
+  suspended: number;
+}
+
+export interface PlanOption {
+  id: string;
+  name: string;
 }
 
 interface TenantsTableProps {
   tenants: Tenant[];
+  pagination: TenantsPagination;
+  summary: TenantsSummary;
+  planOptions: PlanOption[];
+  search: string;
+  status: string;
+  plan: string;
+  isLoading: boolean;
+  error: string | null;
+  onFilterChange: (next: { status?: string; plan?: string; search?: string }) => void;
+  onPageChange: (page: number) => void;
+  onRefresh: () => void;
   onAddTenantClick: () => void;
 }
 
-export default function TenantsTable({ tenants, onAddTenantClick }: TenantsTableProps) {
-  const [search, setSearch] = useState("");
-  const [statusFilter, setStatusFilter] = useState("All");
-  const [planFilter, setPlanFilter] = useState("All");
+const STATUS_OPTIONS = [
+  { value: "ALL", label: "Status: All" },
+  { value: "ACTIVE", label: "Active" },
+  { value: "TRIAL", label: "Trial" },
+  { value: "PAST_DUE", label: "Past Due" },
+  { value: "SUSPENDED", label: "Suspended" },
+];
+
+function formatStorageValue(gb: number) {
+  if (gb >= 1024) return `${(gb / 1024).toFixed(1)} TB`;
+  if (gb > 0 && gb < 1) return `${(gb * 1024).toFixed(0)} MB`;
+  return `${gb.toFixed(gb % 1 === 0 ? 0 : 1)} GB`;
+}
+
+function formatStorage(used: number, limit: number | null) {
+  if (limit === null || limit <= 0) {
+    return { text: formatStorageValue(used), percent: null as number | null };
+  }
+  return {
+    text: `${formatStorageValue(used)}/${formatStorageValue(limit)}`,
+    percent: Math.min((used / limit) * 100, 100),
+  };
+}
+
+function toCsv(tenants: Tenant[]) {
+  const header = [
+    "Name",
+    "Slug",
+    "Status",
+    "Plan",
+    "MRR",
+    "Screens Online",
+    "Screens Total",
+    "Storage Used (GB)",
+    "Storage Limit (GB)",
+    "Custom Domain",
+  ];
+  const rows = tenants.map((tenant) => [
+    tenant.name,
+    tenant.slug,
+    tenant.status,
+    tenant.plan ?? "",
+    tenant.mrr,
+    tenant.screensActive,
+    tenant.screensTotal,
+    tenant.storageUsedGb,
+    tenant.storageLimitGb ?? "",
+    tenant.customDomain ?? "",
+  ]);
+  return [header, ...rows]
+    .map((row) => row.map((cell) => `"${String(cell).replace(/"/g, '""')}"`).join(","))
+    .join("\n");
+}
+
+export default function TenantsTable({
+  tenants,
+  pagination,
+  summary,
+  planOptions,
+  search,
+  status,
+  plan,
+  isLoading,
+  error,
+  onFilterChange,
+  onPageChange,
+  onRefresh,
+  onAddTenantClick,
+}: TenantsTableProps) {
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
 
-  // Filter logic
-  const filteredTenants = tenants.filter((tenant) => {
-    const matchesSearch =
-      tenant.name.toLowerCase().includes(search.toLowerCase()) ||
-      tenant.customDomain.toLowerCase().includes(search.toLowerCase());
-    const matchesStatus = statusFilter === "All" || tenant.status === statusFilter;
-    const matchesPlan = planFilter === "All" || tenant.plan === planFilter;
-    return matchesSearch && matchesStatus && matchesPlan;
-  });
-
   const toggleSelectAll = () => {
-    if (selectedIds.length === filteredTenants.length) {
-      setSelectedIds([]);
-    } else {
-      setSelectedIds(filteredTenants.map((t) => t.id));
-    }
+    setSelectedIds(selectedIds.length === tenants.length ? [] : tenants.map((t) => t.id));
   };
 
   const toggleSelect = (id: string) => {
-    if (selectedIds.includes(id)) {
-      setSelectedIds(selectedIds.filter((item) => item !== id));
-    } else {
-      setSelectedIds([...selectedIds, id]);
-    }
+    setSelectedIds(
+      selectedIds.includes(id)
+        ? selectedIds.filter((item) => item !== id)
+        : [...selectedIds, id],
+    );
   };
 
-  // Convert storage values for display
-  const formatStorage = (used: number, total: number) => {
-    const formatValue = (val: number) => {
-      if (val >= 1024) {
-        return `${(val / 1024).toFixed(1)} TB`;
-      }
-      return `${val} GB`;
-    };
-    return {
-      text: `${formatValue(used)}/${formatValue(total)}`,
-      percent: Math.min((used / total) * 100, 100)
-    };
+  const exportCsv = () => {
+    const blob = new Blob([toCsv(tenants)], { type: "text/csv;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `tenants-page-${pagination.page}.csv`;
+    link.click();
+    URL.revokeObjectURL(url);
   };
+
+  const firstRow = pagination.total === 0 ? 0 : (pagination.page - 1) * pagination.pageSize + 1;
+  const lastRow = Math.min(pagination.page * pagination.pageSize, pagination.total);
+  const pageNumbers = Array.from({ length: pagination.totalPages }, (_, index) => index + 1).filter(
+    (number) =>
+      number === 1 ||
+      number === pagination.totalPages ||
+      Math.abs(number - pagination.page) <= 1,
+  );
 
   return (
     <div className="flex min-w-0 flex-1 flex-col overflow-hidden rounded-xl border border-app-border bg-app-surface shadow-xs">
@@ -74,15 +173,28 @@ export default function TenantsTable({ tenants, onAddTenantClick }: TenantsTable
         <div>
           <h2 className="text-title font-bold text-app-text">Tenant Management</h2>
           <p className="mt-0.5 text-caption text-app-muted">
-            186 active tenants · 23 on trial
+            {summary.total} {summary.total === 1 ? "tenant" : "tenants"} · {summary.active} active ·{" "}
+            {summary.trial} on trial
+            {summary.pastDue > 0 ? ` · ${summary.pastDue} past due` : ""}
+            {summary.suspended > 0 ? ` · ${summary.suspended} suspended` : ""}
           </p>
         </div>
-        <button
-          onClick={onAddTenantClick}
-          className="flex cursor-pointer items-center gap-1.5 rounded-lg bg-app-accent px-3.5 py-1.5 text-caption font-semibold text-app-accent-on shadow-xs transition-colors hover:bg-app-accent-hover"
-        >
-          <span>+ Add Tenant</span>
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={onRefresh}
+            className="flex cursor-pointer items-center gap-1.5 rounded-lg border border-app-border bg-app-surface px-3 py-1.5 text-caption font-semibold text-app-text shadow-xs transition-colors hover:bg-app-surface-alt"
+            title="Refresh tenants"
+          >
+            <RefreshCw className={`h-3.5 w-3.5 text-app-muted ${isLoading ? "animate-spin" : ""}`} />
+            <span>Refresh</span>
+          </button>
+          <button
+            onClick={onAddTenantClick}
+            className="flex cursor-pointer items-center gap-1.5 rounded-lg bg-app-accent px-3.5 py-1.5 text-caption font-semibold text-app-accent-on shadow-xs transition-colors hover:bg-app-accent-hover"
+          >
+            <span>+ Add Tenant</span>
+          </button>
+        </div>
       </div>
 
       {/* Toolbar / Filters */}
@@ -92,9 +204,9 @@ export default function TenantsTable({ tenants, onAddTenantClick }: TenantsTable
             <Search className="absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-app-muted" />
             <input
               type="text"
-              placeholder="Search by name, domain, owner..."
+              placeholder="Search by name, slug or domain..."
               value={search}
-              onChange={(e) => setSearch(e.target.value)}
+              onChange={(e) => onFilterChange({ search: e.target.value })}
               className="w-full rounded-lg border border-app-border bg-app-surface py-1.5 pl-8.5 pr-3 text-caption text-app-text placeholder:text-app-muted focus:outline-none focus:ring-2 focus:ring-app-accent-text"
             />
           </div>
@@ -104,82 +216,105 @@ export default function TenantsTable({ tenants, onAddTenantClick }: TenantsTable
           {/* Status Filter */}
           <div className="relative">
             <select
-              value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value)}
+              value={status}
+              onChange={(e) => onFilterChange({ status: e.target.value })}
               className="cursor-pointer appearance-none rounded-lg border border-app-border bg-app-surface py-1.5 pl-3 pr-8 text-caption font-medium text-app-text focus:outline-none focus:ring-2 focus:ring-app-accent-text"
             >
-              <option value="All">Status: All</option>
-              <option value="Active">Active</option>
-              <option value="Trial">Trial</option>
-              <option value="Past Due">Past Due</option>
-              <option value="Suspended">Suspended</option>
+              {STATUS_OPTIONS.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
             </select>
             <ChevronDown className="pointer-events-none absolute right-2.5 top-1/2 h-3 w-3 -translate-y-1/2 text-app-muted" />
           </div>
 
-          {/* Plan Filter */}
+          {/* Plan Filter — options come from the plans table */}
           <div className="relative">
             <select
-              value={planFilter}
-              onChange={(e) => setPlanFilter(e.target.value)}
-              className="cursor-pointer appearance-none rounded-lg border border-app-border bg-app-surface py-1.5 pl-3 pr-8 text-caption font-medium text-app-text focus:outline-none focus:ring-2 focus:ring-app-accent-text"
+              value={plan}
+              onChange={(e) => onFilterChange({ plan: e.target.value })}
+              disabled={planOptions.length === 0}
+              className="cursor-pointer appearance-none rounded-lg border border-app-border bg-app-surface py-1.5 pl-3 pr-8 text-caption font-medium text-app-text focus:outline-none focus:ring-2 focus:ring-app-accent-text disabled:cursor-not-allowed disabled:opacity-50"
             >
-              <option value="All">Plan: All</option>
-              <option value="Enterprise">Enterprise</option>
-              <option value="Business">Business</option>
-              <option value="Growth">Growth</option>
+              <option value="ALL">Plan: All</option>
+              {planOptions.map((option) => (
+                <option key={option.id} value={option.name}>
+                  {option.name}
+                </option>
+              ))}
             </select>
             <ChevronDown className="pointer-events-none absolute right-2.5 top-1/2 h-3 w-3 -translate-y-1/2 text-app-muted" />
           </div>
 
-          {/* Columns Config */}
-          <button className="flex cursor-pointer items-center gap-1 rounded-lg border border-app-border bg-app-surface px-3 py-1.5 text-caption font-semibold text-app-text shadow-xs transition-colors hover:bg-app-surface-alt">
-            <LayoutGrid className="h-3.5 w-3.5 text-app-muted" />
-            <span>Columns</span>
-          </button>
-
           {/* Export CSV */}
-          <button className="flex cursor-pointer items-center gap-1 rounded-lg border border-app-border bg-app-surface px-3 py-1.5 text-caption font-semibold text-app-text shadow-xs transition-colors hover:bg-app-surface-alt">
+          <button
+            onClick={exportCsv}
+            disabled={tenants.length === 0}
+            className="flex cursor-pointer items-center gap-1 rounded-lg border border-app-border bg-app-surface px-3 py-1.5 text-caption font-semibold text-app-text shadow-xs transition-colors hover:bg-app-surface-alt disabled:cursor-not-allowed disabled:opacity-50"
+          >
             <Download className="h-3.5 w-3.5 text-app-muted" />
             <span>Export CSV</span>
           </button>
         </div>
       </div>
 
+      {error && (
+        <div className="flex items-center gap-2 border-b border-app-danger-border bg-app-danger-surface px-4 py-2.5 text-caption font-medium text-app-danger-text">
+          <AlertCircle className="h-3.5 w-3.5 shrink-0" />
+          <span>{error}</span>
+        </div>
+      )}
+
       {/* Tenants Table */}
-      <div className="overflow-x-auto">
+      <div className="flex-1 overflow-auto">
         <table className="w-full border-collapse text-left text-caption">
           <thead>
             <tr className="select-none border-b border-app-border bg-app-surface-alt font-bold text-app-muted">
               <th className="p-3.5 w-10 text-center">
                 <input
                   type="checkbox"
-                  checked={filteredTenants.length > 0 && selectedIds.length === filteredTenants.length}
+                  checked={tenants.length > 0 && selectedIds.length === tenants.length}
                   onChange={toggleSelectAll}
                   className="h-3.5 w-3.5 cursor-pointer rounded border-app-border accent-app-accent-text"
                 />
               </th>
               <th className="p-3.5 font-bold">
-                <span className="flex cursor-pointer items-center gap-1 hover:text-app-text">
+                <span className="flex items-center gap-1">
                   Tenant <ArrowUpDown className="h-3 w-3 text-app-muted" />
                 </span>
               </th>
               <th className="p-3.5 font-bold">Status</th>
               <th className="p-3.5 font-bold">Plan</th>
-              <th className="p-3.5 font-bold">
-                <span className="flex cursor-pointer items-center justify-end gap-1 hover:text-app-text">
-                  MRR <ArrowUpDown className="h-3 w-3 text-app-muted" />
-                </span>
-              </th>
+              <th className="p-3.5 font-bold text-right">MRR</th>
               <th className="p-3.5 font-bold text-center">Screens</th>
               <th className="p-3.5 font-bold">Storage</th>
               <th className="p-3.5 font-bold">Custom Domain</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-app-border">
-            {filteredTenants.map((tenant) => {
+            {isLoading && tenants.length === 0 && (
+              <tr>
+                <td colSpan={8} className="p-10 text-center text-app-muted">
+                  <Loader2 className="mx-auto mb-2 h-4 w-4 animate-spin" />
+                  Loading tenants…
+                </td>
+              </tr>
+            )}
+
+            {!isLoading && tenants.length === 0 && !error && (
+              <tr>
+                <td colSpan={8} className="p-10 text-center text-app-muted">
+                  {search || status !== "ALL" || plan !== "ALL"
+                    ? "No tenants match these filters."
+                    : "No tenants yet. Use “Add Tenant” to provision the first workspace."}
+                </td>
+              </tr>
+            )}
+
+            {tenants.map((tenant) => {
               const isSelected = selectedIds.includes(tenant.id);
-              const storageInfo = formatStorage(tenant.storageUsed, tenant.storageTotal);
+              const storageInfo = formatStorage(tenant.storageUsedGb, tenant.storageLimitGb);
 
               return (
                 <tr
@@ -197,7 +332,12 @@ export default function TenantsTable({ tenants, onAddTenantClick }: TenantsTable
                     />
                   </td>
                   <td className="p-3.5 font-semibold text-app-text">
-                    {tenant.name}
+                    <div className="flex flex-col">
+                      <span>{tenant.name}</span>
+                      <span className="font-mono text-[10px] font-normal text-app-muted">
+                        {tenant.slug}
+                      </span>
+                    </div>
                   </td>
                   <td className="p-3.5">
                     <span
@@ -226,12 +366,16 @@ export default function TenantsTable({ tenants, onAddTenantClick }: TenantsTable
                     </span>
                   </td>
                   <td className="p-3.5">
-                    <span className="rounded-md border border-app-border bg-app-surface-alt px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-app-muted">
-                      {tenant.plan}
-                    </span>
+                    {tenant.plan ? (
+                      <span className="rounded-md border border-app-border bg-app-surface-alt px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-app-muted">
+                        {tenant.plan}
+                      </span>
+                    ) : (
+                      <span className="text-app-muted">—</span>
+                    )}
                   </td>
                   <td className="p-3.5 text-right font-bold text-app-text">
-                    ₹{tenant.mrr.toLocaleString("en-IN")}
+                    {tenant.mrr > 0 ? `₹${tenant.mrr.toLocaleString("en-IN")}` : <span className="font-normal text-app-muted">—</span>}
                   </td>
                   <td className="p-3.5 text-center font-medium text-app-text">
                     {tenant.screensActive}/{tenant.screensTotal}
@@ -241,16 +385,21 @@ export default function TenantsTable({ tenants, onAddTenantClick }: TenantsTable
                       <span className="text-[10px] font-medium text-app-muted">
                         {storageInfo.text}
                       </span>
-                      <div className="h-1 w-full overflow-hidden rounded-full bg-app-surface-alt">
-                        <div
-                          className="h-full bg-app-accent-text"
-                          style={{ width: `${storageInfo.percent}%` }}
-                        />
-                      </div>
+                      {storageInfo.percent !== null && (
+                        <div className="h-1 w-full overflow-hidden rounded-full bg-app-surface-alt">
+                          <div
+                            className="h-full bg-app-accent-text"
+                            style={{ width: `${storageInfo.percent}%` }}
+                          />
+                        </div>
+                      )}
                     </div>
                   </td>
-                  <td className="max-w-[120px] truncate p-3.5 font-mono text-[11px] text-app-muted" title={tenant.customDomain}>
-                    {tenant.customDomain}
+                  <td
+                    className="max-w-[140px] truncate p-3.5 font-mono text-[11px] text-app-muted"
+                    title={tenant.customDomain ?? undefined}
+                  >
+                    {tenant.customDomain ?? "—"}
                   </td>
                 </tr>
               );
@@ -261,28 +410,46 @@ export default function TenantsTable({ tenants, onAddTenantClick }: TenantsTable
 
       {/* Pagination Footer */}
       <div className="flex select-none items-center justify-between border-t border-app-border bg-app-surface-alt p-4 text-caption text-app-muted">
-        <span>Showing 1–8 of 186 tenants</span>
+        <span>
+          {pagination.total === 0
+            ? "No tenants to show"
+            : `Showing ${firstRow}–${lastRow} of ${pagination.total} ${
+                pagination.total === 1 ? "tenant" : "tenants"
+              }`}
+        </span>
         <div className="flex items-center gap-1">
-          <button className="flex cursor-pointer items-center gap-1 rounded-lg border border-app-border bg-app-surface px-2.5 py-1.5 text-app-text transition-colors hover:bg-app-surface-alt disabled:opacity-50" disabled>
+          <button
+            onClick={() => onPageChange(pagination.page - 1)}
+            disabled={pagination.page <= 1}
+            className="flex cursor-pointer items-center gap-1 rounded-lg border border-app-border bg-app-surface px-2.5 py-1.5 text-app-text transition-colors hover:bg-app-surface-alt disabled:cursor-not-allowed disabled:opacity-50"
+          >
             <ChevronLeft className="w-3.5 h-3.5" />
             <span>Previous</span>
           </button>
-          
-          <button className="flex h-8 w-8 cursor-pointer items-center justify-center rounded-lg bg-app-accent font-bold text-app-accent-on">
-            1
-          </button>
-          <button className="flex h-8 w-8 cursor-pointer items-center justify-center rounded-lg text-app-text hover:bg-app-surface">
-            2
-          </button>
-          <button className="flex h-8 w-8 cursor-pointer items-center justify-center rounded-lg text-app-text hover:bg-app-surface">
-            3
-          </button>
-          <span className="px-1 text-app-muted">...</span>
-          <button className="flex h-8 w-8 cursor-pointer items-center justify-center rounded-lg text-app-text hover:bg-app-surface">
-            24
-          </button>
 
-          <button className="flex cursor-pointer items-center gap-1 rounded-lg border border-app-border bg-app-surface px-2.5 py-1.5 text-app-text transition-colors hover:bg-app-surface-alt">
+          {pageNumbers.map((number, index) => (
+            <React.Fragment key={number}>
+              {index > 0 && number - pageNumbers[index - 1] > 1 && (
+                <span className="px-1 text-app-muted">...</span>
+              )}
+              <button
+                onClick={() => onPageChange(number)}
+                className={`flex h-8 w-8 cursor-pointer items-center justify-center rounded-lg ${
+                  number === pagination.page
+                    ? "bg-app-accent font-bold text-app-accent-on"
+                    : "text-app-text hover:bg-app-surface"
+                }`}
+              >
+                {number}
+              </button>
+            </React.Fragment>
+          ))}
+
+          <button
+            onClick={() => onPageChange(pagination.page + 1)}
+            disabled={pagination.page >= pagination.totalPages}
+            className="flex cursor-pointer items-center gap-1 rounded-lg border border-app-border bg-app-surface px-2.5 py-1.5 text-app-text transition-colors hover:bg-app-surface-alt disabled:cursor-not-allowed disabled:opacity-50"
+          >
             <span>Next</span>
             <ChevronRight className="w-3.5 h-3.5" />
           </button>
