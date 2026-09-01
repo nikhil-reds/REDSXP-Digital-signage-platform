@@ -30,6 +30,9 @@ import {
   SearchInput,
   SegmentedControl,
   Select,
+  Skeleton,
+  SkeletonRegion,
+  SkeletonTable,
 } from "@/components/ui";
 
 function uniqueSorted(values: (string | undefined)[]): string[] {
@@ -42,6 +45,10 @@ export default function AgentScreensPage() {
   const [viewMode, setViewMode] = useState<"table" | "map">("table");
   const [selectedScreen, setSelectedScreen] = useState<ScreenDevice | null>(null);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  // Plan §2: skeleton on first load only — a refetch keeps the current content
+  // on screen rather than replacing it with grey bars.
+  const isFirstLoad = isLoading && screens.length === 0;
+
   const [isDownloadModalOpen, setIsDownloadModalOpen] = useState(false);
   const [downloadError, setDownloadError] = useState<string | null>(null);
 
@@ -240,10 +247,16 @@ export default function AgentScreensPage() {
 
         {/* Main Render Area */}
         <div className="flex-1 flex flex-col min-h-0">
-          {isLoading ? (
-            <Card size="panel" className="flex-1 min-h-[400px] flex items-center justify-center">
-              <span className="text-body font-semibold text-app-muted">Loading screens…</span>
-            </Card>
+          {isFirstLoad ? (
+            viewMode === "table" ? (
+              <Card size="panel" className="overflow-hidden">
+                <SkeletonTable rows={6} cols={12} label="Loading screens…" />
+              </Card>
+            ) : (
+              <SkeletonRegion label="Loading screen map…" className="flex-1">
+                <Skeleton className="h-full min-h-[400px] w-full rounded-xl" />
+              </SkeletonRegion>
+            )
           ) : screens.length === 0 ? (
             <Card size="panel" className="flex-1 min-h-[400px] flex items-center justify-center">
               <EmptyState
