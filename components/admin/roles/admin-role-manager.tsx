@@ -1,171 +1,288 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { Shield, Plus, Edit2, Trash2, Lock } from "lucide-react";
+import { useCallback, useEffect, useState } from "react";
+import {
+  AlertCircle,
+  CheckCircle2,
+  Edit2,
+  KeyRound,
+  Lock,
+  Plus,
+  Shield,
+  ShieldCheck,
+  Trash2,
+  Users,
+  X,
+} from "lucide-react";
+import {
+  Badge,
+  Button,
+  Card,
+  CardBody,
+  CardFooter,
+  EmptyState,
+  PageShell,
+  Skeleton,
+  SkeletonRegion,
+  SkeletonStatGrid,
+  StatGrid,
+  StatTile,
+} from "@/components/ui";
 import { RoleFormModal, type RoleFormRole } from "./role-form-modal";
 
 interface Role extends RoleFormRole {
   _count?: { users: number };
 }
 
+/**
+ * Mirrors the real card — name row, description, two chips, footer actions —
+ * so nothing shifts when the data lands.
+ */
+function RoleSkeletonCards({ count = 3 }: { count?: number }) {
+  return (
+    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+      {Array.from({ length: count }).map((_, index) => (
+        <Card key={index} size="widget">
+          <CardBody size="widget">
+            <Skeleton className="h-4 w-32" />
+            <Skeleton className="mt-2 h-3 w-full" />
+            <Skeleton className="mt-1.5 h-3 w-2/3" />
+            <div className="mt-4 flex flex-wrap gap-2">
+              <Skeleton className="h-5 w-20 rounded-full" />
+              <Skeleton className="h-5 w-28 rounded-full" />
+              <Skeleton className="h-5 w-16 rounded-full" />
+            </div>
+          </CardBody>
+          <CardFooter size="widget" className="justify-end">
+            <Skeleton className="h-7 w-16 rounded-lg" />
+          </CardFooter>
+        </Card>
+      ))}
+    </div>
+  );
+}
+
 export function AdminRoleManager() {
   const [roles, setRoles] = useState<Role[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingRole, setEditingRole] = useState<Role | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
 
-  useEffect(() => {
-    fetchData();
+  const loadRoles = useCallback(async () => {
+    try {
+      const response = await fetch("/api/admin/roles", { cache: "no-store" });
+      const result = await response.json();
+      if (!response.ok || !result.success) {
+        throw new Error(result.message || "Unable to load platform roles.");
+      }
+      setRoles(result.data || []);
+      setError(null);
+    } catch (loadError) {
+      setError(loadError instanceof Error ? loadError.message : "Unable to load platform roles.");
+    } finally {
+      setIsLoading(false);
+    }
   }, []);
 
-  async function fetchData() {
-    setLoading(true);
-    try {
-      const rolesRes = await fetch("/api/admin/roles");
-      if (rolesRes.ok) {
-        const rolesData = await rolesRes.json();
-        if (rolesData.success) setRoles(rolesData.data || []);
-      }
-    } catch (err) {
-      console.error("Failed to load roles", err);
-    } finally {
-      setLoading(false);
-    }
-  }
+  useEffect(() => {
+    // The state updates happen after the asynchronous API request resolves.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    void loadRoles();
+  }, [loadRoles]);
 
-  function handleOpenCreateModal() {
+  const openCreate = () => {
     setEditingRole(null);
     setIsModalOpen(true);
-  }
+  };
 
-  function handleOpenEditModal(role: Role) {
+  const openEdit = (role: Role) => {
     setEditingRole(role);
     setIsModalOpen(true);
-  }
+  };
 
-  function handleSaved() {
-    setIsModalOpen(false);
-    fetchData();
-  }
+  const deleteRole = async (role: Role) => {
+    if (!window.confirm(`Delete the custom role “${role.name}”? This cannot be undone.`)) return;
 
-  async function handleDeleteRole(role: Role) {
-    if (!confirm(`Are you sure you want to delete custom role "${role.name}"?`)) return;
-
+    setDeletingId(role.id);
+    setNotice(null);
     try {
-      const res = await fetch(`/api/admin/roles/${role.id}`, { method: "DELETE" });
-      const json = await res.json();
-      if (!res.ok || !json.success) {
-        alert(json.message || "Failed to delete role.");
-      } else {
-        fetchData();
+      const response = await fetch(`/api/admin/roles/${role.id}`, { method: "DELETE" });
+      const result = await response.json();
+      if (!response.ok || !result.success) {
+        throw new Error(result.message || "Unable to delete this role.");
       }
-    } catch (err) {
-      alert("Error deleting role.");
+      setNotice(`Role “${role.name}” was deleted.`);
+      await loadRoles();
+    } catch (deleteError) {
+      setError(deleteError instanceof Error ? deleteError.message : "Unable to delete this role.");
+    } finally {
+      setDeletingId(null);
     }
-  }
+  };
 
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center p-12 text-slate-500">
-        <div className="h-6 w-6 animate-spin rounded-full border-2 border-blue-600 border-t-transparent mr-3" />
-        Loading platform administrator roles...
-      </div>
-    );
-  }
+  // A skeleton is for the first load only; a refetch leaves the cards in place.
+  const isFirstLoad = isLoading && roles.length === 0;
+  const systemRoles = roles.filter((role) => role.isSystem).length;
+  const assignedUsers = roles.reduce((total, role) => total + (role._count?.users || 0), 0);
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 bg-white dark:bg-slate-900 p-6 rounded-xl border border-slate-200 dark:border-slate-800 shadow-xs">
+    <PageShell className="space-y-6">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <div className="flex items-center gap-2">
-            <Shield className="h-6 w-6 text-blue-600 dark:text-blue-400" />
-            <h1 className="text-xl font-bold text-slate-900 dark:text-white">
-              Platform Admin Roles (RBAC)
-            </h1>
+          <div className="mb-1 flex items-center gap-2">
+            <Shield className="h-5 w-5 text-app-accent-text" />
+            <h1 className="text-page-title font-bold text-app-text">Platform Roles</h1>
           </div>
-          <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
-            Manage global administrator roles and assign fine-grained platform capabilities for the /admin portal.
+          <p className="text-body text-app-muted">
+            Manage administrator roles and the platform capabilities each one grants in the admin
+            portal.
           </p>
         </div>
-        <button
-          onClick={handleOpenCreateModal}
-          className="inline-flex items-center gap-2 px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg shadow-xs transition-colors text-sm"
-        >
-          <Plus className="h-4 w-4" /> Create Custom Admin Role
-        </button>
+        <Button onClick={openCreate} variant="primary" icon={Plus} className="self-start sm:self-auto">
+          Create role
+        </Button>
       </div>
 
-      {/* Roles Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {roles.map((role) => (
-          <div
-            key={role.id}
-            className="flex flex-col justify-between bg-white dark:bg-slate-900 p-6 rounded-xl border border-slate-200 dark:border-slate-800 shadow-xs hover:border-blue-500/50 transition-all"
-          >
+      {notice && (
+        <div className="flex items-center justify-between rounded-xl border border-app-accent-border bg-app-accent-surface px-4 py-3 text-body text-app-accent-text">
+          <span className="flex items-center gap-2">
+            <CheckCircle2 className="h-4 w-4" />
+            {notice}
+          </span>
+          <button onClick={() => setNotice(null)} aria-label="Dismiss">
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+      )}
+
+      {isFirstLoad ? (
+        <SkeletonStatGrid columns={3} label="Loading role counts…" />
+      ) : (
+        <StatGrid columns={3}>
+          <StatTile label="Total roles" value={roles.length} icon={Shield} />
+          <StatTile label="System protected" value={systemRoles} icon={Lock} />
+          <StatTile label="Users assigned" value={assignedUsers} icon={Users} />
+        </StatGrid>
+      )}
+
+      {error ? (
+        <Card size="panel">
+          <CardBody className="flex min-h-64 flex-col items-center justify-center gap-3 text-center">
+            <AlertCircle className="h-8 w-8 text-app-danger-text" />
             <div>
-              <div className="flex items-start justify-between">
-                <div>
-                  <div className="flex items-center gap-2">
-                    <h3 className="font-semibold text-slate-900 dark:text-white text-base">
-                      {role.name}
-                    </h3>
-                    {role.isSystem && (
-                      <span className="inline-flex items-center gap-1 text-xs font-medium bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-400 px-2 py-0.5 rounded-md border border-amber-200/50 dark:border-amber-800/50">
-                        <Lock className="h-3 w-3" /> System
-                      </span>
-                    )}
-                  </div>
-                  <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 line-clamp-2">
-                    {role.description || "No description provided."}
-                  </p>
+              <p className="font-semibold text-app-text">Platform roles could not be loaded</p>
+              <p className="mt-1 text-body text-app-muted">{error}</p>
+            </div>
+            <Button
+              variant="primary"
+              onClick={() => {
+                setIsLoading(true);
+                void loadRoles();
+              }}
+            >
+              Try again
+            </Button>
+          </CardBody>
+        </Card>
+      ) : isFirstLoad ? (
+        <SkeletonRegion label="Loading platform administrator roles…">
+          <RoleSkeletonCards />
+        </SkeletonRegion>
+      ) : roles.length === 0 ? (
+        <Card size="panel">
+          <EmptyState
+            icon={ShieldCheck}
+            title="No platform roles yet"
+            description="Create a role to start granting fine-grained access to the admin portal."
+            action={
+              <Button variant="primary" icon={Plus} onClick={openCreate}>
+                Create role
+              </Button>
+            }
+          />
+        </Card>
+      ) : (
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {roles.map((role) => (
+            <Card key={role.id} size="widget" className="flex flex-col">
+              <CardBody size="widget" className="flex-1">
+                {/* Role names are identifiers with no natural break point, so
+                    they get the full card width — sharing a row with a badge
+                    either clips SUPER_ADMIN to SUPER_… or splits it mid-word.
+                    The System badge joins the chip row below instead. */}
+                <h3 className="font-heading text-h6 font-semibold tracking-headline text-app-text">
+                  {role.name}
+                </h3>
+                <p className="mt-1 text-body text-app-muted">
+                  {role.description || "No description provided."}
+                </p>
+                <div className="mt-4 flex flex-wrap gap-2">
+                  {role.isSystem && (
+                    <Badge tone="warning">
+                      <Lock className="h-3 w-3" /> System
+                    </Badge>
+                  )}
+                  <Badge>
+                    <KeyRound className="h-3 w-3" />
+                    {role.permissions.length} permission{role.permissions.length === 1 ? "" : "s"}
+                  </Badge>
+                  <Badge>
+                    <Users className="h-3 w-3" />
+                    {role._count?.users || 0} user{(role._count?.users || 0) === 1 ? "" : "s"}
+                  </Badge>
                 </div>
-              </div>
+              </CardBody>
 
-              {/* Badges */}
-              <div className="mt-4 flex flex-wrap gap-2 text-xs">
-                <span className="bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 px-2.5 py-1 rounded-md font-medium">
-                  {role.permissions.length} Permissions
-                </span>
-                <span className="bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 px-2.5 py-1 rounded-md font-medium">
-                  {role._count?.users || 0} Users Assigned
-                </span>
-              </div>
-            </div>
-
-            {/* Actions */}
-            <div className="mt-6 pt-4 border-t border-slate-100 dark:border-slate-800 flex items-center justify-end gap-2">
-              <button
-                onClick={() => handleOpenEditModal(role)}
-                disabled={role.isSystem}
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 disabled:opacity-40 transition-colors"
-              >
-                <Edit2 className="h-3.5 w-3.5" /> Edit
-              </button>
-              {!role.isSystem && (
-                <button
-                  onClick={() => handleDeleteRole(role)}
-                  className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md text-red-600 hover:bg-red-50 dark:hover:bg-red-950/30 transition-colors"
+              <CardFooter size="widget" className="justify-end">
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  icon={Edit2}
+                  onClick={() => openEdit(role)}
+                  disabled={role.isSystem}
+                  title={
+                    role.isSystem ? "System roles cannot be edited" : `Edit ${role.name}`
+                  }
                 >
-                  <Trash2 className="h-3.5 w-3.5" /> Delete
-                </button>
-              )}
-            </div>
-          </div>
-        ))}
-      </div>
+                  Edit
+                </Button>
+                {!role.isSystem && (
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    icon={Trash2}
+                    onClick={() => void deleteRole(role)}
+                    disabled={deletingId === role.id}
+                    className="text-app-danger-text hover:bg-app-danger-surface"
+                  >
+                    {deletingId === role.id ? "Deleting…" : "Delete"}
+                  </Button>
+                )}
+              </CardFooter>
+            </Card>
+          ))}
+        </div>
+      )}
 
-      {/* Role Creation / Editing Modal */}
       {isModalOpen && (
         <RoleFormModal
           role={editingRole}
           rolesEndpoint="/api/admin/roles"
           permissionsScope="SYSTEM"
-          title={editingRole ? `Edit Platform Role: ${editingRole.name}` : "Create Platform Admin Role"}
+          title={editingRole ? `Edit role: ${editingRole.name}` : "Create platform role"}
           onClose={() => setIsModalOpen(false)}
-          onSaved={handleSaved}
+          onSaved={(saved: RoleFormRole) => {
+            setIsModalOpen(false);
+            setNotice(
+              editingRole ? `Role “${saved.name}” was updated.` : `Role “${saved.name}” was created.`,
+            );
+            void loadRoles();
+          }}
         />
       )}
-    </div>
+    </PageShell>
   );
 }

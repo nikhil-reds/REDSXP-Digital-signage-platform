@@ -52,10 +52,8 @@ const RAW_GREY_BACKLOG = [
   "components/admin/health/incidents-deployments.tsx",
   "components/admin/plans/admin-users.tsx",
   // Ported from the RBAC/tripti branch, which was cut before the token system
-  // existed. Due for conversion in docs/rbac-completion-plan.md Phase 6, which
-  // is already in these three files to add permission gating.
-  "components/admin/roles/admin-role-manager.tsx",
-  "components/admin/roles/role-form-modal.tsx",
+  // existed. The two /admin/roles files are converted; the agent mirror still
+  // needs the same treatment.
   "components/agent/roles/tenant-role-manager.tsx",
 ];
 

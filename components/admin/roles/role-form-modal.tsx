@@ -1,7 +1,17 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { AlertCircle, Check, Layers } from "lucide-react";
+import { AlertCircle, Check, Loader2 } from "lucide-react";
+import {
+  Badge,
+  Button,
+  Checkbox,
+  FieldLabel,
+  Modal,
+  Skeleton,
+  SkeletonRegion,
+  TextInput,
+} from "@/components/ui";
 
 export interface Permission {
   id: string;
@@ -33,6 +43,27 @@ interface RoleFormModalProps {
   onSaved: (role: RoleFormRole) => void;
 }
 
+/** Mirrors a resource group so the matrix does not jump when the catalogue lands. */
+function PermissionSkeleton() {
+  return (
+    <div className="space-y-3">
+      {Array.from({ length: 3 }).map((_, group) => (
+        <div key={group} className="rounded-xl border border-app-border bg-app-surface-alt p-4">
+          <div className="mb-3 flex items-center justify-between">
+            <Skeleton className="h-3.5 w-32" />
+            <Skeleton className="h-3 w-20" />
+          </div>
+          <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+            {Array.from({ length: 4 }).map((_, item) => (
+              <Skeleton key={item} className="h-14 w-full rounded-lg" />
+            ))}
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 /**
  * Shared create/edit form for a Role: name, description, and a permission checkbox
  * matrix grouped by resource with a per-group "select all" toggle. Used both from the
@@ -40,12 +71,21 @@ interface RoleFormModalProps {
  * "Add Admin" flow on /admin/users, so there is exactly one implementation of the
  * permission picker rather than a copy embedded in each caller.
  */
-export function RoleFormModal({ role, rolesEndpoint, permissionsScope, title, onClose, onSaved }: RoleFormModalProps) {
+export function RoleFormModal({
+  role,
+  rolesEndpoint,
+  permissionsScope,
+  title,
+  onClose,
+  onSaved,
+}: RoleFormModalProps) {
   const [allPermissions, setAllPermissions] = useState<Permission[]>([]);
   const [loadingPerms, setLoadingPerms] = useState(true);
   const [roleName, setRoleName] = useState(role?.name || "");
   const [roleDesc, setRoleDesc] = useState(role?.description || "");
-  const [selectedPermIds, setSelectedPermIds] = useState<string[]>(role?.permissions.map((p) => p.id) || []);
+  const [selectedPermIds, setSelectedPermIds] = useState<string[]>(
+    role?.permissions.map((p) => p.id) || [],
+  );
   const [errorMsg, setErrorMsg] = useState("");
   const [saving, setSaving] = useState(false);
 
@@ -69,7 +109,9 @@ export function RoleFormModal({ role, rolesEndpoint, permissionsScope, title, on
   }, [permissionsScope]);
 
   function togglePermission(permId: string) {
-    setSelectedPermIds((prev) => (prev.includes(permId) ? prev.filter((id) => id !== permId) : [...prev, permId]));
+    setSelectedPermIds((prev) =>
+      prev.includes(permId) ? prev.filter((id) => id !== permId) : [...prev, permId],
+    );
   }
 
   function toggleResourceGroup(resource: string) {
@@ -123,155 +165,137 @@ export function RoleFormModal({ role, rolesEndpoint, permissionsScope, title, on
   }, {});
 
   return (
-    <div
-      className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto"
-      role="dialog"
-      aria-modal="true"
-    >
-      <div className="bg-white dark:bg-slate-900 rounded-2xl max-w-3xl w-full border border-slate-200 dark:border-slate-800 shadow-2xl overflow-hidden my-8">
-        <div className="px-6 py-4 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between">
-          <h2 className="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
-            <Layers className="h-5 w-5 text-blue-600" />
-            {title || (role ? `Edit Role: ${role.name}` : "Create Custom Role")}
-          </h2>
-          <button
-            type="button"
-            onClick={onClose}
-            className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 text-sm font-semibold"
-            aria-label="Close"
+    <Modal
+      open
+      onClose={() => {
+        if (!saving) onClose();
+      }}
+      size="xl"
+      title={title || (role ? `Edit role: ${role.name}` : "Create role")}
+      description="Pick the capabilities this role grants. Members inherit every permission you select."
+      className="border-t-4 border-t-app-accent"
+      footer={
+        <>
+          <Button type="button" variant="secondary" disabled={saving} onClick={onClose}>
+            Cancel
+          </Button>
+          {/* The footer sits outside the <form>, so submit by id instead. */}
+          <Button
+            type="submit"
+            form="role-form"
+            variant="primary"
+            disabled={saving || loadingPerms}
           >
-            ✕
-          </button>
+            {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
+            {saving ? "Saving…" : "Save role"}
+          </Button>
+        </>
+      }
+    >
+      <form id="role-form" onSubmit={handleSave} className="space-y-5">
+        {errorMsg && (
+          <div className="flex items-start gap-2 rounded-lg border border-app-danger-border bg-app-danger-surface p-3 text-body text-app-danger-text">
+            <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
+            <span>{errorMsg}</span>
+          </div>
+        )}
+
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <div>
+            <FieldLabel htmlFor="role-name">Role name</FieldLabel>
+            <TextInput
+              id="role-name"
+              required
+              autoFocus
+              value={roleName}
+              onChange={(e) => setRoleName(e.target.value)}
+              placeholder="Billing Support Admin"
+            />
+          </div>
+          <div>
+            <FieldLabel htmlFor="role-description">Description</FieldLabel>
+            <TextInput
+              id="role-description"
+              value={roleDesc}
+              onChange={(e) => setRoleDesc(e.target.value)}
+              placeholder="What this role is for"
+            />
+          </div>
         </div>
 
-        <form onSubmit={handleSave} className="p-6 space-y-6 max-h-[75vh] overflow-y-auto">
-          {errorMsg && (
-            <div className="p-3 bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-800 rounded-lg text-red-700 dark:text-red-300 text-xs flex items-center gap-2">
-              <AlertCircle className="h-4 w-4 shrink-0" />
-              {errorMsg}
+        <div>
+          <div className="mb-2 flex items-center justify-between">
+            <FieldLabel className="mb-0">Capabilities</FieldLabel>
+            <Badge tone={selectedPermIds.length > 0 ? "accent" : "neutral"}>
+              {selectedPermIds.length} selected
+            </Badge>
+          </div>
+
+          {loadingPerms ? (
+            <SkeletonRegion label="Loading permission catalogue…">
+              <PermissionSkeleton />
+            </SkeletonRegion>
+          ) : (
+            <div className="space-y-3">
+              {Object.entries(groupedPermissions).map(([resource, perms]) => {
+                const allSelected = perms.every((p) => selectedPermIds.includes(p.id));
+                return (
+                  <div
+                    key={resource}
+                    className="rounded-xl border border-app-border bg-app-surface-alt p-4"
+                  >
+                    <div className="mb-3 flex items-center justify-between gap-2">
+                      <h4 className="font-heading text-body font-semibold capitalize tracking-headline text-app-text">
+                        {resource}
+                      </h4>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => toggleResourceGroup(resource)}
+                      >
+                        {allSelected ? "Clear all" : "Select all"}
+                      </Button>
+                    </div>
+
+                    <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                      {perms.map((perm) => {
+                        const isChecked = selectedPermIds.includes(perm.id);
+                        return (
+                          <label
+                            key={perm.id}
+                            className={`flex cursor-pointer items-start gap-2.5 rounded-lg border p-2.5 transition-colors ${
+                              isChecked
+                                ? "border-app-accent-text bg-app-accent-surface"
+                                : "border-app-border bg-app-surface hover:bg-app-surface-alt"
+                            }`}
+                          >
+                            <Checkbox
+                              checked={isChecked}
+                              onChange={() => togglePermission(perm.id)}
+                              className="mt-0.5 shrink-0"
+                            />
+                            <span className="min-w-0">
+                              <span className="block text-body font-semibold text-app-text">
+                                {perm.name}
+                              </span>
+                              {perm.description && (
+                                <span className="mt-0.5 block text-caption leading-relaxed text-app-muted">
+                                  {perm.description}
+                                </span>
+                              )}
+                            </span>
+                          </label>
+                        );
+                      })}
+                    </div>
+                  </div>
+                );
+              })}
             </div>
           )}
-
-          <div className="grid grid-cols-1 gap-4">
-            <div>
-              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1">
-                Role Name *
-              </label>
-              <input
-                type="text"
-                value={roleName}
-                onChange={(e) => setRoleName(e.target.value)}
-                placeholder="e.g. Billing Support Admin"
-                className="w-full px-3.5 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-sm text-slate-900 dark:text-white focus:ring-2 focus:ring-blue-500 outline-hidden"
-                required
-                autoFocus
-              />
-            </div>
-            <div>
-              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1">
-                Description
-              </label>
-              <input
-                type="text"
-                value={roleDesc}
-                onChange={(e) => setRoleDesc(e.target.value)}
-                placeholder="Brief summary of duties and permissions"
-                className="w-full px-3.5 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-sm text-slate-900 dark:text-white focus:ring-2 focus:ring-blue-500 outline-hidden"
-              />
-            </div>
-          </div>
-
-          <div>
-            <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-3">
-              Assign Capabilities ({selectedPermIds.length} Selected)
-            </label>
-
-            {loadingPerms ? (
-              <div className="flex items-center justify-center p-8 text-slate-500 text-sm">
-                <div className="h-5 w-5 animate-spin rounded-full border-2 border-blue-600 border-t-transparent mr-3" />
-                Loading permission catalogue...
-              </div>
-            ) : (
-              <div className="space-y-4">
-                {Object.entries(groupedPermissions).map(([resource, perms]) => {
-                  const allSelected = perms.every((p) => selectedPermIds.includes(p.id));
-                  return (
-                    <div
-                      key={resource}
-                      className="bg-slate-50 dark:bg-slate-800/50 p-4 rounded-xl border border-slate-200/80 dark:border-slate-800"
-                    >
-                      <div className="flex items-center justify-between mb-2">
-                        <h4 className="font-semibold text-sm capitalize text-slate-900 dark:text-white">
-                          {resource} Management
-                        </h4>
-                        <button
-                          type="button"
-                          onClick={() => toggleResourceGroup(resource)}
-                          className="text-xs text-blue-600 dark:text-blue-400 hover:underline font-medium"
-                        >
-                          {allSelected ? "Deselect All" : "Select All"}
-                        </button>
-                      </div>
-
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                        {perms.map((perm) => {
-                          const isChecked = selectedPermIds.includes(perm.id);
-                          return (
-                            <label
-                              key={perm.id}
-                              className={`flex items-start gap-2.5 p-2.5 rounded-lg border text-xs cursor-pointer transition-colors ${
-                                isChecked
-                                  ? "bg-blue-50/80 dark:bg-blue-950/40 border-blue-300 dark:border-blue-700 text-blue-900 dark:text-blue-100"
-                                  : "bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800"
-                              }`}
-                            >
-                              <input
-                                type="checkbox"
-                                checked={isChecked}
-                                onChange={() => togglePermission(perm.id)}
-                                className="mt-0.5 rounded-md border-slate-300 text-blue-600 focus:ring-blue-500"
-                              />
-                              <div>
-                                <div className="font-medium">{perm.name}</div>
-                                {perm.description && (
-                                  <div className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
-                                    {perm.description}
-                                  </div>
-                                )}
-                              </div>
-                            </label>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-          </div>
-
-          <div className="pt-4 border-t border-slate-200 dark:border-slate-800 flex items-center justify-end gap-3">
-            <button
-              type="button"
-              onClick={onClose}
-              className="px-4 py-2 text-sm font-medium text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg"
-            >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              disabled={saving || loadingPerms}
-              className="px-4 py-2 text-sm font-medium bg-blue-600 hover:bg-blue-700 text-white rounded-lg shadow-xs flex items-center gap-2 disabled:opacity-50"
-            >
-              {saving ? "Saving..." : (
-                <>
-                  <Check className="h-4 w-4" /> Save Role
-                </>
-              )}
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
+        </div>
+      </form>
+    </Modal>
   );
 }
