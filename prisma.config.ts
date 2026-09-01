@@ -26,6 +26,9 @@ export default defineConfig({
   schema: "prisma/schema.prisma",
   migrations: {
     path: "prisma/migrations",
+    // Runs after `prisma migrate dev` / `prisma db seed`. tsx is already a
+    // devDependency; prisma/seed.ts is TypeScript and imports the generated client.
+    seed: "tsx prisma/seed.ts",
   },
   datasource: {
     url: getDatabaseUrl(),

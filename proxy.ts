@@ -1,10 +1,20 @@
 import { createHash } from "node:crypto";
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 
 const SESSION_COOKIE = "rubenius_session";
 
-function loginRedirect(request, clearSession = false) {
+/**
+ * Next 16's proxy is documented as an *optimistic* check and explicitly "not
+ * intended [...] as a full session management or authorization solution"
+ * (node_modules/next/dist/docs/01-app/01-getting-started/16-proxy.md).
+ *
+ * So this file does one job: send a signed-in human to the portal that matches
+ * their role scope, and everyone else to /login. It is a redirect for humans.
+ * Authorization proper lives in the route handlers, behind requireAdmin() and
+ * requirePermission() in lib/admin-auth.ts — see docs/rbac-completion-plan.md.
+ */
+function loginRedirect(request: NextRequest, clearSession = false) {
   const loginUrl = new URL("/login", request.url);
   loginUrl.searchParams.set(
     "next",
@@ -24,7 +34,7 @@ function loginRedirect(request, clearSession = false) {
   return response;
 }
 
-export async function proxy(request) {
+export async function proxy(request: NextRequest) {
   const token = request.cookies.get(SESSION_COOKIE)?.value;
   if (!token) return loginRedirect(request);
 
@@ -35,7 +45,7 @@ export async function proxy(request) {
       },
       select: {
         expiresAt: true,
-        user: { select: { status: true, role: { select: { name: true } } } },
+        user: { select: { status: true, role: { select: { scope: true } } } },
       },
     });
 
@@ -47,11 +57,16 @@ export async function proxy(request) {
       return loginRedirect(request, true);
     }
 
-    const isAdmin = session.user.role.name.includes("ADMIN");
-    if (request.nextUrl.pathname.startsWith("/admin") && !isAdmin) {
+    // Scope, never role name. Roles are unique per (tenantId, name), so a tenant
+    // can create one called "ADMIN" or "SUPER_ADMIN" — and the old
+    // `role.name.includes("ADMIN")` check would have routed its members into the
+    // platform admin panel.
+    const isSystemScope = session.user.role.scope === "SYSTEM";
+
+    if (request.nextUrl.pathname.startsWith("/admin") && !isSystemScope) {
       return NextResponse.redirect(new URL("/agent", request.url));
     }
-    if (request.nextUrl.pathname.startsWith("/agent") && isAdmin) {
+    if (request.nextUrl.pathname.startsWith("/agent") && isSystemScope) {
       return NextResponse.redirect(new URL("/admin", request.url));
     }
 
