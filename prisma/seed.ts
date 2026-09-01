@@ -36,6 +36,30 @@ function createPrismaClient() {
 
 const prisma = createPrismaClient();
 
+/** Dev-only fallback. Anything other than development must supply its own. */
+const DEV_FALLBACK_PASSWORD = "SuperAdmin@123456";
+
+function resolveSuperAdminPassword(): string {
+  const fromEnv = process.env.SEED_SUPERADMIN_PASSWORD?.trim();
+  if (fromEnv) {
+    if (fromEnv.length < 12) {
+      throw new Error("SEED_SUPERADMIN_PASSWORD must be at least 12 characters.");
+    }
+    return fromEnv;
+  }
+  if (process.env.NODE_ENV === "production") {
+    throw new Error(
+      "SEED_SUPERADMIN_PASSWORD is required when NODE_ENV=production. " +
+        "Refusing to seed the platform super administrator with a known default.",
+    );
+  }
+  console.warn(
+    "⚠  SEED_SUPERADMIN_PASSWORD is unset — falling back to the development default. " +
+      "Set it in .env before seeding anything shared.",
+  );
+  return DEV_FALLBACK_PASSWORD;
+}
+
 export const SYSTEM_PERMISSIONS = [
   { key: "admin:tenants:read", name: "Read Tenants", resource: "tenants", action: "read", description: "View workspace tenants and organization metadata" },
   { key: "admin:tenants:write", name: "Manage Tenants", resource: "tenants", action: "write", description: "Create, update, or suspend workspace tenants" },
@@ -190,16 +214,16 @@ export async function main() {
     },
   });
 
-  const superAdminEmail = "superadmin@redsxp.com";
-  const defaultPassword = "SuperAdmin@123456";
-  const passwordHash = await bcrypt.hash(defaultPassword, 12);
+  const superAdminEmail = process.env.SEED_SUPERADMIN_EMAIL || "superadmin@redsxp.com";
+  const passwordHash = await bcrypt.hash(resolveSuperAdminPassword(), 12);
 
+  // passwordHash is deliberately absent from `update`: re-seeding an existing
+  // environment must not silently reset a password someone has since changed.
   const superAdminUser = await prisma.user.upsert({
     where: { email: superAdminEmail },
     update: {
       roleId: superAdminRole.id,
       tenantId: systemTenant.id,
-      passwordHash,
       status: UserStatus.ACTIVE,
     },
     create: {
