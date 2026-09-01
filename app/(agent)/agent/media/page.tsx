@@ -13,6 +13,8 @@ import {
   SearchInput,
   SegmentedControl,
   Select,
+  SkeletonCardGrid,
+  SkeletonTable,
 } from "@/components/ui";
 
 export default function AgentMediaPage() {
@@ -21,6 +23,10 @@ export default function AgentMediaPage() {
   const [viewMode, setViewMode] = useState<"grid" | "table">("grid");
   const [selectedAsset, setSelectedAsset] = useState<MediaAsset | null>(null);
   const [showUploadModal, setShowUploadModal] = useState(false);
+  // Plan §2: skeleton on first load only — a refetch keeps the current content
+  // on screen rather than replacing it with grey bars.
+  const isFirstLoad = isLoading && assets.length === 0;
+
 
   // Filters State
   const [search, setSearch] = useState("");
@@ -164,10 +170,14 @@ export default function AgentMediaPage() {
 
         {/* Visual Render Zone */}
         <div className="flex-1">
-          {isLoading ? (
-            <Card size="panel" className="min-h-[300px] flex items-center justify-center">
-              <span className="text-body font-semibold text-app-muted">Loading media…</span>
-            </Card>
+          {isFirstLoad ? (
+            viewMode === "grid" ? (
+              <SkeletonCardGrid count={8} columns={4} label="Loading media…" />
+            ) : (
+              <Card size="panel" className="overflow-hidden">
+                <SkeletonTable rows={6} cols={9} label="Loading media…" />
+              </Card>
+            )
           ) : viewMode === "grid" ? (
             <MediaGrid assets={filteredAssets} onSelectMedia={(a) => setSelectedAsset(a)} />
           ) : (
