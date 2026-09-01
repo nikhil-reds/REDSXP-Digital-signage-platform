@@ -8,10 +8,10 @@ import {
   ArrowUpDown,
   ChevronLeft,
   ChevronRight,
-  Loader2,
   AlertCircle,
   RefreshCw,
 } from "lucide-react";
+import { Skeleton } from "@/components/ui";
 
 export interface Tenant {
   id: string;
@@ -118,6 +118,53 @@ function toCsv(tenants: Tenant[]) {
     .join("\n");
 }
 
+/**
+ * Mirrors the real tenant row cell-for-cell at its own p-3.5 padding: checkbox,
+ * two-line name/slug, both pills, right-aligned MRR, centred screens, the
+ * storage bar, the domain. Geometry has to match or the table jumps when data
+ * lands (plan §2).
+ */
+function TenantSkeletonRows({ rows = 6 }: { rows?: number }) {
+  return (
+    <>
+      {Array.from({ length: rows }).map((_, index) => (
+        <tr key={index}>
+          <td className="p-3.5 text-center">
+            <Skeleton className="mx-auto h-3.5 w-3.5 rounded-sm" />
+          </td>
+          <td className="p-3.5">
+            <div className="flex flex-col gap-1.5">
+              <Skeleton className="h-3.5 w-40" />
+              <Skeleton className="h-2.5 w-24" />
+            </div>
+          </td>
+          <td className="p-3.5">
+            <Skeleton className="h-4 w-16 rounded-full" />
+          </td>
+          <td className="p-3.5">
+            <Skeleton className="h-4 w-20 rounded-md" />
+          </td>
+          <td className="p-3.5">
+            <Skeleton className="ml-auto h-3.5 w-16" />
+          </td>
+          <td className="p-3.5">
+            <Skeleton className="mx-auto h-3.5 w-12" />
+          </td>
+          <td className="p-3.5">
+            <div className="flex w-24 flex-col gap-1">
+              <Skeleton className="h-2.5 w-16" />
+              <Skeleton className="h-1 w-full rounded-full" />
+            </div>
+          </td>
+          <td className="p-3.5">
+            <Skeleton className="h-3 w-28" />
+          </td>
+        </tr>
+      ))}
+    </>
+  );
+}
+
 export default function TenantsTable({
   tenants,
   pagination,
@@ -134,6 +181,9 @@ export default function TenantsTable({
   onAddTenantClick,
 }: TenantsTableProps) {
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
+
+  // Plan §2: skeleton on first load only. Filter and page changes keep the rows.
+  const isFirstLoad = isLoading && tenants.length === 0;
 
   const toggleSelectAll = () => {
     setSelectedIds(selectedIds.length === tenants.length ? [] : tenants.map((t) => t.id));
@@ -172,12 +222,16 @@ export default function TenantsTable({
       <div className="flex items-center justify-between gap-4 border-b border-app-border p-4">
         <div>
           <h2 className="text-title font-bold text-app-text">Tenant Management</h2>
-          <p className="mt-0.5 text-caption text-app-muted">
-            {summary.total} {summary.total === 1 ? "tenant" : "tenants"} · {summary.active} active ·{" "}
-            {summary.trial} on trial
-            {summary.pastDue > 0 ? ` · ${summary.pastDue} past due` : ""}
-            {summary.suspended > 0 ? ` · ${summary.suspended} suspended` : ""}
-          </p>
+          {isFirstLoad ? (
+            <Skeleton className="mt-1.5 h-3 w-64" />
+          ) : (
+            <p className="mt-0.5 text-caption text-app-muted">
+              {summary.total} {summary.total === 1 ? "tenant" : "tenants"} · {summary.active} active ·{" "}
+              {summary.trial} on trial
+              {summary.pastDue > 0 ? ` · ${summary.pastDue} past due` : ""}
+              {summary.suspended > 0 ? ` · ${summary.suspended} suspended` : ""}
+            </p>
+          )}
         </div>
         <div className="flex items-center gap-2">
           <button
@@ -267,7 +321,15 @@ export default function TenantsTable({
       )}
 
       {/* Tenants Table */}
-      <div className="flex-1 overflow-auto">
+      <div
+        className={`flex-1 overflow-auto transition-opacity duration-200 ${
+          isLoading && tenants.length > 0 ? "opacity-60" : ""
+        }`}
+        aria-busy={isLoading}
+        role={isFirstLoad ? "status" : undefined}
+        aria-live={isFirstLoad ? "polite" : undefined}
+      >
+        {isFirstLoad && <span className="sr-only">Loading tenants…</span>}
         <table className="w-full border-collapse text-left text-caption">
           <thead>
             <tr className="select-none border-b border-app-border bg-app-surface-alt font-bold text-app-muted">
@@ -293,14 +355,7 @@ export default function TenantsTable({
             </tr>
           </thead>
           <tbody className="divide-y divide-app-border">
-            {isLoading && tenants.length === 0 && (
-              <tr>
-                <td colSpan={8} className="p-10 text-center text-app-muted">
-                  <Loader2 className="mx-auto mb-2 h-4 w-4 animate-spin" />
-                  Loading tenants…
-                </td>
-              </tr>
-            )}
+            {isFirstLoad && <TenantSkeletonRows />}
 
             {!isLoading && tenants.length === 0 && !error && (
               <tr>
