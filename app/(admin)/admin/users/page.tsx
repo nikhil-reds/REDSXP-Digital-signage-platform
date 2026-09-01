@@ -23,6 +23,9 @@ import {
   FieldLabel,
   Modal,
   PageShell,
+  Skeleton,
+  SkeletonRegion,
+  SkeletonStatGrid,
   StatGrid,
   StatTile,
   TextInput,
@@ -70,6 +73,61 @@ function generatePassword() {
   crypto.getRandomValues(bytes);
   const chars = "abcdefghijkmnopqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ23456789";
   return `${Array.from(bytes, (byte) => chars[byte % chars.length]).join("")}!9aA`;
+}
+
+const TABLE_COLUMNS = ["Administrator", "Role", "Status", "Last login", "Created", "Action"];
+
+function UsersTableHead() {
+  return (
+    <thead>
+      <tr className="border-b border-app-border bg-app-surface-alt text-caption font-semibold uppercase tracking-wide text-app-muted">
+        {TABLE_COLUMNS.map((column) => (
+          <th key={column} className={`p-4 ${column === "Action" ? "text-right" : ""}`}>
+            {column}
+          </th>
+        ))}
+      </tr>
+    </thead>
+  );
+}
+
+/**
+ * Mirrors the real row cell-for-cell — avatar, two-line identity, both pills,
+ * two dates, the action button — so nothing shifts when the data lands.
+ */
+function UsersSkeletonRows({ rows = 5 }: { rows?: number }) {
+  return (
+    <>
+      {Array.from({ length: rows }).map((_, index) => (
+        <tr key={index}>
+          <td className="p-4">
+            <div className="flex items-center gap-3">
+              <Skeleton className="h-9 w-9 rounded-full" />
+              <div className="space-y-2">
+                <Skeleton className="h-3.5 w-40" />
+                <Skeleton className="h-3 w-56" />
+              </div>
+            </div>
+          </td>
+          <td className="p-4">
+            <Skeleton className="h-6 w-32 rounded-full" />
+          </td>
+          <td className="p-4">
+            <Skeleton className="h-6 w-20 rounded-full" />
+          </td>
+          <td className="p-4">
+            <Skeleton className="h-3 w-36" />
+          </td>
+          <td className="p-4">
+            <Skeleton className="h-3 w-36" />
+          </td>
+          <td className="p-4">
+            <Skeleton className="ml-auto h-7 w-28 rounded-lg" />
+          </td>
+        </tr>
+      ))}
+    </>
+  );
 }
 
 export default function UsersPage() {
@@ -136,6 +194,10 @@ export default function UsersPage() {
     }
   };
 
+  // Plan §2: a skeleton is for a first load only. On refetch (filter, search,
+  // paginate, refresh) the rows stay put and the refresh icon spins instead.
+  const isFirstLoad = isLoading && data.users.length === 0;
+
   return (
     <PageShell className="space-y-6">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
@@ -151,15 +213,19 @@ export default function UsersPage() {
         </Button>
       </div>
 
-      <StatGrid columns={3}>
-        {[
-          { label: "Total administrators", value: data.summary.total, icon: Users },
-          { label: "Active access", value: data.summary.active, icon: UserCheck },
-          { label: "Inactive access", value: data.summary.inactive, icon: UserX },
-        ].map((item) => (
-          <StatTile key={item.label} label={item.label} value={isLoading ? "—" : item.value} icon={item.icon} tone={item.label === "Active access" ? "accent" : "neutral"} />
-        ))}
-      </StatGrid>
+      {isFirstLoad ? (
+        <SkeletonStatGrid columns={3} label="Loading administrator counts…" />
+      ) : (
+        <StatGrid columns={3}>
+          {[
+            { label: "Total administrators", value: data.summary.total, icon: Users },
+            { label: "Active access", value: data.summary.active, icon: UserCheck },
+            { label: "Inactive access", value: data.summary.inactive, icon: UserX },
+          ].map((item) => (
+            <StatTile key={item.label} label={item.label} value={item.value} icon={item.icon} tone={item.label === "Active access" ? "accent" : "neutral"} />
+          ))}
+        </StatGrid>
+      )}
 
       {notice && (
         <div className="flex items-center justify-between rounded-xl border border-app-accent-border bg-app-accent-surface px-4 py-3 text-body text-app-accent-text">
@@ -190,14 +256,27 @@ export default function UsersPage() {
       <div className="overflow-hidden rounded-xl border border-app-border bg-app-surface shadow-xs">
         {error ? (
           <div className="flex min-h-72 flex-col items-center justify-center gap-3 p-8 text-center"><AlertCircle className="h-8 w-8 text-app-danger-text" /><div><p className="font-semibold text-app-text">Administrators could not be loaded</p><p className="mt-1 text-body text-app-muted">{error}</p></div><button onClick={() => { setIsLoading(true); void loadUsers(); }} className="rounded-lg bg-app-accent px-4 py-2 text-body font-semibold text-app-accent-on hover:bg-app-accent-hover">Try again</button></div>
-        ) : isLoading ? (
-          <div className="divide-y divide-zinc-100 dark:divide-zinc-800">{Array.from({ length: 5 }).map((_, index) => <div key={index} className="flex animate-pulse items-center gap-4 p-4"><div className="h-9 w-9 rounded-full bg-zinc-100 dark:bg-zinc-800" /><div className="flex-1 space-y-2"><div className="h-3 w-40 rounded bg-zinc-100 dark:bg-zinc-800" /><div className="h-3 w-56 rounded bg-zinc-100 dark:bg-zinc-800" /></div></div>)}</div>
+        ) : isFirstLoad ? (
+          <SkeletonRegion label="Loading administrators…">
+            <div className="overflow-x-auto">
+              <table className="w-full min-w-[850px] text-left text-sm">
+                <UsersTableHead />
+                <tbody className="divide-y divide-app-border">
+                  <UsersSkeletonRows />
+                </tbody>
+              </table>
+            </div>
+          </SkeletonRegion>
         ) : data.users.length === 0 ? (
           <div className="flex min-h-72 flex-col items-center justify-center p-8 text-center"><div className="mb-4 rounded-full bg-zinc-100 p-4 dark:bg-zinc-800"><Users className="h-7 w-7 text-zinc-500" /></div><p className="font-semibold text-zinc-900 dark:text-zinc-100">{search || status !== "ALL" ? "No administrators match these filters" : "No administrators yet"}</p><p className="mt-1 max-w-sm text-sm text-zinc-500">{search || status !== "ALL" ? "Try a different search or status." : "Add the first administrator to grant secure platform access."}</p></div>
         ) : (
-          <div className="overflow-x-auto">
+          // Tier 3: rows stay on screen during a refetch, dimmed rather than replaced.
+          <div
+            aria-busy={isLoading}
+            className={`overflow-x-auto transition-opacity duration-200 ${isLoading ? "opacity-60" : ""}`}
+          >
             <table className="w-full min-w-[850px] text-left text-sm">
-              <thead><tr className="border-b border-app-border bg-app-surface-alt text-caption font-semibold uppercase tracking-wide text-app-muted"><th className="p-4">Administrator</th><th className="p-4">Role</th><th className="p-4">Status</th><th className="p-4">Last login</th><th className="p-4">Created</th><th className="p-4 text-right">Action</th></tr></thead>
+              <UsersTableHead />
               <tbody className="divide-y divide-app-border">
                 {data.users.map((user) => (
                   <tr key={user.id} className="transition-colors hover:bg-app-surface-alt">
