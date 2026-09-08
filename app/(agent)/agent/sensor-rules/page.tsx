@@ -1,10 +1,11 @@
 "use client";
 
 import React, { useState } from "react";
-import { Search, Plus, Filter, Zap, Activity, ShieldCheck, ChevronDown } from "lucide-react";
+import { Plus, Filter, Zap, Activity, ShieldCheck } from "lucide-react";
 import RulesList, { AutomationRule } from "@/components/agent/sensor-rules/rules-list";
 import RuleFormModal from "@/components/agent/sensor-rules/rule-form-modal";
 import RuleLogsTrends from "@/components/agent/sensor-rules/rule-logs-trends";
+import { Button, PageShell, SearchInput, Select, StatGrid, StatTile, Toolbar } from "@/components/ui";
 
 const initialRules: AutomationRule[] = [
   {
@@ -97,91 +98,62 @@ export default function AgentSensorRulesPage() {
   };
 
   return (
-    <div className="py-6 px-8 space-y-6 mx-auto font-sans">
+    <PageShell>
       
       {/* Header Section */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b border-[#E2E6EC] dark:border-[#283243] pb-5 shrink-0">
-        <div className="flex flex-col gap-0.5">
-          <h1 className="text-xl font-bold text-zinc-900 dark:text-zinc-55 tracking-tight flex items-center gap-2">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b border-app-border pb-5 shrink-0">
+        <div>
+          <h1 className="font-heading text-h5 font-semibold tracking-headline text-app-text">
             Local Automation & Sensor Rules
           </h1>
-          <p className="text-xs text-[#657080] dark:text-[#9AA7B7]">
+          <p className="text-body text-app-muted mt-1">
             Build edge triggers (motion, camera, lux, temp) to override scheduled menus dynamically.
           </p>
         </div>
 
-        <button
+        <Button variant="primary" size="sm" icon={Plus}
           onClick={() => {
             setEditingRule(null);
             setShowFormModal(true);
           }}
-          className="flex items-center gap-1.5 bg-[#2859D9] dark:bg-[#6F96FF] text-white dark:text-[#111722] px-3.5 py-1.5 rounded-lg text-xs font-bold hover:opacity-90 transition-opacity shadow-sm cursor-pointer self-start sm:self-auto"
+          className="self-start sm:self-auto"
         >
-          <Plus className="w-3.5 h-3.5" />
-          <span>Add Sensor Rule</span>
-        </button>
+          Add Sensor Rule
+        </Button>
       </div>
 
       {/* Stats counter panel */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <div className="p-4 bg-white dark:bg-[#111722] border border-[#E2E6EC] dark:border-[#283243] rounded-xl flex items-center justify-between">
-          <div>
-            <span className="text-[10px] uppercase font-bold text-zinc-400">Total Rules</span>
-            <span className="block text-lg font-bold text-zinc-900 dark:text-white mt-1">{rules.length} rules</span>
-          </div>
-          <Zap className="w-5 h-5 text-zinc-400" />
-        </div>
-        <div className="p-4 bg-white dark:bg-[#111722] border border-[#E2E6EC] dark:border-[#283243] rounded-xl flex items-center justify-between">
-          <div>
-            <span className="text-[10px] uppercase font-bold text-zinc-400">Active Rules</span>
-            <span className="block text-lg font-bold text-emerald-600 dark:text-emerald-500 mt-1">
-              {rules.filter((r) => r.active).length} deployed
-            </span>
-          </div>
-          <ShieldCheck className="w-5 h-5 text-emerald-500" />
-        </div>
-        <div className="p-4 bg-white dark:bg-[#111722] border border-[#E2E6EC] dark:border-[#283243] rounded-xl flex items-center justify-between">
-          <div>
-            <span className="text-[10px] uppercase font-bold text-zinc-400">Total Triggers Today</span>
-            <span className="block text-lg font-bold text-zinc-900 dark:text-white mt-1">
-              {rules.reduce((acc, curr) => acc + curr.triggersCount, 0)} triggers
-            </span>
-          </div>
-          <Activity className="w-5 h-5 text-amber-500" />
-        </div>
-      </div>
+      <StatGrid columns={3}>
+        <StatTile label="Total Rules" value={`${rules.length}`} icon={Zap} />
+        <StatTile label="Active Rules" value={`${rules.filter((r) => r.active).length}`} icon={ShieldCheck} />
+        <StatTile label="Triggers Today" value={`${rules.reduce((acc, curr) => acc + curr.triggersCount, 0)}`} icon={Activity} />
+      </StatGrid>
 
       {/* Query Filters */}
-      <div className="p-4 bg-white dark:bg-[#111722] border border-[#E2E6EC] dark:border-[#283243] rounded-xl grid grid-cols-1 sm:grid-cols-2 gap-3">
+      <Toolbar className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         {/* Search */}
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-zinc-400" />
-          <input
-            type="text"
+          <SearchInput
             placeholder="Search rules, targets..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="w-full pl-9 pr-3 py-1.5 bg-[#F6F7F9] dark:bg-[#171F2C]/50 border border-[#E2E6EC] dark:border-[#283243] rounded-lg text-xs text-[#18202B] dark:text-[#F2F5F8] placeholder-zinc-450 focus:outline-none"
           />
-        </div>
 
         {/* Sensor selector */}
         <div className="relative">
-          <select
+          <Select
+            icon={Filter}
             value={sensorFilter}
             onChange={(e) => setSensorFilter(e.target.value)}
-            className="w-full pl-8 pr-8 py-1.5 border border-[#E2E6EC] dark:border-[#283243] rounded-lg bg-[#F6F7F9] dark:bg-[#171F2C]/50 text-xs text-zinc-700 dark:text-zinc-300 font-bold focus:outline-none appearance-none cursor-pointer"
+            className="w-full"
           >
             <option value="All">All Sensor Types</option>
             <option value="Motion">Motion Sensors</option>
             <option value="Light">Light Lux Sensors</option>
             <option value="Temperature">Temperature Probes</option>
             <option value="Camera">Camera Analytics</option>
-          </select>
-          <Filter className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-zinc-400" />
-          <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-zinc-400 pointer-events-none" />
+          </Select>
         </div>
-      </div>
+      </Toolbar>
 
       {/* Rules list table */}
       <div className="flex-1">
@@ -207,6 +179,6 @@ export default function AgentSensorRulesPage() {
         />
       )}
 
-    </div>
+    </PageShell>
   );
 }

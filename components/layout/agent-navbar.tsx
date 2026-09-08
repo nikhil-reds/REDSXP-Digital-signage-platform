@@ -5,8 +5,8 @@ import { usePathname } from "next/navigation";
 import { useTheme } from "@/components/providers/theme-provider";
 import {
   Search,
+  Menu,
   Calendar,
-  ChevronDown,
   Bell,
   Sun,
   Moon,
@@ -20,9 +20,7 @@ import {
   LineChart,
   FileText,
   History,
-  LifeBuoy,
-  Wifi,
-  Sparkles
+  LifeBuoy
 } from "lucide-react";
 
 const routeMetadata: Record<
@@ -43,7 +41,15 @@ const routeMetadata: Record<
   "/agent/support": { title: "Help & Support", icon: LifeBuoy },
 };
 
-export default function AgentNavbar() {
+interface AgentNavbarProps {
+  isMenuOpen?: boolean;
+  onMenuClick?: () => void;
+}
+
+export default function AgentNavbar({
+  isMenuOpen = false,
+  onMenuClick,
+}: AgentNavbarProps) {
   const pathname = usePathname();
   const { theme, setTheme } = useTheme();
 
@@ -54,84 +60,92 @@ export default function AgentNavbar() {
 
   const Icon = activeMetadata.icon;
 
+  const themeButtonClass = (isActive: boolean) =>
+    `p-1.5 rounded-md transition-all duration-200 cursor-pointer ${
+      isActive
+        ? "bg-app-surface shadow-xs text-app-text"
+        : "text-app-muted hover:text-app-text"
+    }`;
+
   return (
-    <header className="h-16 border-b border-[#E2E6EC] dark:border-[#283243] bg-white dark:bg-[#111722] flex items-center justify-between px-6 shrink-0 font-sans">
+    <header className="flex h-16 shrink-0 items-center justify-between border-b border-app-border bg-app-surface px-4 font-sans sm:px-6">
       {/* Left side: Page Title & Search */}
-      <div className="flex items-center gap-6 flex-1 max-w-2xl">
-        <div className="flex items-center gap-2.5 text-[#18202B] dark:text-[#F2F5F8] shrink-0">
-          <Icon className="w-4.5 h-4.5 text-[#657080] dark:text-[#9AA7B7]" />
-          <span className="font-semibold text-sm tracking-tight">{activeMetadata.title}</span>
+      <div className="flex min-w-0 max-w-2xl flex-1 items-center gap-3 sm:gap-6">
+        <button
+          type="button"
+          onClick={onMenuClick}
+          aria-label="Open navigation"
+          aria-haspopup="true"
+          aria-expanded={isMenuOpen}
+          className="inline-flex rounded-lg border border-app-border p-2 text-app-muted transition-colors hover:bg-app-surface-alt hover:text-app-text focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-app-accent-text md:hidden"
+        >
+          <Menu className="h-4 w-4" />
+        </button>
+        <div className="flex items-center gap-2.5 text-app-text shrink-0">
+          <Icon className="hidden h-4.5 w-4.5 text-app-muted sm:block" />
+          {/* Sora is drawn tight — headlines take positive tracking, never tight */}
+          <h1 className="font-heading font-semibold text-h6 tracking-headline truncate">
+            {activeMetadata.title}
+          </h1>
         </div>
 
         {/* Search Bar */}
         <div className="relative w-full max-w-md hidden sm:block">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#657080] dark:text-[#9AA7B7]" />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-app-muted" />
           <input
             type="text"
-            placeholder="Search screens, groups, playlists, media, alerts..."
-            className="w-full pl-9 pr-4 py-1.5 bg-[#F6F7F9] dark:bg-[#171F2C]/50 border border-[#E2E6EC] dark:border-[#283243] rounded-lg text-xs text-[#18202B] dark:text-[#F2F5F8] placeholder-[#657080]/70 dark:placeholder-[#9AA7B7]/50 focus:outline-none focus:ring-1 focus:ring-[#2859D9] dark:focus:ring-[#6F96FF] transition-all duration-200"
+            placeholder="Search screens, groups, playlists, media, alerts…"
+            className="w-full pl-9 pr-4 py-1.5 bg-app-surface-alt border border-app-border rounded-lg text-body text-app-text placeholder-app-muted focus:outline-none focus:ring-2 focus:ring-app-accent-text transition-all duration-200"
           />
         </div>
       </div>
 
       {/* Right side: Actions & Status */}
-      <div className="flex items-center gap-4">
-        {/* Live connection status */}
-        <div className="hidden lg:flex items-center gap-1.5 px-2.5 py-1 border border-[#E2E6EC] dark:border-[#283243] bg-[#F6F7F9] dark:bg-[#171F2C] rounded-md text-[10px] font-semibold text-[#657080] dark:text-[#9AA7B7]">
+      <div className="flex items-center gap-2 sm:gap-4">
+        {/* Live connection status — brand green, this is product state not an alert */}
+        <div className="hidden lg:flex items-center gap-1.5 px-2.5 py-1 border border-app-border bg-app-surface-alt rounded-md text-caption font-semibold text-app-muted">
           <span className="relative flex h-2 w-2">
-            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-            <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-app-accent-text opacity-75" />
+            <span className="relative inline-flex rounded-full h-2 w-2 bg-app-accent-text" />
           </span>
           <span>Live Context</span>
         </div>
 
         {/* Notification Bell */}
-        <button className="relative p-2 border border-[#E2E6EC] dark:border-[#283243] rounded-lg hover:bg-[#F6F7F9] dark:hover:bg-[#171F2C] text-[#657080] dark:text-[#9AA7B7] transition-colors shadow-xs cursor-pointer">
+        <button className="relative p-2 border border-app-border rounded-lg hover:bg-app-surface-alt text-app-muted hover:text-app-text transition-colors shadow-xs cursor-pointer">
           <Bell className="w-4 h-4" />
-          <span className="absolute -top-1 -right-1 bg-[#FF2244] text-[9px] font-bold text-white rounded-full w-4 h-4 flex items-center justify-center border-2 border-white dark:border-[#111722]">
+          <span className="absolute -top-2 -right-2 bg-app-danger text-app-danger-on text-caption font-semibold rounded-full min-w-5 h-5 px-1 flex items-center justify-center border-2 border-app-surface leading-none">
             6
           </span>
         </button>
 
         {/* Theme Toggles */}
-        <div className="flex items-center gap-0.5 p-0.5 border border-[#E2E6EC] dark:border-[#283243] rounded-lg bg-[#F6F7F9] dark:bg-[#171F2C]/50 shadow-xs">
+        <div className="flex items-center gap-0.5 p-0.5 border border-app-border rounded-lg bg-app-surface-alt shadow-xs">
           <button
             onClick={() => setTheme("light")}
             title="Light Mode"
-            className={`p-1.5 rounded-md transition-all duration-200 cursor-pointer ${
-              theme === "light"
-                ? "bg-white dark:bg-zinc-800 shadow-xs text-zinc-900 dark:text-zinc-50"
-                : "text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300"
-            }`}
+            className={themeButtonClass(theme === "light")}
           >
             <Sun className="w-3.5 h-3.5" />
           </button>
           <button
             onClick={() => setTheme("dark")}
             title="Dark Mode"
-            className={`p-1.5 rounded-md transition-all duration-200 cursor-pointer ${
-              theme === "dark"
-                ? "bg-white dark:bg-zinc-800 shadow-xs text-zinc-900 dark:text-zinc-50"
-                : "text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300"
-            }`}
+            className={themeButtonClass(theme === "dark")}
           >
             <Moon className="w-3.5 h-3.5" />
           </button>
           <button
             onClick={() => setTheme("system")}
             title="System Mode"
-            className={`p-1.5 rounded-md transition-all duration-200 cursor-pointer ${
-              theme === "system"
-                ? "bg-white dark:bg-zinc-800 shadow-xs text-zinc-900 dark:text-zinc-50"
-                : "text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300"
-            }`}
+            className={themeButtonClass(theme === "system")}
           >
             <Monitor className="w-3.5 h-3.5" />
           </button>
         </div>
 
         {/* Region context select indicator */}
-        <div className="text-[11px] text-[#657080] dark:text-[#9AA7B7] font-semibold border-l border-[#E2E6EC] dark:border-[#283243] pl-4 hidden md:flex items-center gap-1">
+        <div className="text-caption text-app-muted font-semibold border-l border-app-border pl-4 hidden md:flex items-center gap-1">
           <span>Bengaluru Region</span>
         </div>
       </div>

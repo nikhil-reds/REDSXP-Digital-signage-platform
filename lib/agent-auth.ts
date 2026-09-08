@@ -1,25 +1,6 @@
-import { NextRequest } from "next/server";
-import { apiError } from "@/lib/api";
-import { hashToken, SESSION_COOKIE } from "@/lib/auth";
-import { prisma } from "@/lib/prisma";
-
-export async function requireAgent(request: NextRequest) {
-  const token = request.cookies.get(SESSION_COOKIE)?.value;
-  if (!token) return { response: apiError("Authentication required.", 401) };
-
-  const session = await prisma.session.findUnique({
-    where: { tokenHash: hashToken(token) },
-    select: {
-      expiresAt: true,
-      user: {
-        select: { id: true, tenantId: true, status: true, role: { select: { name: true } } },
-      },
-    },
-  });
-
-  if (!session || session.expiresAt <= new Date() || session.user.status !== "ACTIVE") {
-    return { response: apiError("Session expired.", 401) };
-  }
-
-  return { agent: session.user };
-}
+/**
+ * Re-export shim. See lib/session.ts — requireAgent is now the no-permission
+ * case of the same session lookup, and returns the full user rather than the
+ * three columns this file used to select.
+ */
+export { requireAgent } from "@/lib/session";

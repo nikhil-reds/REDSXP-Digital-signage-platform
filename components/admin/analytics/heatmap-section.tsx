@@ -18,25 +18,25 @@ const heatmapData: Record<string, number[]> = {
 
 // Shading class mapping
 const intensityColors = [
-  "bg-zinc-100 dark:bg-zinc-800/40",                 // Low (0)
-  "bg-blue-100 dark:bg-blue-950/20 text-blue-900",    // 1
-  "bg-blue-300 dark:bg-blue-900/40 text-blue-900",    // 2
-  "bg-blue-500 dark:bg-blue-700/60 text-white",       // 3
-  "bg-blue-600 dark:bg-blue-600 text-white"           // High (4)
+  "bg-app-surface-alt",
+  "bg-app-accent-surface",
+  "bg-app-accent-border",
+  "bg-app-accent",
+  "bg-app-accent-hover"
 ];
 
 export default function HourlyEngagementHeatmap() {
   return (
-    <div className="bg-white dark:bg-zinc-900 border border-zinc-200/80 dark:border-zinc-800/80 p-5 rounded-xl shadow-xs flex flex-col justify-between">
+    <div className="flex flex-col justify-between rounded-xl border border-app-border bg-app-surface p-5 shadow-xs">
       <div>
-        <h2 className="text-sm font-bold text-zinc-900 dark:text-zinc-50">Hourly Engagement Heatmap</h2>
-        <p className="text-xs text-zinc-400 mt-0.5">Screen activity intensity by hour across days of the week</p>
+        <h2 className="text-body font-bold text-app-text">Hourly Engagement Heatmap</h2>
+        <p className="mt-0.5 text-caption text-app-muted">Screen activity intensity by hour across days of the week</p>
       </div>
 
       <div className="mt-6 overflow-x-auto">
         <div className="min-w-[480px]">
           {/* Hour Headers */}
-          <div className="grid gap-1.5 mb-1.5 text-[10px] text-zinc-400 font-semibold text-center select-none" style={{ gridTemplateColumns: "repeat(13, minmax(0, 1fr))" }}>
+          <div className="mb-1.5 grid select-none gap-1.5 text-center text-[10px] font-semibold text-app-muted" style={{ gridTemplateColumns: "repeat(13, minmax(0, 1fr))" }}>
             <div className="text-left font-bold text-transparent">Day</div>
             {hours.map((hr) => (
               <div key={hr} className="w-6 mx-auto">
@@ -51,7 +51,7 @@ export default function HourlyEngagementHeatmap() {
               const rowValues = heatmapData[day] || Array(12).fill(0);
               return (
                 <div key={day} className="grid gap-1.5 items-center" style={{ gridTemplateColumns: "repeat(13, minmax(0, 1fr))" }}>
-                  <div className="text-[10px] text-zinc-455 dark:text-zinc-400 font-bold select-none w-10">
+                  <div className="w-10 select-none text-[10px] font-bold text-app-muted">
                     {day}
                   </div>
                   {rowValues.map((val, idx) => (
@@ -69,7 +69,7 @@ export default function HourlyEngagementHeatmap() {
       </div>
 
       {/* Heatmap Legend */}
-      <div className="flex items-center gap-1.5 text-[9px] font-semibold text-zinc-450 dark:text-zinc-500 mt-5 select-none">
+      <div className="mt-5 flex select-none items-center gap-1.5 text-[9px] font-semibold text-app-muted">
         <span>Low</span>
         <div className="flex items-center gap-1">
           {intensityColors.map((colorClass, idx) => (

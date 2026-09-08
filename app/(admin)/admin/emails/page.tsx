@@ -4,6 +4,7 @@ import React, { useState } from "react";
 import { Plus } from "lucide-react";
 import TemplatesList from "@/components/admin/emails/templates-list";
 import TemplatePreview from "@/components/admin/emails/template-preview";
+import { Button } from "@/components/ui";
 
 interface TemplateDetails {
   id: string;
@@ -152,15 +153,15 @@ export default function EmailTemplatesPage() {
   };
 
   return (
-    <div className="flex h-[calc(100vh-4rem)] overflow-hidden bg-zinc-50 dark:bg-zinc-950 font-sans">
+    <div className="flex h-[calc(100vh-4rem)] overflow-hidden bg-app-canvas font-sans text-app-text">
       {/* Left side templates catalogue */}
       <div className="w-80 flex flex-col p-6 overflow-hidden shrink-0 pr-3">
         {/* Header */}
         <div className="flex flex-col gap-0.5 mb-5 select-none shrink-0">
-          <h1 className="text-xl font-bold text-zinc-900 dark:text-zinc-50 tracking-tight">
+          <h1 className="text-page-title font-bold tracking-tight text-app-text">
             Email Templates
           </h1>
-          <p className="text-xs text-zinc-550 dark:text-zinc-400">
+          <p className="text-caption text-app-muted">
             Manage transactional and marketing email templates sent via AWS SES
           </p>
         </div>
@@ -179,18 +180,18 @@ export default function EmailTemplatesPage() {
       <div className="flex-1 flex flex-col p-6 overflow-hidden pl-3">
         {/* New Template button row */}
         <div className="flex justify-end mb-5 select-none shrink-0">
-          <button
+          <Button
             onClick={handleAddNewTemplate}
-            className="flex items-center gap-1.5 bg-zinc-950 text-white dark:bg-zinc-50 dark:text-zinc-955 px-3.5 py-1.5 rounded-lg text-xs font-semibold hover:opacity-90 transition-opacity shadow-sm cursor-pointer"
           >
             <Plus className="w-3.5 h-3.5" />
             <span>New Template</span>
-          </button>
+          </Button>
         </div>
 
         {/* Live editor component */}
         <div className="flex-1 flex overflow-hidden min-h-0">
           <TemplatePreview
+            key={activeTemplate.id}
             template={activeTemplate}
             onSave={handleSaveTemplate}
           />

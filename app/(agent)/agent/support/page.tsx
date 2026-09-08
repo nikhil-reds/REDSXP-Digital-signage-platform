@@ -1,10 +1,11 @@
 "use client";
 
 import React, { useState } from "react";
-import { Plus, Search, Filter, MessageSquare, ShieldCheck, ChevronDown } from "lucide-react";
+import { Filter, Plus } from "lucide-react";
 import TicketsList, { SupportTicket } from "@/components/agent/support/tickets-list";
 import TicketCreateModal from "@/components/agent/support/ticket-create-modal";
 import ChatWidget from "@/components/agent/support/chat-widget";
+import { Button, PageShell, SearchInput, Select, Toolbar } from "@/components/ui";
 
 const initialTickets: SupportTicket[] = [
   {
@@ -73,94 +74,66 @@ export default function AgentSupportPage() {
   };
 
   return (
-    <div className="py-6 px-8 h-full flex flex-col min-h-0 overflow-hidden font-sans">
+    <PageShell className="h-full flex flex-col min-h-0 overflow-hidden">
       
       {/* Header Section */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b border-[#E2E6EC] dark:border-[#283243] pb-5 shrink-0">
-        <div className="flex flex-col gap-0.5">
-          <h1 className="text-xl font-bold text-zinc-900 dark:text-zinc-55 tracking-tight flex items-center gap-2">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b border-app-border pb-5 shrink-0">
+        <div>
+          <h1 className="font-heading text-h5 font-semibold tracking-headline text-app-text">
             Support Helpdesk & Live Chat
           </h1>
-          <p className="text-xs text-[#657080] dark:text-[#9AA7B7]">
+          <p className="text-body text-app-muted mt-1">
             File hardware maintenance requests, report connectivity drops, and chat directly with operations specialists.
           </p>
         </div>
 
-        <button
+        <Button variant="primary" size="sm" icon={Plus}
           onClick={() => setShowCreateModal(true)}
-          className="flex items-center gap-1.5 bg-[#2859D9] dark:bg-[#6F96FF] text-white dark:text-[#111722] px-3.5 py-1.5 rounded-lg text-xs font-bold hover:opacity-90 transition-opacity shadow-sm cursor-pointer self-start sm:self-auto"
+          className="self-start sm:self-auto"
         >
-          <Plus className="w-3.5 h-3.5" />
-          <span>New Support Ticket</span>
-        </button>
+          New support ticket
+        </Button>
       </div>
 
       {/* Query Filters */}
-      <div className="p-4 bg-white dark:bg-[#111722] border border-[#E2E6EC] dark:border-[#283243] rounded-xl grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 my-6 shrink-0">
-        {/* Search */}
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-zinc-400" />
-          <input
-            type="text"
-            placeholder="Search tickets, IDs..."
+      <Toolbar className="my-6 grid shrink-0 grid-cols-1 gap-3 rounded-xl border border-app-border bg-app-surface p-4 sm:grid-cols-2 lg:grid-cols-4">
+          <SearchInput
+            placeholder="Search tickets or IDs…"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="w-full pl-9 pr-3 py-1.5 bg-[#F6F7F9] dark:bg-[#171F2C]/50 border border-[#E2E6EC] dark:border-[#283243] rounded-lg text-xs text-[#18202B] dark:text-[#F2F5F8] placeholder-zinc-450 focus:outline-none"
           />
-        </div>
-
-        {/* Status Filter */}
-        <div className="relative">
-          <select
+          <Select icon={Filter}
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value)}
-            className="w-full pl-8 pr-8 py-1.5 border border-[#E2E6EC] dark:border-[#283243] rounded-lg bg-[#F6F7F9] dark:bg-[#171F2C]/50 text-xs text-zinc-705 dark:text-zinc-300 font-bold focus:outline-none appearance-none cursor-pointer"
           >
             <option value="All">All Ticket States</option>
             <option value="Open">Open</option>
             <option value="In Progress">In Progress</option>
             <option value="Resolved">Resolved</option>
-          </select>
-          <Filter className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-zinc-400" />
-          <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-zinc-400 pointer-events-none" />
-        </div>
-
-        {/* Priority Filter */}
-        <div className="relative">
-          <select
+          </Select>
+          <Select icon={Filter}
             value={priorityFilter}
             onChange={(e) => setPriorityFilter(e.target.value)}
-            className="w-full pl-8 pr-8 py-1.5 border border-[#E2E6EC] dark:border-[#283243] rounded-lg bg-[#F6F7F9] dark:bg-[#171F2C]/50 text-xs text-zinc-705 dark:text-zinc-300 font-bold focus:outline-none appearance-none cursor-pointer"
           >
             <option value="All">All Priorities</option>
             <option value="High">High</option>
             <option value="Medium">Medium</option>
             <option value="Low">Low</option>
-          </select>
-          <Filter className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-zinc-400" />
-          <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-zinc-400 pointer-events-none" />
-        </div>
-
-        {/* Category Filter */}
-        <div className="relative">
-          <select
+          </Select>
+          <Select icon={Filter}
             value={categoryFilter}
             onChange={(e) => setCategoryFilter(e.target.value)}
-            className="w-full pl-8 pr-8 py-1.5 border border-[#E2E6EC] dark:border-[#283243] rounded-lg bg-[#F6F7F9] dark:bg-[#171F2C]/50 text-xs text-zinc-705 dark:text-zinc-300 font-bold focus:outline-none appearance-none cursor-pointer"
           >
             <option value="All">All Categories</option>
             <option value="Hardware">Hardware</option>
             <option value="Network">Network</option>
             <option value="Content">Content</option>
             <option value="General">General</option>
-          </select>
-          <Filter className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-zinc-400" />
-          <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-zinc-400 pointer-events-none" />
-        </div>
-      </div>
+          </Select>
+      </Toolbar>
 
       {/* Main split dashboard panel */}
-      <div className="flex-1 flex gap-6 min-h-0">
+      <div className="flex min-h-0 flex-1 flex-col gap-6 lg:flex-row">
         
         {/* Left Side: Ticket list queue */}
         <TicketsList
@@ -172,7 +145,7 @@ export default function AgentSupportPage() {
 
         {/* Right Side: Live chat widget mockup */}
         <div className="shrink-0">
-          <ChatWidget ticket={selectedTicket} />
+          <ChatWidget key={selectedTicket?.id ?? "no-ticket"} ticket={selectedTicket} />
         </div>
 
       </div>
@@ -185,6 +158,6 @@ export default function AgentSupportPage() {
         />
       )}
 
-    </div>
+    </PageShell>
   );
 }

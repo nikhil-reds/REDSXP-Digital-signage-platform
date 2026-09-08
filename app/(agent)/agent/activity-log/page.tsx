@@ -1,8 +1,9 @@
 "use client";
 
 import React, { useState } from "react";
-import { Search, Download, Trash, Filter, ClipboardList, ChevronDown } from "lucide-react";
+import { Download, Filter, Trash } from "lucide-react";
 import ActivityFeed, { LogEntry } from "@/components/agent/activity-log/activity-feed";
+import { Button, PageShell, SearchInput, Select, Toolbar } from "@/components/ui";
 
 const initialLogs: LogEntry[] = [
   {
@@ -157,92 +158,68 @@ export default function AgentActivityLogPage() {
   };
 
   return (
-    <div className="py-6 px-8 h-full flex flex-col min-h-0 overflow-hidden font-sans">
+    <PageShell className="h-full flex flex-col min-h-0 overflow-hidden">
       
       {/* Header Section */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b border-[#E2E6EC] dark:border-[#283243] pb-5 shrink-0">
-        <div className="flex flex-col gap-0.5">
-          <h1 className="text-xl font-bold text-zinc-900 dark:text-zinc-55 tracking-tight flex items-center gap-2">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b border-app-border pb-5 shrink-0">
+        <div>
+          <h1 className="font-heading text-h5 font-semibold tracking-headline text-app-text">
             Operations Audit Log Feed
           </h1>
-          <p className="text-xs text-[#657080] dark:text-[#9AA7B7]">
+          <p className="text-body text-app-muted mt-1">
             Chronological audit log tracking uploader uploads, playlist updates, reboot triggers, and edge sensor analytics.
           </p>
         </div>
 
         <div className="flex items-center gap-2.5 self-start sm:self-auto">
-          <button
+          <Button size="sm" icon={Download}
             onClick={handleExportCSV}
-            className="flex items-center gap-1.5 px-3 py-1.5 border border-[#E2E6EC] dark:border-[#283243] bg-white dark:bg-[#111722] hover:bg-[#F6F7F9] dark:hover:bg-zinc-800 rounded-lg text-xs font-bold text-zinc-650 dark:text-zinc-300 transition-colors shadow-2xs cursor-pointer animate-pulse"
           >
-            <Download className="w-3.5 h-3.5" />
-            <span>Export CSV Log</span>
-          </button>
+            Export CSV log
+          </Button>
           
-          <button
+          <Button size="sm" variant="danger" icon={Trash}
             onClick={handleClearLogs}
-            className="flex items-center gap-1.5 px-3 py-1.5 bg-red-50 hover:bg-red-100 text-red-650 text-xs font-bold rounded-lg transition-colors cursor-pointer"
           >
-            <Trash className="w-3.5 h-3.5" />
-            <span>Clear Logs Archive</span>
-          </button>
+            Clear log archive
+          </Button>
         </div>
       </div>
 
       {/* Query Filters */}
-      <div className="p-4 bg-white dark:bg-[#111722] border border-[#E2E6EC] dark:border-[#283243] rounded-xl grid grid-cols-1 sm:grid-cols-3 gap-3 my-6 shrink-0">
-        {/* Search */}
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-zinc-400" />
-          <input
-            type="text"
-            placeholder="Search events, targets..."
+      <Toolbar className="my-6 grid shrink-0 grid-cols-1 gap-3 rounded-xl border border-app-border bg-app-surface p-4 sm:grid-cols-3">
+          <SearchInput
+            placeholder="Search events or targets…"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="w-full pl-9 pr-3 py-1.5 bg-[#F6F7F9] dark:bg-[#171F2C]/50 border border-[#E2E6EC] dark:border-[#283243] rounded-lg text-xs text-[#18202B] dark:text-[#F2F5F8] placeholder-zinc-450 focus:outline-none"
           />
-        </div>
-
-        {/* User filter */}
-        <div className="relative">
-          <select
+          <Select icon={Filter}
             value={userFilter}
             onChange={(e) => setUserFilter(e.target.value)}
-            className="w-full pl-8 pr-8 py-1.5 border border-[#E2E6EC] dark:border-[#283243] rounded-lg bg-[#F6F7F9] dark:bg-[#171F2C]/50 text-xs text-zinc-705 dark:text-zinc-300 font-bold focus:outline-none appearance-none cursor-pointer"
           >
             <option value="All">All Operators</option>
             <option value="Aarav">Aarav Mehta</option>
             <option value="Sneha">Sneha Iyer</option>
             <option value="Rohan">Rohan Das</option>
             <option value="System">System Engine</option>
-          </select>
-          <Filter className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-zinc-400" />
-          <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-zinc-400 pointer-events-none" />
-        </div>
-
-        {/* Event types filter */}
-        <div className="relative">
-          <select
+          </Select>
+          <Select icon={Filter}
             value={typeFilter}
             onChange={(e) => setTypeFilter(e.target.value)}
-            className="w-full pl-8 pr-8 py-1.5 border border-[#E2E6EC] dark:border-[#283243] rounded-lg bg-[#F6F7F9] dark:bg-[#171F2C]/50 text-xs text-zinc-705 dark:text-zinc-300 font-bold focus:outline-none appearance-none cursor-pointer"
           >
             <option value="All">All Action Categories</option>
             <option value="Upload">Asset Uploads</option>
             <option value="Publish">Playlist Releases</option>
             <option value="Reboot">Device Reboots</option>
             <option value="Sensor">Sensor Triggers</option>
-          </select>
-          <Filter className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-zinc-400" />
-          <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-zinc-400 pointer-events-none" />
-        </div>
-      </div>
+          </Select>
+      </Toolbar>
 
       {/* Timeline logs feed */}
       <div className="flex-1 overflow-y-auto min-h-0">
         <ActivityFeed logs={filteredLogs} />
       </div>
 
-    </div>
+    </PageShell>
   );
 }

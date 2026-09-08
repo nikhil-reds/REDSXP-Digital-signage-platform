@@ -1,14 +1,14 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React from "react";
 import { PieChart, Pie, Cell, AreaChart, Area, XAxis, YAxis, ResponsiveContainer, Tooltip } from "recharts";
 
 // Donut Chart Data
 const planData = [
-  { name: "Starter", value: 12, color: "#f59e0b", label: "Starter 12%" },
-  { name: "Growth", value: 28, color: "#14b8a6", label: "Growth 28%" },
-  { name: "Business", value: 38, color: "#2563eb", label: "Business 38%" },
-  { name: "Enterprise", value: 22, color: "#0f172a", label: "Enterprise 22%" }
+  { name: "Starter", value: 12, color: "var(--app-warning)", label: "Starter 12%" },
+  { name: "Growth", value: 28, color: "var(--chart-1)", label: "Growth 28%" },
+  { name: "Business", value: 38, color: "var(--chart-2)", label: "Business 38%" },
+  { name: "Enterprise", value: 22, color: "var(--app-text)", label: "Enterprise 22%" }
 ];
 
 // Stacked Area Data
@@ -28,22 +28,6 @@ const topTenants = [
 ];
 
 export default function AnalyticsDistributionSection() {
-  const [mounted, setMounted] = useState(false);
-
-  useEffect(() => {
-    setMounted(true);
-  }, []);
-
-  if (!mounted) {
-    return (
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div className="bg-white dark:bg-zinc-900 border border-zinc-200/80 dark:border-zinc-800/80 p-5 rounded-xl h-80 animate-pulse" />
-        <div className="bg-white dark:bg-zinc-900 border border-zinc-200/80 dark:border-zinc-800/80 p-5 rounded-xl h-80 animate-pulse" />
-        <div className="bg-white dark:bg-zinc-900 border border-zinc-200/80 dark:border-zinc-800/80 p-5 rounded-xl h-80 animate-pulse" />
-      </div>
-    );
-  }
-
   const formatCurrency = (value: number) => {
     if (value >= 1000000) {
       return `${(value / 1000000).toFixed(1)}M`;
@@ -57,10 +41,10 @@ export default function AnalyticsDistributionSection() {
   return (
     <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
       {/* 1. Sessions by Plan Donut */}
-      <div className="bg-white dark:bg-zinc-900 border border-zinc-200/80 dark:border-zinc-800/80 p-5 rounded-lg shadow-xs flex flex-col justify-between">
+      <div className="flex flex-col justify-between rounded-xl border border-app-border bg-app-surface p-5 shadow-xs">
         <div>
-          <h2 className="text-sm font-bold text-zinc-900 dark:text-zinc-50">Sessions by Plan</h2>
-          <p className="text-xs text-zinc-400 mt-0.5">Distribution across plan tiers</p>
+          <h2 className="text-body font-bold text-app-text">Sessions by Plan</h2>
+          <p className="mt-0.5 text-caption text-app-muted">Distribution across plan tiers</p>
         </div>
 
         <div className="h-40 relative flex items-center justify-center mt-2">
@@ -84,81 +68,81 @@ export default function AnalyticsDistributionSection() {
         </div>
 
         {/* Legend */}
-        <div className="grid grid-cols-2 gap-2 text-[10px] mt-2 border-t border-zinc-100 dark:border-zinc-800/60 pt-3.5 font-medium">
+        <div className="mt-2 grid grid-cols-2 gap-2 border-t border-app-border pt-3.5 text-[10px] font-medium">
           {planData.map((item) => (
             <div key={item.name} className="flex items-center gap-1.5">
               <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: item.color }} />
-              <span className="text-zinc-650 dark:text-zinc-450">{item.label}</span>
+              <span className="text-app-muted">{item.label}</span>
             </div>
           ))}
         </div>
       </div>
 
       {/* 2. Content Plays by Category */}
-      <div className="bg-white dark:bg-zinc-900 border border-zinc-200/80 dark:border-zinc-800/80 p-5 rounded-lg shadow-xs flex flex-col justify-between">
+      <div className="flex flex-col justify-between rounded-xl border border-app-border bg-app-surface p-5 shadow-xs">
         <div>
-          <h2 className="text-sm font-bold text-zinc-900 dark:text-zinc-50">Content Plays by Category</h2>
-          <p className="text-xs text-zinc-400 mt-0.5">Stacked area · June 2026</p>
+          <h2 className="text-body font-bold text-app-text">Content Plays by Category</h2>
+          <p className="mt-0.5 text-caption text-app-muted">Stacked area · June 2026</p>
         </div>
 
         <div className="h-40 mt-4 w-full text-[10px]">
           <ResponsiveContainer width="100%" height="100%">
             <AreaChart data={playsCategoryData} margin={{ top: 10, right: 10, left: -25, bottom: 0 }}>
-              <XAxis dataKey="name" tickLine={false} axisLine={false} stroke="#888888" />
+              <XAxis dataKey="name" tickLine={false} axisLine={false} stroke="var(--app-muted)" />
               <YAxis
                 tickFormatter={formatCurrency}
                 tickLine={false}
                 axisLine={false}
-                stroke="#888888"
+                stroke="var(--app-muted)"
                 domain={[0, 1000000]}
                 ticks={[0, 250000, 500000, 750000, 1000000]}
               />
               <Tooltip
-                formatter={(value: any) => [Number(value).toLocaleString(), ""]}
+                formatter={(value) => [Number(value).toLocaleString(), ""]}
                 contentStyle={{
-                  background: "var(--background)",
-                  border: "1px solid var(--color-zinc-200)",
+                  background: "var(--app-surface)",
+                  border: "1px solid var(--app-border)",
                   borderRadius: "8px"
                 }}
               />
-              <Area type="monotone" dataKey="video" stackId="1" stroke="#2563eb" fill="#2563eb" fillOpacity={0.4} />
-              <Area type="monotone" dataKey="audio" stackId="1" stroke="#14b8a6" fill="#14b8a6" fillOpacity={0.45} />
-              <Area type="monotone" dataKey="images" stackId="1" stroke="#f59e0b" fill="#f59e0b" fillOpacity={0.4} />
+              <Area type="monotone" dataKey="video" stackId="1" stroke="var(--chart-1)" fill="var(--chart-1)" fillOpacity={0.4} />
+              <Area type="monotone" dataKey="audio" stackId="1" stroke="var(--chart-2)" fill="var(--chart-2)" fillOpacity={0.4} />
+              <Area type="monotone" dataKey="images" stackId="1" stroke="var(--app-warning)" fill="var(--app-warning)" fillOpacity={0.4} />
             </AreaChart>
           </ResponsiveContainer>
         </div>
 
         {/* Legend */}
-        <div className="flex justify-between items-center text-[10px] mt-2 border-t border-zinc-100 dark:border-zinc-800/60 pt-3 text-zinc-450 font-medium">
+        <div className="mt-2 flex items-center justify-between border-t border-app-border pt-3 text-[10px] font-medium text-app-muted">
           <span className="flex items-center gap-1">
-            <span className="w-1.5 h-1.5 bg-[#2563eb] rounded-xs" /> Video
+            <span className="h-1.5 w-1.5 rounded-xs bg-app-accent" /> Video
           </span>
           <span className="flex items-center gap-1">
-            <span className="w-1.5 h-1.5 bg-[#14b8a6] rounded-xs" /> Audio
+            <span className="h-1.5 w-1.5 rounded-xs bg-app-warning" /> Audio
           </span>
           <span className="flex items-center gap-1">
-            <span className="w-1.5 h-1.5 bg-[#f59e0b] rounded-xs" /> Images
+            <span className="h-1.5 w-1.5 rounded-xs bg-app-danger" /> Images
           </span>
         </div>
       </div>
 
       {/* 3. Top 5 Tenants by Screen Impressions */}
-      <div className="bg-white dark:bg-zinc-900 border border-zinc-200/80 dark:border-zinc-800/80 p-5 rounded-lg shadow-xs flex flex-col justify-between">
+      <div className="flex flex-col justify-between rounded-xl border border-app-border bg-app-surface p-5 shadow-xs">
         <div>
-          <h2 className="text-sm font-bold text-zinc-900 dark:text-zinc-50">Top 5 Tenants by Screen Impressions</h2>
-          <p className="text-xs text-zinc-400 mt-0.5">June 2026 · total impressions</p>
+          <h2 className="text-body font-bold text-app-text">Top 5 Tenants by Screen Impressions</h2>
+          <p className="mt-0.5 text-caption text-app-muted">June 2026 · total impressions</p>
         </div>
 
         <div className="space-y-3.5 mt-4 flex-1">
           {topTenants.map((tenant) => (
             <div key={tenant.name} className="flex flex-col gap-1">
-              <div className="flex justify-between items-center text-[11px] font-semibold text-zinc-700 dark:text-zinc-300">
+              <div className="flex items-center justify-between text-[11px] font-semibold text-app-text">
                 <span className="truncate max-w-[150px]">{tenant.name}</span>
-                <span className="font-mono text-zinc-900 dark:text-zinc-100">{tenant.value}</span>
+                <span className="font-mono text-app-text">{tenant.value}</span>
               </div>
-              <div className="w-full bg-zinc-100 dark:bg-zinc-800 h-1.5 rounded-full overflow-hidden">
+              <div className="h-1.5 w-full overflow-hidden rounded-full bg-app-surface-alt">
                 <div
-                  className="bg-blue-600 dark:bg-blue-500 h-full rounded-full"
+                  className="h-full rounded-full bg-app-accent"
                   style={{ width: `${tenant.percent}%` }}
                 />
               </div>

@@ -1,7 +1,9 @@
 import { randomBytes, randomUUID } from "crypto";
 import { NextRequest, NextResponse } from "next/server";
-import { requireAgent } from "@/lib/agent-auth";
+import { assertQuota } from "@/lib/features";
 import { prisma } from "@/lib/prisma";
+import { PERMISSIONS } from "@/lib/rbac";
+import { requirePermission } from "@/lib/session";
 import { AlertSeverity, DeviceStatus } from "@/app/generated/prisma/client";
 
 const STATUS_LABEL: Record<DeviceStatus, "Online" | "Delayed" | "Offline"> = {
@@ -77,12 +79,15 @@ export function serializeDevice(device: {
 }
 
 export async function GET(request: NextRequest) {
-  const auth = await requireAgent(request);
+  const auth = await requirePermission(request, PERMISSIONS.DEVICE_READ);
   if (auth.response) return auth.response;
 
   try {
+    // Tenant comes from the session, never the query string. This used to read
+    // ?tenantId and fall through to `where: undefined`, which returned every
+    // tenant's devices to any caller.
     const devices = await prisma.device.findMany({
-      where: { tenantId: auth.agent.tenantId },
+      where: { tenantId: auth.user.tenantId },
       include: { group: true, playlist: true },
       orderBy: { createdAt: "desc" },
     });
@@ -95,7 +100,7 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
-  const auth = await requireAgent(request);
+  const auth = await requirePermission(request, PERMISSIONS.DEVICE_CREATE);
   if (auth.response) return auth.response;
 
   try {
@@ -105,19 +110,15 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
     }
 
-    if (body.groupId) {
-      const group = await prisma.deviceGroup.findFirst({
-        where: { id: body.groupId, tenantId: auth.agent.tenantId },
-        select: { id: true },
-      });
-      if (!group) {
-        return NextResponse.json({ error: "Screen group not found" }, { status: 404 });
-      }
-    }
+    // The plan's screen limit. Previously absent, along with any notion of who
+    // was asking: a missing tenantId fell back to "the first tenant in the
+    // table", creating devices in someone else's workspace.
+    const overQuota = await assertQuota(auth.user.tenantId, "devices");
+    if (overQuota) return overQuota;
 
     const device = await prisma.device.create({
       data: {
-        tenantId: auth.agent.tenantId,
+        tenantId: auth.user.tenantId,
         name: body.name,
         model: body.model,
         location: body.location || null,

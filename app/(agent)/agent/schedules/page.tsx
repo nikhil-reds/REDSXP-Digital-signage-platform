@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useCallback, useEffect, useMemo, useState } from "react";
-import { Plus, Calendar, Layers, ChevronDown } from "lucide-react";
+import { Plus, Calendar, Layers, ListChecks, AlertTriangle, Monitor } from "lucide-react";
 import ScheduleCalendar from "@/components/agent/schedules/schedule-calendar";
 import ScheduleFormModal from "@/components/agent/schedules/schedule-form-modal";
 import ConflictDialog from "@/components/agent/schedules/conflict-dialog";
@@ -9,6 +9,42 @@ import { ScheduleSummary, fetchSchedules } from "@/components/agent/schedules/ap
 import { findConflicts, ScheduleConflict } from "@/components/agent/schedules/conflict-utils";
 import { fetchScreenGroups, fetchScreenGroup } from "@/components/agent/screen-groups/api";
 import { ScreenGroup } from "@/components/agent/screen-groups/groups-grid";
+import {
+  Button,
+  Card,
+  EmptyState,
+  PageShell,
+  Select,
+  Skeleton,
+  SkeletonRegion,
+  SkeletonStatGrid,
+  StatGrid,
+  StatTile,
+} from "@/components/ui";
+
+/**
+ * The schedules page renders a month calendar, not a list, so it gets its own
+ * skeleton rather than a table or card grid: a weekday header row over a 5x7
+ * grid of day cells at the same min-height as the real calendar panel.
+ */
+function ScheduleCalendarSkeleton() {
+  return (
+    <SkeletonRegion label="Loading schedules…">
+      <Card size="panel" padded className="min-h-[300px]">
+        <div className="grid grid-cols-7 gap-2">
+          {Array.from({ length: 7 }).map((_, index) => (
+            <Skeleton key={`head-${index}`} className="h-3 w-10" />
+          ))}
+        </div>
+        <div className="mt-3 grid grid-cols-7 gap-2">
+          {Array.from({ length: 35 }).map((_, index) => (
+            <Skeleton key={`cell-${index}`} className="h-14 rounded-lg" />
+          ))}
+        </div>
+      </Card>
+    </SkeletonRegion>
+  );
+}
 
 export default function AgentSchedulesPage() {
   const [schedules, setSchedules] = useState<ScheduleSummary[]>([]);
@@ -19,6 +55,9 @@ export default function AgentSchedulesPage() {
 
   // Modals state
   const [selectedSchedule, setSelectedSchedule] = useState<ScheduleSummary | null>(null);
+
+  // Plan §2: skeleton on first load only — a refetch keeps the calendar on screen.
+  const isFirstLoad = isLoading && schedules.length === 0;
   const [isCreating, setIsCreating] = useState(false);
   const [conflictModalData, setConflictModalData] = useState<{ c1: ScheduleSummary; c2: ScheduleSummary } | null>(null);
 
@@ -77,63 +116,76 @@ export default function AgentSchedulesPage() {
   };
 
   return (
-    <div className="py-6 px-8 space-y-6 mx-auto font-sans">
+    <PageShell>
 
       {/* Header Section */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b border-[#E2E6EC] dark:border-[#283243] pb-5 shrink-0">
-        <div className="flex flex-col gap-0.5">
-          <h1 className="text-xl font-bold text-zinc-900 dark:text-zinc-55 tracking-tight">
-            Signage Calendars & Scheduling
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b border-app-border pb-5 shrink-0">
+        <div>
+          <h1 className="font-heading text-h5 font-semibold tracking-headline text-app-text">
+            Signage Calendars &amp; Scheduling
           </h1>
-          <p className="text-xs text-[#657080] dark:text-[#9AA7B7]">
+          <p className="text-body text-app-muted mt-1">
             Schedule playlists by date grids, hour slots, week filters, and resolve conflicts via priority weights.
           </p>
         </div>
 
-        <div className="flex items-center gap-2.5 self-start sm:self-auto">
-          {/* Create Schedule Button */}
-          <button
-            onClick={() => setIsCreating(true)}
-            className="flex items-center gap-1.5 bg-[#2859D9] dark:bg-[#6F96FF] text-white dark:text-[#111722] px-3.5 py-1.5 rounded-lg text-xs font-bold hover:opacity-90 transition-opacity shadow-sm cursor-pointer"
-          >
-            <Plus className="w-3.5 h-3.5" />
-            <span>Create Schedule</span>
-          </button>
-        </div>
+        <Button
+          variant="primary"
+          size="sm"
+          icon={Plus}
+          onClick={() => setIsCreating(true)}
+          className="self-start sm:self-auto"
+        >
+          Create Schedule
+        </Button>
       </div>
 
+      {isFirstLoad ? (
+        <SkeletonStatGrid columns={4} label="Loading schedule counts…" />
+      ) : (
+      <StatGrid columns={4}>
+        <StatTile label="Total Schedules" value={`${schedules.length}`} icon={ListChecks} />
+        <StatTile label="Active Schedules" value={`${schedules.filter((s) => s.status === "ACTIVE").length}`} icon={Calendar} />
+        <StatTile label="Conflicts" value={`${conflicts.length}`} icon={AlertTriangle} tone={conflicts.length ? "warning" : undefined} />
+        <StatTile label="Targeted Screens" value={`${new Set(schedules.flatMap((s) => s.deviceIds)).size}`} icon={Monitor} />
+      </StatGrid>
+      )}
+
       {/* Group Filters panel */}
-      <div className="p-4 bg-white dark:bg-[#111722] border border-[#E2E6EC] dark:border-[#283243] rounded-xl flex items-center gap-3">
-        <div className="relative w-64">
-          <select
-            value={groupFilter}
-            onChange={(e) => setGroupFilter(e.target.value)}
-            className="w-full pl-8 pr-8 py-1.5 border border-[#E2E6EC] dark:border-[#283243] rounded-lg bg-[#F6F7F9] dark:bg-[#171F2C]/50 text-xs text-zinc-700 dark:text-zinc-300 font-bold focus:outline-none appearance-none cursor-pointer"
-          >
-            <option value="All">All Screen Groups</option>
-            {screenGroups.map((g) => (
-              <option key={g.id} value={g.id}>
-                {g.name}
-              </option>
-            ))}
-          </select>
-          <Layers className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-zinc-400" />
-          <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-zinc-400 pointer-events-none" />
-        </div>
-      </div>
+      <Card size="widget" padded className="flex items-center gap-3">
+        <Select
+          icon={Layers}
+          value={groupFilter}
+          onChange={(e) => setGroupFilter(e.target.value)}
+          aria-label="Filter by screen group"
+          className="w-64"
+        >
+          <option value="All">All Screen Groups</option>
+          {screenGroups.map((g) => (
+            <option key={g.id} value={g.id}>
+              {g.name}
+            </option>
+          ))}
+        </Select>
+      </Card>
 
       {/* Calendar Area */}
       <div className="flex-1">
-        {isLoading ? (
-          <div className="flex items-center justify-center text-xs font-semibold text-zinc-400 dark:text-zinc-500 min-h-[300px] border border-[#E2E6EC] dark:border-[#283243] rounded-xl">
-            Loading schedules…
-          </div>
+        {isFirstLoad ? (
+          <ScheduleCalendarSkeleton />
         ) : schedules.length === 0 ? (
-          <div className="flex flex-col items-center justify-center gap-2 text-center min-h-[300px] border border-dashed border-[#E2E6EC] dark:border-[#283243] rounded-xl">
-            <Calendar className="w-6 h-6 text-zinc-400 dark:text-zinc-500" />
-            <p className="text-xs font-semibold text-zinc-500 dark:text-zinc-400">No schedules yet.</p>
-            <p className="text-[11px] text-zinc-400 dark:text-zinc-500">Create a schedule to deploy playlists on a timeline.</p>
-          </div>
+          <Card size="panel" className="min-h-[300px] flex items-center justify-center">
+            <EmptyState
+              icon={Calendar}
+              title="No schedules yet"
+              description="Create a schedule to deploy playlists on a timeline."
+              action={
+                <Button variant="primary" size="sm" icon={Plus} onClick={() => setIsCreating(true)}>
+                  Create Schedule
+                </Button>
+              }
+            />
+          </Card>
         ) : (
           <ScheduleCalendar
             schedules={filteredSchedules}
@@ -165,7 +217,6 @@ export default function AgentSchedulesPage() {
           onClose={() => setConflictModalData(null)}
         />
       )}
-
-    </div>
+    </PageShell>
   );
 }

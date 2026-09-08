@@ -22,12 +22,12 @@ export default function AnnouncementForm({ onClose, onSave }: AnnouncementFormPr
   const [type, setType] = useState<"Banner" | "Modal" | "Email">("Banner");
   const [audience, setAudience] = useState("Growth + Business + Enterprise");
   const [message, setMessage] = useState("");
-  const [bannerColor, setBannerColor] = useState("#2457D6");
+  const [bannerColor, setBannerColor] = useState("#0F7A4F");
   const [scheduleEnabled, setScheduleEnabled] = useState(true);
   const [goLive, setGoLive] = useState("2026-07-06T09:00");
   const [expires, setExpires] = useState("2026-07-13T09:00");
 
-  const handleSubmit = (e: React.FormEvent, isPublish: boolean) => {
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     onSave({
       title,
@@ -42,43 +42,43 @@ export default function AnnouncementForm({ onClose, onSave }: AnnouncementFormPr
   };
 
   return (
-    <div className="w-96 bg-white dark:bg-zinc-900 border-l border-zinc-200 dark:border-zinc-800 flex flex-col h-full font-sans shadow-xl shrink-0 overflow-y-auto">
+    <div className="flex h-full w-96 shrink-0 flex-col overflow-y-auto border-l border-app-border bg-app-surface font-sans text-app-text shadow-xl">
       {/* Header */}
-      <div className="p-4 border-b border-zinc-150 dark:border-zinc-800 flex justify-between items-start">
+      <div className="flex items-start justify-between border-b border-app-border p-4">
         <div>
-          <h2 className="text-sm font-bold text-zinc-900 dark:text-zinc-50 leading-snug">
+          <h2 className="text-body font-bold leading-snug text-app-text">
             Create / Edit Announcement
           </h2>
-          <p className="text-[11px] text-zinc-450 dark:text-zinc-500 mt-0.5">
+          <p className="mt-0.5 text-[11px] text-app-muted">
             Compose and schedule a platform broadcast
           </p>
         </div>
         <button
           onClick={onClose}
-          className="p-1 rounded-lg text-zinc-405 hover:text-zinc-900 dark:hover:text-zinc-50 hover:bg-zinc-50 dark:hover:bg-zinc-805 transition-colors cursor-pointer"
+          className="cursor-pointer rounded-lg p-1 text-app-muted transition-colors hover:bg-app-surface-alt hover:text-app-text"
         >
           <X className="w-4 h-4" />
         </button>
       </div>
 
       {/* Form content */}
-      <form className="p-4 space-y-4 flex-1 text-xs" onSubmit={(e) => handleSubmit(e, false)}>
+      <form className="flex-1 space-y-4 p-4 text-caption" onSubmit={handleSubmit}>
         {/* Title */}
         <div className="flex flex-col gap-1.5">
-          <label className="font-semibold text-zinc-500">Title</label>
+          <label className="font-semibold text-app-muted">Title</label>
           <input
             type="text"
             placeholder="Announcement title"
             value={title}
             onChange={(e) => setTitle(e.target.value)}
-            className="w-full px-3 py-2 bg-white dark:bg-zinc-950 border border-zinc-200/80 dark:border-zinc-800/80 rounded-lg text-xs text-zinc-900 dark:text-zinc-100 placeholder-zinc-400 focus:outline-none"
+            className="w-full rounded-lg border border-app-border bg-app-surface-alt px-3 py-2 text-caption text-app-text placeholder:text-app-muted focus:outline-none focus:ring-2 focus:ring-app-accent-text"
             required
           />
         </div>
 
         {/* Type selector */}
         <div className="flex flex-col gap-1.5">
-          <label className="font-semibold text-zinc-500">Type</label>
+          <label className="font-semibold text-app-muted">Type</label>
           <div className="flex gap-2">
             {(["Banner", "Modal", "Email"] as const).map((t) => {
               const isSelected = type === t;
@@ -89,8 +89,8 @@ export default function AnnouncementForm({ onClose, onSave }: AnnouncementFormPr
                   onClick={() => setType(t)}
                   className={`flex-1 py-1.5 border rounded-lg text-center font-semibold transition-all cursor-pointer ${
                     isSelected
-                      ? "bg-zinc-950 text-white border-zinc-950 dark:bg-zinc-50 dark:text-zinc-950 dark:border-zinc-50 shadow-xs"
-                      : "bg-white dark:bg-zinc-950 border-zinc-200 dark:border-zinc-805 text-zinc-700 dark:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-zinc-900"
+                      ? "border-app-accent bg-app-accent text-app-accent-on shadow-xs"
+                      : "border-app-border bg-app-surface text-app-text hover:bg-app-surface-alt"
                   }`}
                 >
                   {t}
@@ -102,22 +102,22 @@ export default function AnnouncementForm({ onClose, onSave }: AnnouncementFormPr
 
         {/* Audience */}
         <div className="flex flex-col gap-1.5">
-          <label className="font-semibold text-zinc-500">Audience</label>
+          <label className="font-semibold text-app-muted">Audience</label>
           <textarea
             placeholder="All Tenants checked, or select specific plans/tenants"
             value={audience}
             onChange={(e) => setAudience(e.target.value)}
-            className="w-full h-14 px-3 py-2 bg-white dark:bg-zinc-950 border border-zinc-200/80 dark:border-zinc-800/80 rounded-lg text-xs text-zinc-900 dark:text-zinc-100 placeholder-zinc-400 focus:outline-none resize-none"
+            className="h-14 w-full resize-none rounded-lg border border-app-border bg-app-surface-alt px-3 py-2 text-caption text-app-text placeholder:text-app-muted focus:outline-none focus:ring-2 focus:ring-app-accent-text"
             required
           />
         </div>
 
         {/* Rich message text area */}
         <div className="flex flex-col gap-1.5">
-          <label className="font-semibold text-zinc-500">Message</label>
-          <div className="border border-zinc-200/80 dark:border-zinc-800/80 rounded-lg overflow-hidden flex flex-col bg-white dark:bg-zinc-950">
+          <label className="font-semibold text-app-muted">Message</label>
+          <div className="flex flex-col overflow-hidden rounded-lg border border-app-border bg-app-surface-alt">
             {/* Tiny Toolbar */}
-            <div className="flex items-center gap-1.5 p-1.5 border-b border-zinc-150 dark:border-zinc-850 bg-zinc-50/50 dark:bg-zinc-900/50">
+            <div className="flex items-center gap-1.5 border-b border-app-border bg-app-surface p-1.5">
               <button type="button" className="p-1 hover:bg-zinc-200 dark:hover:bg-zinc-800 rounded-md cursor-pointer">
                 <Bold className="w-3.5 h-3.5 text-zinc-500" />
               </button>
@@ -133,7 +133,7 @@ export default function AnnouncementForm({ onClose, onSave }: AnnouncementFormPr
               placeholder="Write your announcement message..."
               value={message}
               onChange={(e) => setMessage(e.target.value)}
-              className="w-full h-24 px-3 py-2 bg-transparent text-xs text-zinc-900 dark:text-zinc-100 placeholder-zinc-400 focus:outline-none resize-none"
+              className="h-24 w-full resize-none bg-transparent px-3 py-2 text-caption text-app-text placeholder:text-app-muted focus:outline-none"
             />
           </div>
         </div>
@@ -142,19 +142,19 @@ export default function AnnouncementForm({ onClose, onSave }: AnnouncementFormPr
         <div className="grid grid-cols-2 gap-3.5">
           {/* Banner Color */}
           <div className="flex flex-col gap-1.5">
-            <label className="font-semibold text-zinc-500">Banner Color</label>
+            <label className="font-semibold text-app-muted">Banner Color</label>
             <input
               type="text"
               value={bannerColor}
               onChange={(e) => setBannerColor(e.target.value)}
-              className="w-full px-3 py-2 bg-white dark:bg-zinc-950 border border-zinc-200/80 dark:border-zinc-800/80 rounded-lg text-xs text-zinc-900 dark:text-zinc-100 placeholder-zinc-400 focus:outline-none"
+              className="w-full rounded-lg border border-app-border bg-app-surface-alt px-3 py-2 text-caption text-app-text focus:outline-none focus:ring-2 focus:ring-app-accent-text"
             />
           </div>
 
           {/* Schedule Toggle */}
           <div className="flex flex-col gap-1.5">
-            <label className="font-semibold text-zinc-500">Schedule</label>
-            <div className="flex items-center justify-between px-3 py-2 bg-white dark:bg-zinc-950 border border-zinc-200/80 dark:border-zinc-800/80 rounded-lg h-9">
+            <label className="font-semibold text-app-muted">Schedule</label>
+            <div className="flex h-9 items-center justify-between rounded-lg border border-app-border bg-app-surface-alt px-3 py-2">
               <span className="font-medium text-zinc-700 dark:text-zinc-300">Enabled</span>
               {/* Custom Toggle Switch */}
               <label className="relative inline-flex items-center cursor-pointer">
@@ -164,7 +164,7 @@ export default function AnnouncementForm({ onClose, onSave }: AnnouncementFormPr
                   onChange={() => setScheduleEnabled(!scheduleEnabled)}
                   className="sr-only peer"
                 />
-                <div className="w-7 h-4 bg-zinc-200 peer-focus:outline-none rounded-full peer dark:bg-zinc-850 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-zinc-300 after:border after:rounded-full after:h-3 after:w-3 after:transition-all dark:border-zinc-650 peer-checked:bg-zinc-950 dark:peer-checked:bg-zinc-100" />
+                <div className="peer h-4 w-7 rounded-full bg-app-border after:absolute after:left-[2px] after:top-[2px] after:h-3 after:w-3 after:rounded-full after:border after:border-app-border after:bg-app-surface after:transition-all after:content-[''] peer-checked:bg-app-accent peer-checked:after:translate-x-full peer-focus:outline-none" />
               </label>
             </div>
           </div>
@@ -177,7 +177,7 @@ export default function AnnouncementForm({ onClose, onSave }: AnnouncementFormPr
                 type="datetime-local"
                 value={goLive}
                 onChange={(e) => setGoLive(e.target.value)}
-                className="w-full pl-3 pr-8 py-2 bg-white dark:bg-zinc-950 border border-zinc-200/80 dark:border-zinc-800/80 rounded-lg text-xs text-zinc-900 dark:text-zinc-100 focus:outline-none cursor-pointer"
+                className="w-full cursor-pointer rounded-lg border border-app-border bg-app-surface-alt py-2 pl-3 pr-8 text-caption text-app-text focus:outline-none focus:ring-2 focus:ring-app-accent-text"
               />
               <Calendar className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400 pointer-events-none" />
             </div>
@@ -191,7 +191,7 @@ export default function AnnouncementForm({ onClose, onSave }: AnnouncementFormPr
                 type="datetime-local"
                 value={expires}
                 onChange={(e) => setExpires(e.target.value)}
-                className="w-full pl-3 pr-8 py-2 bg-white dark:bg-zinc-950 border border-zinc-200/80 dark:border-zinc-800/80 rounded-lg text-xs text-zinc-900 dark:text-zinc-100 focus:outline-none cursor-pointer"
+                className="w-full cursor-pointer rounded-lg border border-app-border bg-app-surface-alt py-2 pl-3 pr-8 text-caption text-app-text focus:outline-none focus:ring-2 focus:ring-app-accent-text"
               />
               <Calendar className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400 pointer-events-none" />
             </div>
@@ -215,14 +215,14 @@ export default function AnnouncementForm({ onClose, onSave }: AnnouncementFormPr
           </button>
           <button
             type="submit"
-            className="flex-1 py-2 bg-zinc-950 hover:bg-zinc-850 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-white rounded-lg text-xs font-semibold shadow-sm transition-all cursor-pointer text-center"
+            className="flex-1 cursor-pointer rounded-lg border border-app-border bg-app-surface py-2 text-center text-caption font-semibold text-app-text shadow-sm transition-colors hover:bg-app-surface-alt"
           >
             Save Draft
           </button>
           <button
             type="button"
-            onClick={(e) => handleSubmit(e, true)}
-            className="flex-1 py-2 bg-zinc-950 hover:bg-zinc-850 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-white rounded-lg text-xs font-semibold shadow-sm transition-all cursor-pointer text-center"
+              onClick={handleSubmit}
+            className="flex-1 cursor-pointer rounded-lg bg-app-accent py-2 text-center text-caption font-semibold text-app-accent-on shadow-sm transition-colors hover:bg-app-accent-hover"
           >
             Publish
           </button>

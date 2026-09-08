@@ -20,7 +20,7 @@ interface ServiceItem {
   status: "Healthy" | "Degraded";
   metric: string;
   subtext: string;
-  icon: React.ComponentType<any>;
+  icon: React.ComponentType<{ className?: string }>;
 }
 
 export default function ServicesGrid() {
@@ -48,21 +48,21 @@ export default function ServicesGrid() {
         return (
           <div
             key={svc.name}
-            className="bg-white dark:bg-zinc-900 border border-zinc-200/80 dark:border-zinc-800/80 p-4 rounded-lg shadow-xs hover:shadow-sm transition-all duration-200 flex flex-col justify-between"
+            className="flex flex-col justify-between rounded-xl border border-app-border bg-app-surface p-4 shadow-xs transition-all duration-200 hover:shadow-sm"
           >
             <div className="flex justify-between items-start">
-              <span className="flex items-center gap-1.5 text-xs font-semibold text-zinc-800 dark:text-zinc-250">
-                <Icon className="w-3.5 h-3.5 text-zinc-400 shrink-0" />
+              <span className="flex items-center gap-1.5 text-caption font-semibold text-app-text">
+                <Icon className="h-3.5 w-3.5 shrink-0 text-app-muted" />
                 {svc.name}
               </span>
               <span
                 className={`text-[9px] px-2 py-0.5 rounded-full font-bold border inline-flex items-center gap-1 ${
                   isDegraded
-                    ? "bg-amber-50 text-amber-700 dark:bg-amber-955/20 dark:text-amber-400 border-amber-100/50"
-                    : "bg-emerald-50 text-emerald-700 dark:bg-emerald-950/20 dark:text-emerald-400 border-emerald-100/50"
+                    ? "border-app-border bg-app-warning-surface text-app-warning-text"
+                    : "border-app-accent-border bg-app-accent-surface text-app-accent-text"
                 }`}
               >
-                <span className={`w-1 h-1 rounded-full ${isDegraded ? "bg-amber-500" : "bg-emerald-500"}`} />
+                <span className={`h-1 w-1 rounded-full ${isDegraded ? "bg-app-warning" : "bg-app-accent-text"}`} />
                 {svc.status}
               </span>
             </div>
@@ -70,12 +70,12 @@ export default function ServicesGrid() {
             <div className="mt-3.5">
               <span
                 className={`text-lg font-bold tracking-tight ${
-                  isDegraded ? "text-amber-650 dark:text-amber-450" : "text-zinc-900 dark:text-zinc-50"
+                  isDegraded ? "text-app-warning-text" : "text-app-text"
                 }`}
               >
                 {svc.metric}
               </span>
-              <p className="text-[10px] text-zinc-450 mt-1 truncate">
+              <p className="mt-1 truncate text-[10px] text-app-muted">
                 {svc.subtext}
               </p>
             </div>

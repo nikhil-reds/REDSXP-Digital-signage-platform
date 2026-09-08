@@ -1,6 +1,7 @@
 "use client";
 
 import React from "react";
+import { Card } from "@/components/ui";
 import {
   Sliders,
   Palette,
@@ -32,7 +33,7 @@ export default function SettingsNav({ activeTab, setActiveTab }: SettingsNavProp
   ];
 
   return (
-    <div className="w-64 bg-white dark:bg-zinc-900 border border-zinc-200/80 dark:border-zinc-800/80 rounded-xl overflow-hidden shadow-xs p-3 space-y-1 h-fit shrink-0 select-none">
+    <Card size="panel" padded className="h-fit w-64 shrink-0 select-none space-y-1 overflow-hidden !p-3">
       {tabs.map((tab) => {
         const Icon = tab.icon;
         const isActive = tab.name === activeTab;
@@ -41,19 +42,19 @@ export default function SettingsNav({ activeTab, setActiveTab }: SettingsNavProp
           <button
             key={tab.name}
             onClick={() => setActiveTab(tab.name)}
-            className={`w-full flex items-center gap-3 px-3.5 py-2.5 rounded-lg text-xs font-semibold transition-all cursor-pointer text-left ${
+            className={`w-full flex items-center gap-3 px-3.5 py-2.5 rounded-lg text-body font-semibold transition-colors cursor-pointer text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-app-accent-text ${
               isActive
-                ? "bg-blue-50/70 dark:bg-blue-950/20 text-blue-600 dark:text-blue-400 font-bold"
-                : "text-zinc-550 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100 hover:bg-zinc-50 dark:hover:bg-zinc-850/50"
+                ? "bg-app-accent-surface text-app-text"
+                : "text-app-muted hover:bg-app-surface-alt hover:text-app-text"
             }`}
           >
             <Icon className={`w-4 h-4 shrink-0 ${
-              isActive ? "text-blue-600 dark:text-blue-400" : "text-zinc-400"
+              isActive ? "text-app-accent-text" : "text-app-muted"
             }`} />
             <span className="truncate">{tab.name}</span>
           </button>
         );
       })}
-    </div>
+    </Card>
   );
 }

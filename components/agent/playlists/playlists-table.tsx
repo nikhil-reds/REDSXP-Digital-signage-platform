@@ -4,6 +4,7 @@ import React from "react";
 import { Edit2, MonitorSmartphone, Trash2 } from "lucide-react";
 import { PlaylistSummary } from "./types";
 import { formatDuration } from "./utils";
+import { Card, EmptyState, IconButton, Td, Th, Tr } from "@/components/ui";
 
 interface PlaylistsTableProps {
   playlists: PlaylistSummary[];
@@ -13,57 +14,57 @@ interface PlaylistsTableProps {
 
 export default function PlaylistsTable({ playlists, onEdit, onDelete }: PlaylistsTableProps) {
   return (
-    <div className="bg-white dark:bg-[#111722] border border-[#E2E6EC] dark:border-[#283243] rounded-xl overflow-hidden shadow-xs">
+    <Card size="panel" className="overflow-hidden">
       <div className="overflow-x-auto">
-        <table className="w-full text-left text-xs border-collapse">
+        <table className="w-full text-left border-collapse">
           <thead>
-            <tr className="bg-[#F6F7F9] dark:bg-[#171F2C]/50 text-[#657080] dark:text-[#9AA7B7] font-bold border-b border-[#E2E6EC] dark:border-[#283243] select-none">
-              <th className="p-3.5">Playlist Name</th>
-              <th className="p-3.5">Clips</th>
-              <th className="p-3.5">Loop Duration</th>
-              <th className="p-3.5">Last Updated</th>
-              <th className="p-3.5 w-20 text-center">Actions</th>
+            <tr className="bg-app-surface-alt select-none">
+              <Th>Playlist Name</Th>
+              <Th>Clips</Th>
+              <Th>Loop Duration</Th>
+              <Th>Last Updated</Th>
+              <Th className="w-20 text-center">Actions</Th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-[#E2E6EC] dark:divide-[#283243]">
+          <tbody>
             {playlists.map((playlist) => (
-              <tr key={playlist.id} className="hover:bg-[#F6F7F9]/30 dark:hover:bg-[#171F2C]/10 transition-all">
-                <td className="p-3.5 font-bold text-zinc-900 dark:text-zinc-50">{playlist.name}</td>
-                <td className="p-3.5 text-zinc-550 dark:text-zinc-400 font-semibold">{playlist.itemCount} clips</td>
-                <td className="p-3.5 text-zinc-500 font-mono text-[11px]">
-                  {formatDuration(playlist.totalDuration)}
-                </td>
-                <td className="p-3.5 text-zinc-400 font-semibold font-mono text-[10px]">{playlist.updatedAt}</td>
-                <td className="p-3.5">
+              <Tr key={playlist.id} interactive>
+                <Td className="font-semibold">{playlist.name}</Td>
+                <Td className="text-app-muted">{playlist.itemCount} clips</Td>
+                <Td className="text-app-muted">{formatDuration(playlist.totalDuration)}</Td>
+                <Td className="text-app-muted">{playlist.updatedAt}</Td>
+                <Td>
                   <div className="flex items-center justify-center gap-1">
-                    <button
+                    <IconButton
+                      icon={Edit2}
+                      size="sm"
                       onClick={() => onEdit(playlist)}
-                      className="p-1 rounded-md text-zinc-450 hover:bg-[#F6F7F9] dark:hover:bg-[#171F2C] hover:text-[#2859D9] dark:hover:text-[#6F96FF] cursor-pointer"
+                      aria-label={`Edit ${playlist.name}`}
                       title="Edit playlist"
-                    >
-                      <Edit2 className="w-3.5 h-3.5" />
-                    </button>
-                    <button
+                    />
+                    <IconButton
+                      icon={Trash2}
+                      size="sm"
                       onClick={() => onDelete(playlist)}
-                      className="p-1 rounded-md text-zinc-450 hover:bg-red-50 dark:hover:bg-red-950/20 hover:text-red-600 dark:hover:text-red-400 cursor-pointer"
+                      aria-label={`Delete ${playlist.name}`}
                       title="Delete playlist"
-                    >
-                      <Trash2 className="w-3.5 h-3.5" />
-                    </button>
+                      className="hover:text-app-danger-text hover:bg-app-danger-surface"
+                    />
                   </div>
-                </td>
-              </tr>
+                </Td>
+              </Tr>
             ))}
           </tbody>
         </table>
       </div>
 
       {playlists.length === 0 && (
-        <div className="flex flex-col items-center justify-center gap-2 py-12 text-zinc-450">
-          <MonitorSmartphone className="w-6 h-6" />
-          <p className="text-xs">No playlists match your search.</p>
-        </div>
+        <EmptyState
+          icon={MonitorSmartphone}
+          title="No playlists found"
+          description="No playlists match your search."
+        />
       )}
-    </div>
+    </Card>
   );
 }

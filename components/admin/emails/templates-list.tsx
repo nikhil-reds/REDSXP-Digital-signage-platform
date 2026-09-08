@@ -28,23 +28,23 @@ export default function TemplatesList({
   );
 
   return (
-    <div className="w-80 bg-white dark:bg-zinc-900 border border-zinc-200/80 dark:border-zinc-800/80 rounded-xl overflow-hidden shadow-xs flex flex-col h-full shrink-0">
+    <div className="flex h-full w-80 shrink-0 flex-col overflow-hidden rounded-xl border border-app-border bg-app-surface shadow-xs">
       {/* Search Input */}
-      <div className="p-4 border-b border-zinc-150 dark:border-zinc-800 bg-zinc-50/20 dark:bg-zinc-900/10">
+      <div className="border-b border-app-border bg-app-surface-alt p-4">
         <div className="relative w-full">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-zinc-400" />
+          <Search className="absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-app-muted" />
           <input
             type="text"
             placeholder="Search templates..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="w-full pl-8.5 pr-3 py-1.5 bg-white dark:bg-zinc-950 border border-zinc-200/80 dark:border-zinc-800/80 rounded-lg text-xs text-zinc-900 dark:text-zinc-100 placeholder-zinc-400 focus:outline-none"
+            className="w-full rounded-lg border border-app-border bg-app-surface py-1.5 pl-8.5 pr-3 text-caption text-app-text placeholder:text-app-muted focus:outline-none focus:ring-2 focus:ring-app-accent-text"
           />
         </div>
       </div>
 
       {/* Templates List */}
-      <div className="flex-1 overflow-y-auto divide-y divide-zinc-100 dark:divide-zinc-850">
+      <div className="flex-1 divide-y divide-app-border overflow-y-auto">
         {filtered.map((t) => {
           const isSelected = t.id === selectedId;
           const isMarketing = t.category === "Marketing";
@@ -55,12 +55,12 @@ export default function TemplatesList({
               onClick={() => onSelect(t.id)}
               className={`p-3.5 flex items-start gap-3 cursor-pointer transition-all ${
                 isSelected
-                  ? "bg-blue-50/65 dark:bg-blue-950/15 border-l-2 border-blue-600 dark:border-blue-500"
-                  : "hover:bg-zinc-50/50 dark:hover:bg-zinc-900/20"
+                  ? "border-l-2 border-app-accent bg-app-accent-surface"
+                  : "hover:bg-app-surface-alt"
               }`}
             >
               <Mail className={`w-4 h-4 mt-0.5 shrink-0 ${
-                isSelected ? "text-blue-600 dark:text-blue-400" : "text-zinc-400"
+                isSelected ? "text-app-accent-text" : "text-app-muted"
               }`} />
               <div className="flex-1 min-w-0">
                 <h4 className={`text-xs font-semibold leading-snug truncate ${
@@ -72,8 +72,8 @@ export default function TemplatesList({
                   <span
                     className={`px-1.5 py-0.5 rounded-full font-bold border shrink-0 ${
                       isMarketing
-                        ? "bg-purple-55/10 text-purple-700 dark:bg-purple-950/20 dark:text-purple-400 border-purple-100/50"
-                        : "bg-blue-50 text-blue-700 dark:bg-blue-950/20 dark:text-blue-400 border-blue-100/50"
+                        ? "border-app-border bg-app-warning-surface text-app-warning-text"
+                        : "border-app-accent-border bg-app-accent-surface text-app-accent-text"
                     }`}
                   >
                     {t.category}

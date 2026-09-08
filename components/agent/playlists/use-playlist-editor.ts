@@ -24,8 +24,7 @@ import {
   INITIAL_GRID_COLUMNS,
   INITIAL_GRID_ROWS,
   LOCKED_TRACKS,
-  PLAYLIST_ZONES,
-} from "./constants";
+  PLAYLIST_ZONES, ZONE_PALETTE } from "./constants";
 import { aspectRatioLabel, formatDuration, getCompatibility } from "./utils";
 import {
   DisplayConfigTab,
@@ -246,7 +245,7 @@ export function usePlaylistEditor({ playlistId }: UsePlaylistEditorOptions = {})
           y: (row * 100) / rows,
           w: 100 / columns,
           h: 100 / rows,
-          color: ["#60A5FA", "#34D399", "#F59E0B", "#F472B6", "#A78BFA", "#22D3EE"][(row + col) % 6],
+          color: ZONE_PALETTE[(row + col) % ZONE_PALETTE.length],
         });
       }
     }
@@ -680,7 +679,7 @@ export function usePlaylistEditor({ playlistId }: UsePlaylistEditorOptions = {})
   const overviewBlocks = items.map((it) => ({
     key: it.instanceId,
     widthPct: total ? (it.duration / total) * 100 : 0,
-    bg: zoneById.get(it.zoneId || DEFAULT_ZONE_ID)?.color || (it.type === "Image" ? "#D97C1E" : it.type === "Video" ? "#7A5236" : "#2F5FD4"),
+    bg: zoneById.get(it.zoneId || DEFAULT_ZONE_ID)?.color || (it.type === "Image" ? ZONE_PALETTE[0] : it.type === "Video" ? ZONE_PALETTE[2] : ZONE_PALETTE[1]),
     opacity: it.instanceId === selectedId ? 1 : 0.55,
   }));
 

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React from "react";
 import { usePathname } from "next/navigation";
 import { useTheme } from "@/components/providers/theme-provider";
 import {
@@ -52,23 +52,27 @@ export default function AdminNavbar() {
   )?.[1] || { title: "Overview", icon: LayoutDashboard };
 
   const Icon = activeMetadata.icon;
+  const themeButtonClass = (active: boolean) =>
+    `cursor-pointer rounded-md p-1.5 transition-colors ${
+      active ? "bg-app-surface text-app-text shadow-xs" : "text-app-muted hover:text-app-text"
+    }`;
 
   return (
-    <header className="h-16 border-b border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 flex items-center justify-between px-2 shrink-0 font-sans">
+    <header className="flex h-16 shrink-0 items-center justify-between border-b border-app-border bg-app-surface px-4 font-sans sm:px-6">
       {/* Left side: Page Title & Search */}
       <div className="flex items-center gap-6 flex-1 max-w-2xl">
-        <div className="flex items-center gap-2.5 text-zinc-900 dark:text-zinc-50 shrink-0">
-          <Icon className="w-5 h-5 text-zinc-500" />
-          <span className="font-semibold text-base">{activeMetadata.title}</span>
+        <div className="flex shrink-0 items-center gap-2.5 text-app-text">
+          <Icon className="h-5 w-5 text-app-muted" />
+          <span className="font-heading text-h6 font-semibold tracking-headline">{activeMetadata.title}</span>
         </div>
 
         {/* Search Bar */}
         <div className="relative w-full max-w-md hidden sm:block">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400" />
+          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-app-muted" />
           <input
             type="text"
-            placeholder="Search tenants, devices, invoices..."
-            className="w-full pl-9 pr-4 py-1.5 bg-zinc-50 dark:bg-zinc-900/50 border border-zinc-200/80 dark:border-zinc-800/80 rounded-lg text-sm text-zinc-900 dark:text-zinc-100 placeholder-zinc-400 focus:outline-none focus:ring-1 focus:ring-zinc-950 dark:focus:ring-zinc-50 transition-all duration-200"
+            placeholder="Search tenants, devices, invoices…"
+            className="w-full rounded-lg border border-app-border bg-app-surface-alt py-1.5 pl-9 pr-4 text-body text-app-text placeholder-app-muted focus:outline-none focus:ring-2 focus:ring-app-accent-text"
           />
         </div>
       </div>
@@ -76,59 +80,47 @@ export default function AdminNavbar() {
       {/* Right side: Actions & User */}
       <div className="flex items-center gap-4">
         {/* Date Selector */}
-        <button className="flex items-center gap-2 px-3 py-1.5 border border-zinc-200 dark:border-zinc-800 rounded-lg bg-white dark:bg-zinc-950 hover:bg-zinc-50 dark:hover:bg-zinc-900 text-sm font-medium text-zinc-700 dark:text-zinc-300 transition-colors shadow-sm cursor-pointer">
+        <button className="flex cursor-pointer items-center gap-2 rounded-lg border border-app-border bg-app-surface px-3 py-1.5 text-body font-semibold text-app-text transition-colors hover:bg-app-surface-alt">
           <Calendar className="w-4 h-4 text-zinc-500" />
           <span>1–30 June 2026</span>
           <ChevronDown className="w-4 h-4 text-zinc-400" />
         </button>
 
         {/* Notification Bell */}
-        <button className="relative p-2 border border-zinc-200 dark:border-zinc-800 rounded-lg hover:bg-zinc-50 dark:hover:bg-zinc-900 text-zinc-700 dark:text-zinc-300 transition-colors shadow-sm cursor-pointer">
+        <button className="relative cursor-pointer rounded-lg border border-app-border p-2 text-app-muted transition-colors hover:bg-app-surface-alt hover:text-app-text" aria-label="Notifications">
           <Bell className="w-4.5 h-4.5" />
-          <span className="absolute -top-1 -right-1 bg-red-500 text-[10px] font-bold text-white rounded-full w-4.5 h-4.5 flex items-center justify-center border-2 border-white dark:border-zinc-950">
+          <span className="absolute -right-2 -top-2 flex h-5 min-w-5 items-center justify-center rounded-full border-2 border-app-surface bg-app-danger px-1 text-caption font-semibold text-app-danger-on">
             3
           </span>
         </button>
 
         {/* Theme Toggles */}
-        <div className="flex items-center gap-0.5 p-0.5 border border-zinc-200 dark:border-zinc-800 rounded-lg bg-zinc-50/50 dark:bg-zinc-900/50 shadow-sm">
+        <div className="flex items-center gap-0.5 rounded-lg border border-app-border bg-app-surface-alt p-0.5">
           <button
             onClick={() => setTheme("light")}
             title="Light Mode"
-            className={`p-1.5 rounded-md transition-all duration-200 cursor-pointer ${
-              theme === "light"
-                ? "bg-white dark:bg-zinc-800 shadow-xs text-zinc-900 dark:text-zinc-50"
-                : "text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-350"
-            }`}
+            className={themeButtonClass(theme === "light")}
           >
             <Sun className="w-4 h-4" />
           </button>
           <button
             onClick={() => setTheme("dark")}
             title="Dark Mode"
-            className={`p-1.5 rounded-md transition-all duration-200 cursor-pointer ${
-              theme === "dark"
-                ? "bg-white dark:bg-zinc-800 shadow-xs text-zinc-900 dark:text-zinc-50"
-                : "text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-350"
-            }`}
+            className={themeButtonClass(theme === "dark")}
           >
             <Moon className="w-4 h-4" />
           </button>
           <button
             onClick={() => setTheme("system")}
             title="System Mode"
-            className={`p-1.5 rounded-md transition-all duration-200 cursor-pointer ${
-              theme === "system"
-                ? "bg-white dark:bg-zinc-800 shadow-xs text-zinc-900 dark:text-zinc-50"
-                : "text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-350"
-            }`}
+            className={themeButtonClass(theme === "system")}
           >
             <Monitor className="w-4 h-4" />
           </button>
         </div>
 
         {/* User Initial Avatar */}
-        <div className="w-9 h-9 rounded-full bg-zinc-200 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 text-xs font-semibold flex items-center justify-center ring-2 ring-white dark:ring-zinc-950 shadow-sm shrink-0 select-none">
+        <div className="flex h-9 w-9 shrink-0 select-none items-center justify-center rounded-full bg-app-accent text-caption font-semibold text-app-accent-on ring-2 ring-app-surface">
           PS
         </div>
       </div>
