@@ -20,6 +20,33 @@ import ScreensMap from "@/components/agent/screens/screens-map";
 import ScreensDetailDrawer from "@/components/agent/screens/screens-detail-drawer";
 import ScreenCreateModal from "@/components/agent/screens/screen-create-modal";
 import { claimPlayerRegistration, createPlayerDownload, createScreen, fetchScreens } from "@/components/agent/screens/api";
+import type { PlayerArch } from "@/components/agent/screens/api";
+
+const PLAYER_DOWNLOAD_OPTIONS: {
+  platform: "LINUX" | "WINDOWS";
+  arch: PlayerArch;
+  label: string;
+  description: string;
+}[] = [
+  {
+    platform: "WINDOWS",
+    arch: "x64",
+    label: "Windows Player (64-bit)",
+    description: "ZIP with the installer and this screen's setup file.",
+  },
+  {
+    platform: "LINUX",
+    arch: "x64",
+    label: "Linux Player (64-bit)",
+    description: "ZIP with the AppImage and this screen's setup file.",
+  },
+  {
+    platform: "LINUX",
+    arch: "arm64",
+    label: "Linux Player (ARM64)",
+    description: "For Raspberry Pi and other ARM devices.",
+  },
+];
 
 function uniqueSorted(values: (string | undefined)[]): string[] {
   return Array.from(new Set(values.filter((v): v is string => Boolean(v)))).sort();
@@ -33,6 +60,8 @@ export default function AgentScreensPage() {
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isDownloadModalOpen, setIsDownloadModalOpen] = useState(false);
   const [downloadError, setDownloadError] = useState<string | null>(null);
+  const [preparingDownload, setPreparingDownload] = useState<string | null>(null);
+  const [pairingCode, setPairingCode] = useState<string | null>(null);
 
   // Filters State
   const [search, setSearch] = useState("");
@@ -68,15 +97,26 @@ export default function AgentScreensPage() {
     setIsCreateModalOpen(false);
   };
 
-  const handleDownloadPlayer = async (platform: "LINUX" | "WINDOWS") => {
+  const handleDownloadPlayer = async (platform: "LINUX" | "WINDOWS", arch: PlayerArch) => {
     setDownloadError(null);
+    setPreparingDownload(`${platform}-${arch}`);
     try {
-      const download = await createPlayerDownload(platform);
+      const download = await createPlayerDownload(platform, arch);
       window.location.href = download.downloadUrl;
-      setIsDownloadModalOpen(false);
+      // Keep the modal open: the pairing code is the only way to recover this
+      // screen if the provisioning file gets separated from the installer.
+      setPairingCode(download.pairingCode);
     } catch (err) {
       setDownloadError(err instanceof Error ? err.message : "Failed to prepare player download");
+    } finally {
+      setPreparingDownload(null);
     }
+  };
+
+  const closeDownloadModal = () => {
+    setIsDownloadModalOpen(false);
+    setPairingCode(null);
+    setDownloadError(null);
   };
 
   // Filter application
@@ -330,7 +370,7 @@ export default function AgentScreensPage() {
                 <h3 className="font-bold text-sm text-[#18202B] dark:text-[#F2F5F8]">Download Player</h3>
               </div>
               <button
-                onClick={() => setIsDownloadModalOpen(false)}
+                onClick={closeDownloadModal}
                 className="p-1 rounded-lg text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-50 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors cursor-pointer"
               >
                 <X className="w-4 h-4" />
@@ -338,27 +378,45 @@ export default function AgentScreensPage() {
             </div>
 
             <div className="p-5 space-y-3">
-              <button
-                onClick={() => handleDownloadPlayer("LINUX")}
-                className="w-full flex items-center justify-between gap-3 rounded-lg border border-[#E2E6EC] dark:border-[#283243] bg-[#F6F7F9] dark:bg-[#171F2C]/50 px-4 py-3 text-left hover:border-[#2859D9] dark:hover:border-[#6F96FF] transition-colors cursor-pointer"
-              >
-                <div>
-                  <p className="text-sm font-bold text-[#18202B] dark:text-[#F2F5F8]">Linux Player</p>
-                  <p className="text-[11px] text-[#657080] dark:text-[#9AA7B7]">Download shell bootstrap from public player package.</p>
-                </div>
-                <Download className="w-4 h-4 text-[#2859D9] dark:text-[#6F96FF] shrink-0" />
-              </button>
+              <p className="text-[11px] text-[#657080] dark:text-[#9AA7B7]">
+                Each download registers one screen. Download once per screen you are setting up.
+              </p>
 
-              <button
-                onClick={() => handleDownloadPlayer("WINDOWS")}
-                className="w-full flex items-center justify-between gap-3 rounded-lg border border-[#E2E6EC] dark:border-[#283243] bg-[#F6F7F9] dark:bg-[#171F2C]/50 px-4 py-3 text-left hover:border-[#2859D9] dark:hover:border-[#6F96FF] transition-colors cursor-pointer"
-              >
-                <div>
-                  <p className="text-sm font-bold text-[#18202B] dark:text-[#F2F5F8]">Windows Player</p>
-                  <p className="text-[11px] text-[#657080] dark:text-[#9AA7B7]">Download Windows bootstrap config from public player package.</p>
+              {PLAYER_DOWNLOAD_OPTIONS.map((option) => {
+                const key = `${option.platform}-${option.arch}`;
+                const isPreparing = preparingDownload === key;
+                return (
+                  <button
+                    key={key}
+                    disabled={preparingDownload !== null}
+                    onClick={() => handleDownloadPlayer(option.platform, option.arch)}
+                    className="w-full flex items-center justify-between gap-3 rounded-lg border border-[#E2E6EC] dark:border-[#283243] bg-[#F6F7F9] dark:bg-[#171F2C]/50 px-4 py-3 text-left hover:border-[#2859D9] dark:hover:border-[#6F96FF] transition-colors cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
+                  >
+                    <div>
+                      <p className="text-sm font-bold text-[#18202B] dark:text-[#F2F5F8]">{option.label}</p>
+                      <p className="text-[11px] text-[#657080] dark:text-[#9AA7B7]">
+                        {isPreparing ? "Preparing download…" : option.description}
+                      </p>
+                    </div>
+                    <Download className="w-4 h-4 text-[#2859D9] dark:text-[#6F96FF] shrink-0" />
+                  </button>
+                );
+              })}
+
+              {pairingCode && (
+                <div className="rounded-lg border border-[#2859D9]/30 dark:border-[#6F96FF]/30 bg-blue-50/60 dark:bg-blue-950/20 p-3">
+                  <p className="text-[10px] font-bold uppercase tracking-wider text-[#2859D9] dark:text-[#6F96FF]">
+                    Pairing code
+                  </p>
+                  <p className="mt-1 font-mono text-lg font-bold tracking-widest text-[#18202B] dark:text-[#F2F5F8]">
+                    {pairingCode}
+                  </p>
+                  <p className="mt-1 text-[11px] text-[#657080] dark:text-[#9AA7B7]">
+                    Your download has started. Keep provisioning.json next to the installer — if the
+                    player asks to be paired, enter this code. It expires in 24 hours.
+                  </p>
                 </div>
-                <Download className="w-4 h-4 text-[#2859D9] dark:text-[#6F96FF] shrink-0" />
-              </button>
+              )}
 
               {downloadError && (
                 <p className="text-[11px] font-semibold text-red-500">{downloadError}</p>
