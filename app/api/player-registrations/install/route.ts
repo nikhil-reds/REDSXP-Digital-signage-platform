@@ -3,22 +3,17 @@ import { NextRequest, NextResponse } from "next/server";
 import { apiError, databaseError, readJson } from "@/lib/api";
 import { hashToken } from "@/lib/auth";
 import { enqueuePlayerInstalledJob } from "@/lib/player-registration-queue";
+import { readPlayerTelemetry, readText } from "@/lib/player-telemetry";
+import { nextScreenName } from "@/lib/screen-naming";
 import { prisma } from "@/lib/prisma";
-
-function readText(value: unknown, maxLength = 160) {
-  if (typeof value !== "string") return null;
-  const trimmed = value.trim();
-  return trimmed ? trimmed.slice(0, maxLength) : null;
-}
 
 export async function POST(request: NextRequest) {
   const body = await readJson(request);
   const registrationId = readText(body?.registrationId, 80);
   const installToken = readText(body?.installToken, 256);
   const installId = readText(body?.installId, 160);
-  const hostname = readText(body?.hostname);
-  const osVersion = readText(body?.osVersion);
-  const appVersion = readText(body?.appVersion);
+  const telemetry = readPlayerTelemetry(body);
+  const arch = readText(body?.arch, 32);
 
   if (!registrationId || !installToken || !installId) {
     return apiError("registrationId, installToken, and installId are required.", 422);
@@ -47,41 +42,57 @@ export async function POST(request: NextRequest) {
     const ipAddress = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || null;
     const model = registration.platform === "LINUX" ? "Linux Player" : "Windows Player";
 
+    const existingDevice =
+      registration.device ?? (await prisma.device.findUnique({ where: { installId } }));
+
+    // An install id is globally unique, so refuse to move a screen between
+    // workspaces even if the caller holds a valid token for their own tenant.
+    if (existingDevice && existingDevice.tenantId !== registration.tenantId) {
+      return apiError("This device is already registered to another workspace.", 409);
+    }
+
     const result = await prisma.$transaction(async (tx) => {
-      const existingDevice =
-        registration.device ??
-        (await tx.device.findUnique({
-          where: { installId },
-        }));
+      // Same tenant reinstalling with a fresh download: retire the registration
+      // that previously owned this device so the unique link can move over.
+      if (
+        existingDevice?.playerRegistrationId &&
+        existingDevice.playerRegistrationId !== registration.id
+      ) {
+        await tx.playerRegistration.update({
+          where: { id: existingDevice.playerRegistrationId },
+          data: { status: "EXPIRED", deviceId: null },
+        });
+      }
+
+      const deviceMetadata = {
+        tenantId: registration.tenantId,
+        installId,
+        platform: registration.platform,
+        model,
+        lastSeen: new Date(),
+        lastHeartbeatAt: new Date(),
+        status: "ONLINE" as const,
+        playerRegistrationId: registration.id,
+        ...(telemetry.appVersion ? { firmwareVersion: telemetry.appVersion } : {}),
+        ...(telemetry.screenResolution ? { screenResolution: telemetry.screenResolution } : {}),
+        ...(telemetry.displayCount !== null ? { displayCount: telemetry.displayCount } : {}),
+        ...(telemetry.timezone ? { timezone: telemetry.timezone } : {}),
+        ...(telemetry.macAddress ? { macAddress: telemetry.macAddress } : {}),
+        ...(telemetry.appInstallPath ? { appInstallPath: telemetry.appInstallPath } : {}),
+      };
 
       const device = existingDevice
         ? await tx.device.update({
             where: { id: existingDevice.id },
-            data: {
-              tenantId: registration.tenantId,
-              installId,
-              platform: registration.platform,
-              model,
-              firmwareVersion: appVersion,
-              lastSeen: new Date(),
-              status: "ONLINE",
-              playerRegistrationId: registration.id,
-            },
+            data: deviceMetadata,
           })
         : await tx.device.create({
             data: {
-              tenantId: registration.tenantId,
+              ...deviceMetadata,
               serialNumber: `PLAYER-${installId}`,
               deviceToken: randomBytes(32).toString("hex"),
-              model,
-              name: hostname || `Unclaimed ${model}`,
+              name: await nextScreenName(tx, registration.tenantId),
               location: null,
-              firmwareVersion: appVersion,
-              lastSeen: new Date(),
-              status: "ONLINE",
-              installId,
-              platform: registration.platform,
-              playerRegistrationId: registration.id,
             },
           });
 
@@ -90,10 +101,15 @@ export async function POST(request: NextRequest) {
         data: {
           installId,
           deviceId: device.id,
-          hostname,
-          osVersion,
-          appVersion,
+          hostname: telemetry.hostname,
+          osVersion: telemetry.osVersion,
+          appVersion: telemetry.appVersion,
+          screenResolution: telemetry.screenResolution,
+          displayCount: telemetry.displayCount,
+          timezone: telemetry.timezone,
+          macAddress: telemetry.macAddress,
           ipAddress,
+          ...(arch ? { arch } : {}),
           status: registration.status === "CLAIMED" ? "CLAIMED" : "INSTALLED",
           installedAt: registration.installedAt ?? new Date(),
         },
@@ -106,9 +122,9 @@ export async function POST(request: NextRequest) {
       registrationId: registration.id,
       installId,
       platform: registration.platform,
-      hostname,
-      osVersion,
-      appVersion,
+      hostname: telemetry.hostname,
+      osVersion: telemetry.osVersion,
+      appVersion: telemetry.appVersion,
       ipAddress,
     }).catch((error) => {
       console.error("Failed to enqueue player registration worker job:", error);
@@ -120,6 +136,7 @@ export async function POST(request: NextRequest) {
         registrationId: result.registration.id,
         deviceId: result.device.id,
         deviceToken: result.device.deviceToken,
+        deviceName: result.device.name,
         status: result.registration.status,
       },
     });

@@ -1,4 +1,5 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
+import { requireAgent } from "@/lib/agent-auth";
 import { prisma } from "@/lib/prisma";
 import { CalendarStatus } from "@/app/generated/prisma/client";
 import { emitScheduleUpdatedEvent } from "@/lib/redpanda";
@@ -31,13 +32,13 @@ const serializeSchedule = (schedule: any) => {
   return serialized;
 };
 
-export async function GET(request: Request) {
-  try {
-    const { searchParams } = new URL(request.url);
-    const tenantId = searchParams.get("tenantId");
+export async function GET(request: NextRequest) {
+  const auth = await requireAgent(request);
+  if (auth.response) return auth.response;
 
+  try {
     const calendars = await prisma.calendar.findMany({
-      where: tenantId ? { tenantId } : undefined,
+      where: { tenantId: auth.agent.tenantId },
       include: {
         playlist: {
           include: {
@@ -65,20 +66,13 @@ export async function GET(request: Request) {
   }
 }
 
-export async function POST(request: Request) {
+export async function POST(request: NextRequest) {
+  const auth = await requireAgent(request);
+  if (auth.response) return auth.response;
+
   try {
     const body = await request.json();
-
-    let resolvedTenantId = body.tenantId;
-    if (!resolvedTenantId) {
-      let tenant = await prisma.tenant.findFirst();
-      if (!tenant) {
-        tenant = await prisma.tenant.create({
-          data: { name: "Default Tenant", slug: "default-tenant" },
-        });
-      }
-      resolvedTenantId = tenant.id;
-    }
+    const resolvedTenantId = auth.agent.tenantId;
 
     // Validate inputs
     if (!body.name) {
@@ -92,11 +86,24 @@ export async function POST(request: Request) {
     }
 
     // Validate if playlist exists
-    const playlist = await prisma.playlist.findUnique({
-      where: { id: body.playlistId },
+    const playlist = await prisma.playlist.findFirst({
+      where: { id: body.playlistId, tenantId: resolvedTenantId },
     });
     if (!playlist) {
       return NextResponse.json({ error: "Playlist not found" }, { status: 404 });
+    }
+
+    // Only screens in this tenant may be targeted, otherwise a schedule could be
+    // pointed at another workspace's device.
+    const deviceIds: string[] = Array.isArray(body.deviceIds) ? body.deviceIds : [];
+    if (deviceIds.length > 0) {
+      const ownedDevices = await prisma.device.findMany({
+        where: { id: { in: deviceIds }, tenantId: resolvedTenantId },
+        select: { id: true },
+      });
+      if (ownedDevices.length !== deviceIds.length) {
+        return NextResponse.json({ error: "One or more screens were not found" }, { status: 404 });
+      }
     }
 
     // Parse status
@@ -120,8 +127,8 @@ export async function POST(request: Request) {
         daysOfWeek: Array.isArray(body.daysOfWeek) ? body.daysOfWeek : [],
         priority: typeof body.priority === "number" ? body.priority : 0,
         status: status,
-        devices: body.deviceIds && Array.isArray(body.deviceIds) ? {
-          connect: body.deviceIds.map((id: string) => ({ id })),
+        devices: deviceIds.length > 0 ? {
+          connect: deviceIds.map((id: string) => ({ id })),
         } : undefined,
       },
       include: {

@@ -99,6 +99,11 @@ export default function AgentScreensPage() {
     }
   };
 
+  const closeDownloadModal = () => {
+    setIsDownloadModalOpen(false);
+    setDownloadError(null);
+  };
+
   // Filter application
   const filteredScreens = screens.filter((screen) => {
     const matchesSearch =

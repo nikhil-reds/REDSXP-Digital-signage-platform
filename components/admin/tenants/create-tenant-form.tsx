@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
-import { X, Calendar, Loader2, AlertCircle } from "lucide-react";
+import { X, Calendar, Loader2, AlertCircle, Lock } from "lucide-react";
 import type { PlanOption } from "@/components/admin/tenants/tenants-table";
 
 export interface CreateTenantPayload {
@@ -46,6 +46,22 @@ export default function CreateTenantForm({
     setName(value);
     if (!isSlugEdited) setSlug(slugify(value));
   };
+
+  /**
+   * Branding and custom domain are entitlements sold on plans, and the tenant
+   * being created does not exist yet — so the question is what the *selected
+   * plan* includes, not what the admin's own workspace has. That is why this
+   * reads planOptions rather than useFeatures(). The API enforces the same
+   * rule with a 402; this only stops the admin filling in a field that would
+   * be rejected on submit.
+   */
+  const selectedPlan = planOptions.find((option) => option.id === planId);
+  const planIncludes = (key: string) => Boolean(selectedPlan?.featureKeys?.includes(key));
+  const canBrand = planIncludes("custom_branding");
+  const canUseDomain = planIncludes("custom_domain");
+  const lockedNote = selectedPlan
+    ? `Not included in ${selectedPlan.name}.`
+    : "Choose a plan that includes this first.";
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -162,22 +178,34 @@ export default function CreateTenantForm({
           </span>
         </div>
 
-        {/* Brand Logo URL */}
+        {/* Brand Logo URL — Custom Branding entitlement */}
         <div className="flex flex-col gap-1.5">
-          <label className="font-semibold text-app-muted">Logo URL</label>
+          <label className="flex items-center gap-1.5 font-semibold text-app-muted">
+            Logo URL
+            {!canBrand && <Lock className="h-3 w-3" />}
+          </label>
           <input
             type="url"
             placeholder="https://cdn.example.com/logo.svg"
             value={brandLogoUrl}
             onChange={(e) => setBrandLogoUrl(e.target.value)}
-            className="w-full rounded-lg border border-app-border bg-app-surface-alt px-3 py-2 text-caption text-app-text placeholder:text-app-muted focus:outline-none focus:ring-2 focus:ring-app-accent-text"
+            disabled={!canBrand}
+            className="w-full rounded-lg border border-app-border bg-app-surface-alt px-3 py-2 text-caption text-app-text placeholder:text-app-muted focus:outline-none focus:ring-2 focus:ring-app-accent-text disabled:cursor-not-allowed disabled:opacity-50"
           />
+          {!canBrand && <span className="text-[10px] text-app-muted">{lockedNote}</span>}
         </div>
 
-        {/* Primary Color Picker */}
+        {/* Primary Color Picker — Custom Branding entitlement */}
         <div className="flex flex-col gap-1.5">
-          <label className="font-semibold text-app-muted">Primary Color</label>
-          <div className="flex items-center gap-2 rounded-lg border border-app-border bg-app-surface-alt px-3 py-1.5">
+          <label className="flex items-center gap-1.5 font-semibold text-app-muted">
+            Primary Color
+            {!canBrand && <Lock className="h-3 w-3" />}
+          </label>
+          <div
+            className={`flex items-center gap-2 rounded-lg border border-app-border bg-app-surface-alt px-3 py-1.5 ${
+              canBrand ? "" : "opacity-50"
+            }`}
+          >
             <div
               className="w-5 h-5 rounded-md shadow-xs shrink-0"
               style={{ backgroundColor: primaryColor }}
@@ -186,21 +214,32 @@ export default function CreateTenantForm({
               type="text"
               value={primaryColor}
               onChange={(e) => setPrimaryColor(e.target.value)}
-              className="w-full bg-transparent font-mono text-caption font-medium uppercase text-app-text focus:outline-none"
+              disabled={!canBrand}
+              className="w-full bg-transparent font-mono text-caption font-medium uppercase text-app-text focus:outline-none disabled:cursor-not-allowed"
             />
           </div>
+          {!canBrand && (
+            <span className="text-[10px] text-app-muted">
+              {lockedNote} The workspace keeps the default colour.
+            </span>
+          )}
         </div>
 
-        {/* Custom Domain */}
+        {/* Custom Domain — Custom Domain entitlement */}
         <div className="flex flex-col gap-1.5">
-          <label className="font-semibold text-app-muted">Custom Domain</label>
+          <label className="flex items-center gap-1.5 font-semibold text-app-muted">
+            Custom Domain
+            {!canUseDomain && <Lock className="h-3 w-3" />}
+          </label>
           <input
             type="text"
             placeholder="screens.acme.in"
             value={customDomain}
             onChange={(e) => setCustomDomain(e.target.value)}
-            className="w-full rounded-lg border border-app-border bg-app-surface-alt px-3 py-2 text-caption text-app-text placeholder:text-app-muted focus:outline-none focus:ring-2 focus:ring-app-accent-text"
+            disabled={!canUseDomain}
+            className="w-full rounded-lg border border-app-border bg-app-surface-alt px-3 py-2 text-caption text-app-text placeholder:text-app-muted focus:outline-none focus:ring-2 focus:ring-app-accent-text disabled:cursor-not-allowed disabled:opacity-50"
           />
+          {!canUseDomain && <span className="text-[10px] text-app-muted">{lockedNote}</span>}
         </div>
 
         {/* Actions Button Panel */}

@@ -51,6 +51,10 @@ const RAW_GREY_BACKLOG = [
   "components/admin/devices/devices-list.tsx",
   "components/admin/health/incidents-deployments.tsx",
   "components/admin/plans/admin-users.tsx",
+  // Ported from the RBAC/tripti branch, which was cut before the token system
+  // existed. The two /admin/roles files are converted; the agent mirror still
+  // needs the same treatment.
+  "components/agent/roles/tenant-role-manager.tsx",
 ];
 
 const eslintConfig = defineConfig([

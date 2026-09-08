@@ -1,4 +1,5 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
+import { requireAgent } from "@/lib/agent-auth";
 import { prisma } from "@/lib/prisma";
 import { CalendarStatus } from "@/app/generated/prisma/client";
 import { emitScheduleUpdatedEvent } from "@/lib/redpanda";
@@ -31,12 +32,15 @@ const serializeSchedule = (schedule: any) => {
   return serialized;
 };
 
-export async function GET(request: Request, { params }: { params: Promise<{ id: string }> }) {
+export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  const auth = await requireAgent(request);
+  if (auth.response) return auth.response;
+
   try {
     const { id } = await params;
 
-    const calendar = await prisma.calendar.findUnique({
-      where: { id },
+    const calendar = await prisma.calendar.findFirst({
+      where: { id, tenantId: auth.agent.tenantId },
       include: {
         playlist: {
           include: {
@@ -66,13 +70,16 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
   }
 }
 
-export async function PUT(request: Request, { params }: { params: Promise<{ id: string }> }) {
+export async function PUT(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  const auth = await requireAgent(request);
+  if (auth.response) return auth.response;
+
   try {
     const { id } = await params;
     const body = await request.json();
 
-    const existingCalendar = await prisma.calendar.findUnique({
-      where: { id },
+    const existingCalendar = await prisma.calendar.findFirst({
+      where: { id, tenantId: auth.agent.tenantId },
     });
 
     if (!existingCalendar) {
@@ -81,8 +88,8 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
 
     // Validate if new playlist ID exists
     if (body.playlistId) {
-      const playlist = await prisma.playlist.findUnique({
-        where: { id: body.playlistId },
+      const playlist = await prisma.playlist.findFirst({
+        where: { id: body.playlistId, tenantId: auth.agent.tenantId },
       });
       if (!playlist) {
         return NextResponse.json({ error: "Playlist not found" }, { status: 404 });
@@ -99,6 +106,17 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
     }
 
     // Update fields
+    const deviceIds: string[] = Array.isArray(body.deviceIds) ? body.deviceIds : [];
+    if (deviceIds.length > 0) {
+      const ownedDevices = await prisma.device.findMany({
+        where: { id: { in: deviceIds }, tenantId: auth.agent.tenantId },
+        select: { id: true },
+      });
+      if (ownedDevices.length !== deviceIds.length) {
+        return NextResponse.json({ error: "One or more screens were not found" }, { status: 404 });
+      }
+    }
+
     const updatedCalendar = await prisma.calendar.update({
       where: { id },
       data: {
@@ -110,8 +128,8 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
         daysOfWeek: Array.isArray(body.daysOfWeek) ? body.daysOfWeek : undefined,
         priority: typeof body.priority === "number" ? body.priority : undefined,
         status: status,
-        devices: body.deviceIds && Array.isArray(body.deviceIds) ? {
-          set: body.deviceIds.map((deviceId: string) => ({ id: deviceId })),
+        devices: Array.isArray(body.deviceIds) ? {
+          set: deviceIds.map((deviceId: string) => ({ id: deviceId })),
         } : undefined,
       },
       include: {
@@ -146,12 +164,15 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
   }
 }
 
-export async function DELETE(request: Request, { params }: { params: Promise<{ id: string }> }) {
+export async function DELETE(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  const auth = await requireAgent(request);
+  if (auth.response) return auth.response;
+
   try {
     const { id } = await params;
 
-    const existingCalendar = await prisma.calendar.findUnique({
-      where: { id },
+    const existingCalendar = await prisma.calendar.findFirst({
+      where: { id, tenantId: auth.agent.tenantId },
     });
 
     if (!existingCalendar) {

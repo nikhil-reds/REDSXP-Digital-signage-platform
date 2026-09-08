@@ -52,6 +52,16 @@ export default function ScreenCreateModal({
       .catch(() => setPlayers([]));
   }, []);
 
+  const selectedPlayer = players.find((player) => player.id === selectedPlayerId) ?? null;
+
+  // Start from the "Screen 01" name the CMS assigned at install time so the
+  // agent can keep it or replace it with something meaningful.
+  useEffect(() => {
+    if (mode === "registered" && selectedPlayer?.deviceName) {
+      setName((current) => current || selectedPlayer.deviceName || "");
+    }
+  }, [mode, selectedPlayer]);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);

@@ -130,3 +130,21 @@ export async function getPresignedUploadUrl(key: string, contentType: string, ex
     throw new Error("Failed to generate presigned URL");
   }
 }
+/** Streams an object out of S3 without buffering it in memory. */
+export async function getS3ObjectStream(
+  key: string,
+  bucketName?: string,
+): Promise<{ body: NodeJS.ReadableStream; contentLength: number | null }> {
+  const command = new GetObjectCommand({
+    Bucket: bucketName || process.env.AWS_BUCKET,
+    Key: key,
+  });
+
+  const response = await s3Client.send(command);
+  if (!response.Body) throw new Error(`S3 object ${key} has no body`);
+
+  return {
+    body: response.Body as NodeJS.ReadableStream,
+    contentLength: response.ContentLength ?? null,
+  };
+}

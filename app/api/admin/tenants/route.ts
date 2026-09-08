@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { apiError, databaseError, readJson } from "@/lib/api";
 import { requireAdmin } from "@/lib/admin-auth";
+import { FEATURES, planHasFeature } from "@/lib/features";
 import { prisma } from "@/lib/prisma";
 import type { Prisma } from "@/app/generated/prisma/client";
 
@@ -98,7 +99,16 @@ export async function GET(request: NextRequest) {
       prisma.tenant.count({ where: statusWhere("SUSPENDED") }),
       prisma.tenant.count({ where: statusWhere("TRIAL") }),
       prisma.tenant.count({ where: statusWhere("PAST_DUE") }),
-      prisma.plan.findMany({ orderBy: { priceMonthly: "asc" }, select: { id: true, name: true } }),
+      // Feature keys ride along so the create form can tell which branding
+      // fields the chosen plan entitles, without a second request.
+      prisma.plan.findMany({
+        orderBy: [{ sortOrder: "asc" }, { priceMonthly: "asc" }],
+        select: {
+          id: true,
+          name: true,
+          features: { select: { feature: { select: { key: true } } } },
+        },
+      }),
     ]);
 
     // Screen and storage usage are aggregated separately so the tenant page stays
@@ -176,7 +186,11 @@ export async function GET(request: NextRequest) {
           pastDue,
           suspended,
         },
-        planOptions,
+        planOptions: planOptions.map((plan) => ({
+          id: plan.id,
+          name: plan.name,
+          featureKeys: plan.features.map((link) => link.feature.key),
+        })),
       },
     });
   } catch (error) {
@@ -216,6 +230,24 @@ export async function POST(request: NextRequest) {
       ? await prisma.plan.findUnique({ where: { id: planId }, select: { id: true } })
       : null;
     if (planId && !plan) return apiError("The selected plan no longer exists.", 422);
+
+    // Entitlement check. Custom domain and custom branding are sold on plans,
+    // and this is the endpoint that actually writes those columns — so the
+    // plan being assigned has to include them. A tenant with no plan resolves
+    // to the default plan, exactly as lib/features.ts does at read time.
+    const entitlementErrors: string[] = [];
+    if (customDomain && !(await planHasFeature(plan?.id ?? null, FEATURES.CUSTOM_DOMAIN))) {
+      entitlementErrors.push("The selected plan does not include Custom Domain.");
+    }
+    if (
+      (brandLogoUrl || primaryColor !== "#1A4E8C") &&
+      !(await planHasFeature(plan?.id ?? null, FEATURES.CUSTOM_BRANDING))
+    ) {
+      entitlementErrors.push("The selected plan does not include Custom Branding.");
+    }
+    if (entitlementErrors.length) {
+      return apiError("This plan does not include those features.", 402, entitlementErrors);
+    }
 
     const tenant = await prisma.$transaction(async (tx) => {
       const created = await tx.tenant.create({

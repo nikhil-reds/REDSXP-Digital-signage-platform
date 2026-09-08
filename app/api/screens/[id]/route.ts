@@ -1,12 +1,16 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
+import { requireAgent } from "@/lib/agent-auth";
 import { prisma } from "@/lib/prisma";
 import { serializeDevice } from "../route";
 
-export async function GET(request: Request, { params }: { params: Promise<{ id: string }> }) {
+export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  const auth = await requireAgent(request);
+  if (auth.response) return auth.response;
+
   try {
     const { id } = await params;
-    const device = await prisma.device.findUnique({
-      where: { id },
+    const device = await prisma.device.findFirst({
+      where: { id, tenantId: auth.agent.tenantId },
       include: { group: true, playlist: true },
     });
 
@@ -21,10 +25,31 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
   }
 }
 
-export async function PATCH(request: Request, { params }: { params: Promise<{ id: string }> }) {
+export async function PATCH(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  const auth = await requireAgent(request);
+  if (auth.response) return auth.response;
+
   try {
     const { id } = await params;
     const body = await request.json();
+
+    const existing = await prisma.device.findFirst({
+      where: { id, tenantId: auth.agent.tenantId },
+      select: { id: true },
+    });
+    if (!existing) {
+      return NextResponse.json({ error: "Screen not found" }, { status: 404 });
+    }
+
+    if (body.groupId) {
+      const group = await prisma.deviceGroup.findFirst({
+        where: { id: body.groupId, tenantId: auth.agent.tenantId },
+        select: { id: true },
+      });
+      if (!group) {
+        return NextResponse.json({ error: "Screen group not found" }, { status: 404 });
+      }
+    }
 
     const device = await prisma.device.update({
       where: { id },
@@ -50,11 +75,17 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
   }
 }
 
-export async function DELETE(request: Request, { params }: { params: Promise<{ id: string }> }) {
+export async function DELETE(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  const auth = await requireAgent(request);
+  if (auth.response) return auth.response;
+
   try {
     const { id } = await params;
 
-    const device = await prisma.device.findUnique({ where: { id } });
+    const device = await prisma.device.findFirst({
+      where: { id, tenantId: auth.agent.tenantId },
+      select: { id: true },
+    });
     if (!device) {
       return NextResponse.json({ error: "Screen not found" }, { status: 404 });
     }

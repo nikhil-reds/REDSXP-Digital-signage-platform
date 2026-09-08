@@ -1,43 +1,51 @@
-import React from "react";
-import { Sliders, CloudUpload } from "lucide-react";
+"use client";
+
+import React, { useState } from "react";
+import { CheckCircle2, Shield, Users, X } from "lucide-react";
+import Link from "next/link";
 import PlanCards from "@/components/admin/plans/plan-cards";
 import FeatureFlags from "@/components/admin/plans/feature-flags";
-import AdminUsers from "@/components/admin/plans/admin-users";
 import { Button, PageShell } from "@/components/ui";
 
 export default function PlansFeatureFlagsPage() {
+  const [notice, setNotice] = useState<string | null>(null);
+
   return (
     <PageShell className="space-y-6">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div className="flex flex-col gap-0.5">
-          <h1 className="text-page-title font-bold tracking-tight text-app-text">
-            Plans & Feature Flags
-          </h1>
-          <p className="text-caption text-app-muted">
-            Configure pricing, limits, and feature rollout across all tenant plans.
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <div className="mb-1 flex items-center gap-2">
+            <Shield className="h-5 w-5 text-app-accent-text" />
+            <h1 className="text-page-title font-bold text-app-text">Plans &amp; Feature Flags</h1>
+          </div>
+          <p className="text-body text-app-muted">
+            Configure pricing, limits, and feature rollout across all tenant plans. Changes save as
+            you make them.
           </p>
         </div>
-        <div className="flex items-center gap-2 self-start sm:self-auto text-xs">
-          <Button variant="secondary">
-            <Sliders className="w-3.5 h-3.5 text-zinc-450" />
-            <span>Review Changes</span>
-          </Button>
-          <Button>
-            <CloudUpload className="w-3.5 h-3.5" />
-            <span>Publish Changes</span>
-          </Button>
-        </div>
+        {/* The old "Review Changes" / "Publish Changes" pair had no handlers and
+            implied a staging step this page does not have — every write here is
+            immediate (decision D3). Replaced with a link to the page that really
+            does manage administrators. */}
+        <Button as={Link} href="/admin/users" variant="secondary" icon={Users} className="self-start sm:self-auto">
+          Admin users
+        </Button>
       </div>
 
-      {/* 1. Plan comparison cards */}
-      <PlanCards />
+      {notice && (
+        <div className="flex items-center justify-between rounded-xl border border-app-accent-border bg-app-accent-surface px-4 py-3 text-body text-app-accent-text">
+          <span className="flex items-center gap-2">
+            <CheckCircle2 className="h-4 w-4" />
+            {notice}
+          </span>
+          <button onClick={() => setNotice(null)} aria-label="Dismiss">
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+      )}
 
-      {/* 2. Global feature flags table */}
-      <FeatureFlags />
-
-      {/* 3. Admin Users table list */}
-      <AdminUsers />
+      <PlanCards onNotice={setNotice} />
+      <FeatureFlags onNotice={setNotice} />
     </PageShell>
   );
 }
