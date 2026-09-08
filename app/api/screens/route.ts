@@ -1,5 +1,6 @@
 import { randomBytes, randomUUID } from "crypto";
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
+import { requireAgent } from "@/lib/agent-auth";
 import { prisma } from "@/lib/prisma";
 import { AlertSeverity, DeviceStatus } from "@/app/generated/prisma/client";
 
@@ -41,6 +42,12 @@ export function serializeDevice(device: {
   installId: string | null;
   platform: "LINUX" | "WINDOWS" | null;
   playerRegistrationId: string | null;
+  screenResolution?: string | null;
+  displayCount?: number | null;
+  timezone?: string | null;
+  macAddress?: string | null;
+  appInstallPath?: string | null;
+  lastHeartbeatAt?: Date | null;
   group: { name: string } | null;
   playlist: { name: string } | null;
 }) {
@@ -60,16 +67,22 @@ export function serializeDevice(device: {
     installId: device.installId,
     platform: device.platform,
     playerRegistrationId: device.playerRegistrationId,
+    screenResolution: device.screenResolution ?? null,
+    displayCount: device.displayCount ?? null,
+    timezone: device.timezone ?? null,
+    macAddress: device.macAddress ?? null,
+    appInstallPath: device.appInstallPath ?? null,
+    lastHeartbeatAt: device.lastHeartbeatAt?.toISOString() ?? null,
   };
 }
 
-export async function GET(request: Request) {
-  try {
-    const { searchParams } = new URL(request.url);
-    const tenantId = searchParams.get("tenantId");
+export async function GET(request: NextRequest) {
+  const auth = await requireAgent(request);
+  if (auth.response) return auth.response;
 
+  try {
     const devices = await prisma.device.findMany({
-      where: tenantId ? { tenantId } : undefined,
+      where: { tenantId: auth.agent.tenantId },
       include: { group: true, playlist: true },
       orderBy: { createdAt: "desc" },
     });
@@ -81,26 +94,30 @@ export async function GET(request: Request) {
   }
 }
 
-export async function POST(request: Request) {
+export async function POST(request: NextRequest) {
+  const auth = await requireAgent(request);
+  if (auth.response) return auth.response;
+
   try {
     const body = await request.json();
-
-    let resolvedTenantId = body.tenantId;
-    if (!resolvedTenantId) {
-      let tenant = await prisma.tenant.findFirst();
-      if (!tenant) {
-        tenant = await prisma.tenant.create({ data: { name: "Default Tenant", slug: "default-tenant" } });
-      }
-      resolvedTenantId = tenant.id;
-    }
 
     if (!body.name || !body.model) {
       return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
     }
 
+    if (body.groupId) {
+      const group = await prisma.deviceGroup.findFirst({
+        where: { id: body.groupId, tenantId: auth.agent.tenantId },
+        select: { id: true },
+      });
+      if (!group) {
+        return NextResponse.json({ error: "Screen group not found" }, { status: 404 });
+      }
+    }
+
     const device = await prisma.device.create({
       data: {
-        tenantId: resolvedTenantId,
+        tenantId: auth.agent.tenantId,
         name: body.name,
         model: body.model,
         location: body.location || null,

@@ -37,6 +37,16 @@ export default function ScreenCreateModal({ onClose, onCreate, onClaimPlayer }: 
       .catch(() => setPlayers([]));
   }, []);
 
+  const selectedPlayer = players.find((player) => player.id === selectedPlayerId) ?? null;
+
+  // Start from the "Screen 01" name the CMS assigned at install time so the
+  // agent can keep it or replace it with something meaningful.
+  useEffect(() => {
+    if (mode === "registered" && selectedPlayer?.deviceName) {
+      setName((current) => current || selectedPlayer.deviceName || "");
+    }
+  }, [mode, selectedPlayer]);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
@@ -121,11 +131,45 @@ export default function ScreenCreateModal({ onClose, onCreate, onClaimPlayer }: 
               >
                 {players.map((player) => (
                   <option key={player.id} value={player.id}>
-                    {player.hostname || "Unnamed device"} · {player.platform === "LINUX" ? "Linux" : "Windows"} ·{" "}
-                    {player.installId?.slice(0, 12) || "No install ID"}
+                    {player.deviceName || player.hostname || "Unnamed device"} ·{" "}
+                    {player.platform === "LINUX" ? "Linux" : "Windows"} ·{" "}
+                    {player.hostname || player.installId?.slice(0, 12) || "No install ID"}
                   </option>
                 ))}
               </select>
+
+              {selectedPlayer && (
+                <dl className="mt-1 grid grid-cols-2 gap-x-3 gap-y-1.5 rounded-lg border border-[#E2E6EC] dark:border-[#283243] bg-[#F6F7F9] dark:bg-[#171F2C]/50 p-3">
+                  {[
+                    ["Hostname", selectedPlayer.hostname],
+                    ["Platform", `${selectedPlayer.platform === "LINUX" ? "Linux" : "Windows"}${selectedPlayer.arch ? ` (${selectedPlayer.arch})` : ""}`],
+                    ["OS", selectedPlayer.osVersion],
+                    ["Player version", selectedPlayer.appVersion],
+                    ["Resolution", selectedPlayer.screenResolution],
+                    ["Displays", selectedPlayer.displayCount?.toString()],
+                    ["Timezone", selectedPlayer.timezone],
+                    ["IP address", selectedPlayer.ipAddress],
+                    [
+                      "Installed",
+                      selectedPlayer.installedAt
+                        ? new Date(selectedPlayer.installedAt).toLocaleString()
+                        : null,
+                    ],
+                  ]
+                    .filter(([, value]) => Boolean(value))
+                    .map(([label, value]) => (
+                      <div key={label} className="min-w-0">
+                        <dt className="text-[9px] font-bold uppercase tracking-wider text-zinc-400 dark:text-zinc-500">
+                          {label}
+                        </dt>
+                        <dd className="truncate text-[11px] font-semibold text-[#18202B] dark:text-[#F2F5F8]">
+                          {value}
+                        </dd>
+                      </div>
+                    ))}
+                </dl>
+              )}
+
               <div className="flex items-center gap-1.5 text-[11px] text-zinc-400 dark:text-zinc-500">
                 <Cpu className="w-3 h-3" />
                 <span>{players.length} installed player{players.length === 1 ? "" : "s"} ready to add.</span>
