@@ -23,12 +23,18 @@ export interface CreateScreenPayload {
 export interface PlayerRegistration {
   id: string;
   platform: "LINUX" | "WINDOWS";
+  arch: string | null;
+  buildVersion: string | null;
   status: "DOWNLOADED" | "INSTALLED" | "CLAIMED" | "EXPIRED";
   installId: string | null;
   hostname: string | null;
   osVersion: string | null;
   appVersion: string | null;
   ipAddress: string | null;
+  screenResolution: string | null;
+  displayCount: number | null;
+  timezone: string | null;
+  macAddress: string | null;
   deviceId: string | null;
   deviceName: string | null;
   installedAt: string | null;
@@ -62,23 +68,27 @@ export async function createScreen(payload: CreateScreenPayload): Promise<Screen
   return request<ScreenDevice>("/api/screens", { method: "POST", body: JSON.stringify(payload) });
 }
 
-export async function createPlayerDownload(platform: "LINUX" | "WINDOWS"): Promise<{
+export type PlayerArch = "x64" | "arm64";
+
+export interface PlayerDownload {
   id: string;
   platform: "LINUX" | "WINDOWS";
+  arch: PlayerArch;
+  buildVersion: string;
+  pairingCode: string;
   label: string;
   expiresAt: string;
   downloadUrl: string;
-}> {
-  const response = await request<{
-    success: boolean;
-    data: {
-      id: string;
-      platform: "LINUX" | "WINDOWS";
-      label: string;
-      expiresAt: string;
-      downloadUrl: string;
-    };
-  }>("/api/player-downloads", { method: "POST", body: JSON.stringify({ platform }) });
+}
+
+export async function createPlayerDownload(
+  platform: "LINUX" | "WINDOWS",
+  arch: PlayerArch = "x64",
+): Promise<PlayerDownload> {
+  const response = await request<{ success: boolean; data: PlayerDownload }>(
+    "/api/player-downloads",
+    { method: "POST", body: JSON.stringify({ platform, arch }) },
+  );
   return response.data;
 }
 
