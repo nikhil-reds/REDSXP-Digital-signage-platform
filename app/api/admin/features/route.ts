@@ -55,7 +55,7 @@ export function readFeatureBody(body: Record<string, unknown> | null) {
 }
 
 export async function GET(request: NextRequest) {
-  const auth = await requireAdmin(request, PERMISSIONS.ADMIN_PLANS_READ);
+  const auth = await requireAdmin(request, PERMISSIONS.ADMIN_FEATURES_READ);
   if (auth.response) return auth.response;
 
   const kindParam = request.nextUrl.searchParams.get("kind");
@@ -90,7 +90,7 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
-  const auth = await requireAdmin(request, PERMISSIONS.ADMIN_PLANS_WRITE);
+  const auth = await requireAdmin(request, PERMISSIONS.ADMIN_FEATURES_UPDATE);
   if (auth.response) return auth.response;
 
   const { errors, data } = readFeatureBody(await readJson(request));
