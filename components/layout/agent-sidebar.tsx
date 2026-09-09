@@ -24,6 +24,7 @@ import {
   ChevronRight,
   X,
   Settings,
+  UserRound,
   ShieldCheck
 } from "lucide-react";
 
@@ -46,6 +47,7 @@ const navItems: NavItem[] = [
   { name: "Analytics", href: "/agent/analytics", icon: LineChart },
   { name: "Reports", href: "/agent/reports", icon: FileText },
   { name: "Activity Log", href: "/agent/activity-log", icon: History },
+  { name: "Workspace Users", href: "/agent/users", icon: UserRound },
   { name: "Roles & Permissions", href: "/agent/roles", icon: ShieldCheck },
   { name: "Help & Support", href: "/agent/support", icon: LifeBuoy },
 ];
