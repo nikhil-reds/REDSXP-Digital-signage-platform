@@ -29,7 +29,7 @@ export async function PUT(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ) {
-  const auth = await requireAdmin(request, PERMISSIONS.ADMIN_ROLES_WRITE);
+  const auth = await requireAdmin(request, PERMISSIONS.ADMIN_ROLES_UPDATE);
   if (auth.response) return auth.response;
 
   const { id } = await params;
@@ -47,6 +47,14 @@ export async function PUT(
   const name = typeof body?.name === "string" ? body.name.trim() : role.name;
   const description = typeof body?.description === "string" ? body.description.trim() : role.description;
   const permissionIds = Array.isArray(body?.permissionIds) ? (body.permissionIds as string[]) : undefined;
+  if (permissionIds) {
+    const validPermissions = await prisma.permission.count({
+      where: { id: { in: permissionIds }, scope: RoleScope.SYSTEM },
+    });
+    if (validPermissions !== new Set(permissionIds).size) {
+      return apiError("One or more selected permissions are invalid for platform roles.", 422);
+    }
+  }
 
   const updated = await prisma.role.update({
     where: { id },
@@ -75,7 +83,7 @@ export async function DELETE(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ) {
-  const auth = await requireAdmin(request, PERMISSIONS.ADMIN_ROLES_WRITE);
+  const auth = await requireAdmin(request, PERMISSIONS.ADMIN_ROLES_DELETE);
   if (auth.response) return auth.response;
 
   const { id } = await params;
