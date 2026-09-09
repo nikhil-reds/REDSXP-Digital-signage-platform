@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { Grid, List, Upload, HardDrive } from "lucide-react";
+import { CircleAlert, Grid, List, Upload, HardDrive } from "lucide-react";
 import MediaGrid, { MediaAsset } from "@/components/agent/media/media-grid";
 import MediaTable from "@/components/agent/media/media-table";
 import MediaUploadModal from "@/components/agent/media/media-upload-modal";
@@ -11,6 +11,7 @@ import {
   Card,
   CollectionPagination,
   CollectionToolbar,
+  EmptyState,
   ProgressBar,
   SegmentedControl,
   SkeletonCardGrid,
@@ -23,6 +24,7 @@ export default function AgentMediaPage() {
   const [viewMode, setViewMode] = useState<"grid" | "table">("grid");
   const [selectedAsset, setSelectedAsset] = useState<MediaAsset | null>(null);
   const [showUploadModal, setShowUploadModal] = useState(false);
+  const [toast, setToast] = useState<{ message: string; tone: "danger" | "success" } | null>(null);
   // Plan §2: skeleton on first load only — a refetch keeps the current content
   // on screen rather than replacing it with grey bars.
   const isFirstLoad = isLoading && assets.length === 0;
@@ -84,8 +86,32 @@ export default function AgentMediaPage() {
     setAssets((prev) => [newAsset, ...prev]);
   };
 
-  const handleDeleteAsset = (id: string) => {
-    setAssets((prev) => prev.filter((a) => a.id !== id));
+  const showToast = (message: string, tone: "danger" | "success") => {
+    setToast({ message, tone });
+    window.setTimeout(() => setToast(null), 5000);
+  };
+
+  const handleDeleteAsset = async (id: string) => {
+    try {
+      const response = await fetch(`/api/media/${id}`, { method: "DELETE" });
+      if (response.status === 403) {
+        showToast("Access denied — you don’t have permission to delete media assets.", "danger");
+        return false;
+      }
+      if (!response.ok) {
+        const problem = await response.json().catch(() => null);
+        showToast(problem?.message || problem?.error || "Unable to delete this asset. Please try again.", "danger");
+        return false;
+      }
+
+      setAssets((prev) => prev.filter((asset) => asset.id !== id));
+      setSelectedAsset(null);
+      showToast("Media asset deleted.", "success");
+      return true;
+    } catch {
+      showToast("Unable to delete this asset. Check your connection and try again.", "danger");
+      return false;
+    }
   };
 
   return (
@@ -161,6 +187,31 @@ export default function AgentMediaPage() {
                 <SkeletonTable rows={6} cols={9} label="Loading media…" />
               </Card>
             )
+          ) : assets.length === 0 ? (
+            <Card size="panel" className="min-h-80 border-dashed">
+              <EmptyState
+                icon={Upload}
+                title="Your media library is empty"
+                description="Upload an image, video, or HTML5 link to start building content for your screens."
+                action={
+                  <Button variant="primary" icon={Upload} onClick={() => setShowUploadModal(true)}>
+                    Upload your first asset
+                  </Button>
+                }
+              />
+            </Card>
+          ) : visibleAssets.length === 0 ? (
+            <Card size="panel" className="min-h-64 border-dashed">
+              <EmptyState
+                title="No assets match these filters"
+                description="Try a different search or clear the active filters to see your media."
+                action={
+                  <Button variant="secondary" onClick={() => { setSearch(""); setTypeFilter("All"); setOrientationFilter("All"); setStatusFilter("All"); setSort("date-desc"); setGroupBy("none"); resetPage(); }}>
+                    Clear filters
+                  </Button>
+                }
+              />
+            </Card>
           ) : viewMode === "grid" ? (
             <MediaGrid assets={visibleAssets} onSelectMedia={(a) => setSelectedAsset(a)} />
           ) : (
@@ -185,6 +236,21 @@ export default function AgentMediaPage() {
           onClose={() => setShowUploadModal(false)}
           onUploadSuccess={handleUploadSuccess}
         />
+      )}
+
+      {toast && (
+        <div
+          role="status"
+          className={`fixed bottom-24 right-6 z-50 flex max-w-sm items-start gap-3 rounded-xl border p-4 shadow-lg ${
+            toast.tone === "danger"
+              ? "border-app-danger-border bg-app-danger-surface text-app-danger-text"
+              : "border-app-accent-border bg-app-accent-surface text-app-accent-text"
+          }`}
+        >
+          <CircleAlert className="mt-0.5 h-5 w-5 shrink-0" aria-hidden />
+          <p className="text-body font-semibold">{toast.message}</p>
+          <button className="text-caption underline" onClick={() => setToast(null)}>Dismiss</button>
+        </div>
       )}
     </div>
   );
