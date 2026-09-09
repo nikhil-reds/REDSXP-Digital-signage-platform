@@ -91,16 +91,16 @@ export default function AgentSidebar({
         } ${isCollapsed ? "md:w-20" : "md:w-64"}`}
       >
       {/* Brand Header */}
-      <div className="px-4 py-6 border-b border-app-border flex items-center justify-between">
+      <div className={`flex items-center justify-between border-b border-app-border py-6 ${isVisuallyCollapsed ? "px-3" : "px-4"}`}>
         <div className="flex items-center gap-3 overflow-hidden">
           {isVisuallyCollapsed ? (
             <div className="w-6 h-6 flex items-center justify-center shrink-0">
               <NextImage
-                src="/reds-xos-logo.png"
-                alt="REDS XOS Logo"
-                width={24}
-                height={24}
-                className="w-full h-full object-contain"
+                src="/logo-squueze.png"
+                alt="REDS"
+                width={28}
+                height={28}
+                className="h-7 w-7 object-contain"
                 priority
               />
             </div>
