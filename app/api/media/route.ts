@@ -1,4 +1,6 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
+import { PERMISSIONS } from "@/lib/rbac";
+import { requirePermission } from "@/lib/session";
 import { prisma } from "@/lib/prisma";
 import { getPresignedDownloadUrl } from "@/lib/s3";
 
@@ -18,13 +20,13 @@ function validateHttpUrl(value: unknown) {
   }
 }
 
-export async function GET(request: Request) {
-  try {
-    const { searchParams } = new URL(request.url);
-    const tenantId = searchParams.get("tenantId");
+export async function GET(request: NextRequest) {
+  const auth = await requirePermission(request, PERMISSIONS.MEDIA_READ);
+  if (auth.response) return auth.response;
 
+  try {
     const media = await prisma.media.findMany({
-      where: tenantId ? { tenantId } : undefined,
+      where: { tenantId: auth.user.tenantId },
       include: { mediaType: true },
       orderBy: { createdAt: "desc" },
     });
@@ -65,21 +67,14 @@ export async function GET(request: Request) {
   }
 }
 
-export async function POST(request: Request) {
+export async function POST(request: NextRequest) {
+  const auth = await requirePermission(request, PERMISSIONS.MEDIA_CREATE);
+  if (auth.response) return auth.response;
+
   try {
     const body = await request.json();
     const durationSec = Number(body.durationSec);
     
-    // In a real app, tenantId comes from session. For now, fallback to the first tenant or create one.
-    let resolvedTenantId = body.tenantId;
-    if (!resolvedTenantId) {
-      let tenant = await prisma.tenant.findFirst();
-      if (!tenant) {
-        tenant = await prisma.tenant.create({ data: { name: "Default Tenant", slug: "default-tenant" } });
-      }
-      resolvedTenantId = tenant.id;
-    }
-
     if (!body.name || !body.filename || !body.s3Key || !body.cdnUrl) {
       const externalUrl = validateHttpUrl(body.url ?? body.externalUrl ?? body.cdnUrl);
       if (body.sourceType !== "external_url" || !body.name || !externalUrl) {
@@ -105,7 +100,7 @@ export async function POST(request: Request) {
 
     const media = await prisma.media.create({
       data: {
-        tenantId: resolvedTenantId,
+        tenantId: auth.user.tenantId,
         name: body.name,
         filename: sourceType === "external_url" ? body.filename || body.name : body.filename,
         s3Key: sourceType === "external_url" ? `external-url:${crypto.randomUUID()}` : body.s3Key,
