@@ -47,7 +47,6 @@ export default function LoginForm() {
           ? nextPath
           : result.data.redirectTo;
       router.push(safeNextPath);
-      router.refresh();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Unable to sign in.");
     } finally {
