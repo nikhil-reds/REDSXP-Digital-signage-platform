@@ -4,6 +4,8 @@ import React, { useState } from "react";
 import NextImage from "next/image";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
+import { useSession } from "@/components/providers/session-provider";
+import { getSidebarProfile } from "@/lib/sidebar-profile";
 import {
   LayoutDashboard,
   Globe,
@@ -48,7 +50,9 @@ const navItems: NavItem[] = [
 export default function AdminSidebar() {
   const pathname = usePathname();
   const router = useRouter();
+  const { user, loading } = useSession();
   const [isCollapsed, setIsCollapsed] = useState(false);
+  const profile = user ? getSidebarProfile(user) : null;
 
   const handleLogout = async () => {
     const response = await fetch("/api/auth/logout", { method: "POST" });
@@ -141,14 +145,14 @@ export default function AdminSidebar() {
       <div className={`mt-auto flex gap-3 border-t border-app-border bg-app-surface-alt p-4 ${isCollapsed ? "flex-col items-center" : "items-center justify-between"}`}>
         <div className="flex min-w-0 items-center gap-3">
           <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-app-accent text-caption font-semibold text-app-accent-on ring-2 ring-app-surface">
-            PS
+            {profile?.initials ?? "…"}
           </div>
           {!isCollapsed && <div className="flex flex-col min-w-0">
             <span className="mb-1 truncate text-body font-semibold leading-none text-app-text">
-              Priya Sharma
+              {profile?.displayName ?? (loading ? "Loading account" : "Account unavailable")}
             </span>
             <span className="truncate text-caption leading-none text-app-muted">
-              Super Admin
+              {profile?.roleName ?? (loading ? "Loading profile" : "")}
             </span>
           </div>}
         </div>

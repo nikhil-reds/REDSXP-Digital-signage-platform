@@ -33,6 +33,7 @@ export {
 } from "./chart-card";
 
 export { EmptyState } from "./empty-state";
+export { AccessDeniedCard } from "./access-denied-card";
 export { Tabs, DataField } from "./tabs";
 export { SectionHeader, PageShell } from "./section-header";
 
