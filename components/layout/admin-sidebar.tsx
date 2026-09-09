@@ -6,6 +6,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useSession } from "@/components/providers/session-provider";
 import { getSidebarProfile } from "@/lib/sidebar-profile";
+import { hasPermission, PERMISSIONS } from "@/lib/rbac";
 import {
   LayoutDashboard,
   Globe,
@@ -29,28 +30,29 @@ interface NavItem {
   name: string;
   href: string;
   icon: React.ComponentType<{ className?: string }>;
+  permission?: string[];
 }
 
 const navItems: NavItem[] = [
-  { name: "Overview", href: "/admin", icon: LayoutDashboard },
-  { name: "Tenants", href: "/admin/tenants", icon: Globe },
-  { name: "Billing & Revenue", href: "/admin/billing", icon: CreditCard },
-  { name: "Platform Analytics", href: "/admin/analytics", icon: LineChart },
-  { name: "Devices", href: "/admin/devices", icon: Monitor },
-  { name: "Plans & Features", href: "/admin/plans", icon: SlidersHorizontal },
-  { name: "Announcements", href: "/admin/announcements", icon: Megaphone },
-  { name: "Email Templates", href: "/admin/emails", icon: Mail },
-  { name: "Audit Logs", href: "/admin/audit-logs", icon: FileText },
-  { name: "System Health", href: "/admin/health", icon: Activity },
-  { name: "Platform Settings", href: "/admin/settings", icon: Settings },
-  { name: "Admin Users", href: "/admin/users", icon: Users },
-  { name: "Platform Roles", href: "/admin/roles", icon: Shield },
+  { name: "Overview", href: "/admin", icon: LayoutDashboard, permission: [PERMISSIONS.ADMIN_OVERVIEW_READ] },
+  { name: "Tenants", href: "/admin/tenants", icon: Globe, permission: [PERMISSIONS.ADMIN_TENANTS_READ] },
+  { name: "Billing & Revenue", href: "/admin/billing", icon: CreditCard, permission: [PERMISSIONS.ADMIN_BILLING_READ] },
+  { name: "Platform Analytics", href: "/admin/analytics", icon: LineChart, permission: [PERMISSIONS.ADMIN_ANALYTICS_READ] },
+  { name: "Devices", href: "/admin/devices", icon: Monitor, permission: [PERMISSIONS.ADMIN_DEVICES_READ] },
+  { name: "Plans & Features", href: "/admin/plans", icon: SlidersHorizontal, permission: [PERMISSIONS.ADMIN_PLANS_READ, PERMISSIONS.ADMIN_FEATURES_READ] },
+  { name: "Announcements", href: "/admin/announcements", icon: Megaphone, permission: [PERMISSIONS.ADMIN_ANNOUNCEMENTS_READ] },
+  { name: "Email Templates", href: "/admin/emails", icon: Mail, permission: [PERMISSIONS.ADMIN_EMAIL_TEMPLATES_READ] },
+  { name: "Audit Logs", href: "/admin/audit-logs", icon: FileText, permission: [PERMISSIONS.ADMIN_AUDIT_READ] },
+  { name: "System Health", href: "/admin/health", icon: Activity, permission: [PERMISSIONS.ADMIN_HEALTH_READ] },
+  { name: "Platform Settings", href: "/admin/settings", icon: Settings, permission: [PERMISSIONS.ADMIN_SETTINGS_READ] },
+  { name: "Admin Users", href: "/admin/users", icon: Users, permission: [PERMISSIONS.ADMIN_USERS_READ] },
+  { name: "Platform Roles", href: "/admin/roles", icon: Shield, permission: [PERMISSIONS.ADMIN_ROLES_READ] },
 ];
 
 export default function AdminSidebar() {
   const pathname = usePathname();
   const router = useRouter();
-  const { user, loading } = useSession();
+  const { user, permissions, loading } = useSession();
   const [isCollapsed, setIsCollapsed] = useState(false);
   const profile = user ? getSidebarProfile(user) : null;
 
@@ -102,7 +104,7 @@ export default function AdminSidebar() {
 
       {/* Navigation Links */}
       <nav className="flex-1 overflow-y-auto px-3 py-4 space-y-1.5 scrollbar-thin scrollbar-thumb-zinc-200 dark:scrollbar-thumb-zinc-800 scrollbar-track-transparent">
-        {navItems.map((item) => {
+        {navItems.filter((item) => !item.permission || item.permission.some((permission) => hasPermission(permissions, permission))).map((item) => {
           const Icon = item.icon;
           // Simple route matching: exact check for root, or startsWith for subroutes (avoid false positives with /admin/something matching /admin)
           const isActive =
