@@ -25,7 +25,7 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
-  const auth = await requireAdmin(request, PERMISSIONS.ADMIN_ROLES_WRITE);
+  const auth = await requireAdmin(request, PERMISSIONS.ADMIN_ROLES_CREATE);
   if (auth.response) return auth.response;
 
   const body = await readJson(request);
