@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import {
   Monitor,
   Map,
@@ -11,7 +11,10 @@ import {
   MapPin,
   Cpu,
   ShieldAlert,
+  RefreshCw,
 } from "lucide-react";
+import { useSession } from "@/components/providers/session-provider";
+import { hasPermission, PERMISSIONS } from "@/lib/rbac";
 import ScreensTable, { ScreenDevice } from "@/components/agent/screens/screens-table";
 import ScreensMap from "@/components/agent/screens/screens-map";
 import ScreensDetailDrawer from "@/components/agent/screens/screens-detail-drawer";
@@ -21,10 +24,12 @@ import {
   createPlayerDownload,
   createScreen,
   fetchScreens,
+  ApiRequestError,
 } from "@/components/agent/screens/api";
 import {
   Button,
   Card,
+  AccessDeniedCard,
   EmptyState,
   Modal,
   SearchInput,
@@ -40,8 +45,10 @@ function uniqueSorted(values: (string | undefined)[]): string[] {
 }
 
 export default function AgentScreensPage() {
+  const { user, permissions, loading: isSessionLoading } = useSession();
   const [screens, setScreens] = useState<ScreenDevice[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [loadError, setLoadError] = useState<ApiRequestError | null>(null);
   const [viewMode, setViewMode] = useState<"table" | "map">("table");
   const [selectedScreen, setSelectedScreen] = useState<ScreenDevice | null>(null);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
@@ -59,13 +66,41 @@ export default function AgentScreensPage() {
   const [locationFilter, setLocationFilter] = useState("All");
   const [modelFilter, setModelFilter] = useState("All");
   const [alertsFilter, setAlertsFilter] = useState("All");
+  const canReadScreens = hasPermission(permissions, PERMISSIONS.DEVICE_READ);
+  const canCreateScreens = hasPermission(permissions, PERMISSIONS.DEVICE_CREATE);
+
+  const loadScreens = useCallback(async () => {
+    setLoadError(null);
+    setIsLoading(true);
+    try {
+      setScreens(await fetchScreens());
+    } catch (error) {
+      setLoadError(
+        error instanceof ApiRequestError
+          ? error
+          : new ApiRequestError("Unable to load screens. Please try again.", 0),
+      );
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
 
   useEffect(() => {
+    if (isSessionLoading || !canReadScreens) return;
     fetchScreens()
-      .then(setScreens)
-      .catch((err) => console.error("Failed to load screens:", err))
+      .then((loadedScreens) => {
+        setScreens(loadedScreens);
+        setLoadError(null);
+      })
+      .catch((error) => {
+        setLoadError(
+          error instanceof ApiRequestError
+            ? error
+            : new ApiRequestError("Unable to load screens. Please try again.", 0),
+        );
+      })
       .finally(() => setIsLoading(false));
-  }, []);
+  }, [canReadScreens, isSessionLoading]);
 
   const groupOptions = uniqueSorted(screens.map((s) => s.group));
   const locationOptions = uniqueSorted(screens.map((s) => s.location));
@@ -124,6 +159,37 @@ export default function AgentScreensPage() {
     return matchesSearch && matchesStatus && matchesGroup && matchesLocation && matchesModel && matchesAlerts;
   });
 
+  if (!isSessionLoading && (!canReadScreens || loadError?.status === 403)) {
+    return (
+      <div className="flex h-full overflow-hidden">
+        <div className="flex min-w-0 flex-1 flex-col overflow-y-auto px-8 py-6">
+          <AccessDeniedCard resource="Screens & Device Players" roleName={user?.role.name} />
+        </div>
+      </div>
+    );
+  }
+
+  if (loadError) {
+    return (
+      <div className="flex h-full overflow-hidden">
+        <div className="flex min-w-0 flex-1 flex-col overflow-y-auto px-8 py-6">
+          <Card size="panel" className="flex min-h-[400px] items-center justify-center p-6 text-center">
+            <div className="max-w-md">
+              <ShieldAlert className="mx-auto h-8 w-8 text-app-danger-text" aria-hidden="true" />
+              <h2 className="mt-4 font-heading text-h5 font-semibold tracking-headline text-app-text">
+                Unable to load screens
+              </h2>
+              <p className="mt-2 text-body text-app-muted">{loadError.message}</p>
+              <Button variant="secondary" size="sm" icon={RefreshCw} className="mt-5" onClick={loadScreens}>
+                Try again
+              </Button>
+            </div>
+          </Card>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="flex h-full overflow-hidden relative">
       <div className="flex-1 flex flex-col min-w-0 py-6 px-8 space-y-6 overflow-y-auto">
@@ -160,9 +226,11 @@ export default function AgentScreensPage() {
               Player
             </Button>
 
-            <Button variant="primary" size="sm" icon={Plus} onClick={() => setIsCreateModalOpen(true)}>
-              Add Screen
-            </Button>
+            {canCreateScreens && (
+              <Button variant="primary" size="sm" icon={Plus} onClick={() => setIsCreateModalOpen(true)}>
+                Add Screen
+              </Button>
+            )}
           </div>
         </div>
 
@@ -268,11 +336,11 @@ export default function AgentScreensPage() {
                 icon={Monitor}
                 title="No screens yet"
                 description="Add your first screen to get started."
-                action={
+                action={canCreateScreens ? (
                   <Button variant="primary" size="sm" icon={Plus} onClick={() => setIsCreateModalOpen(true)}>
                     Add Screen
                   </Button>
-                }
+                ) : undefined}
               />
             </Card>
           ) : viewMode === "table" ? (
@@ -306,7 +374,7 @@ export default function AgentScreensPage() {
 
       <Modal
         open={isDownloadModalOpen}
-        onClose={() => setIsDownloadModalOpen(false)}
+        onClose={closeDownloadModal}
         title="Download Player"
         description="Bootstrap packages for the on-device player."
         size="md"
