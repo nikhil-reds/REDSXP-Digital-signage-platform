@@ -341,6 +341,31 @@
       transform: translateX(4px);
     }
   }
+
+  @keyframes reds-orbit {
+    to {
+      transform: rotate(360deg);
+    }
+  }
+
+  @keyframes reds-orbit-reverse {
+    to {
+      transform: rotate(-360deg);
+    }
+  }
+
+  @keyframes reds-signal {
+    0%,
+    100% {
+      opacity: 0.45;
+      transform: scale(0.8);
+    }
+
+    50% {
+      opacity: 1;
+      transform: scale(1.2);
+    }
+  }
 }
 
 /* No prefers-color-scheme override here on purpose. ThemeProvider (and the
