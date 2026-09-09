@@ -56,7 +56,7 @@ export function rolloutBucket(tenantId: string, key: string): number {
  *
  * One query for the catalogue, one for the tenant's own state. Not one per key.
  */
-export async function getTenantFeatures(tenantId: string): Promise<Set<string>> {
+export async function getTenantFeatureSnapshot(tenantId: string) {
   const [features, overrides, subscription, defaultPlan] = await Promise.all([
     prisma.feature.findMany({
       select: {
@@ -74,15 +74,39 @@ export async function getTenantFeatures(tenantId: string): Promise<Set<string>> 
     prisma.subscription.findFirst({
       where: { tenantId, status: { in: ["ACTIVE", "TRIAL", "PAST_DUE"] } },
       orderBy: { createdAt: "desc" },
-      select: { planId: true },
+      select: {
+        plan: {
+          select: {
+            id: true,
+            name: true,
+            maxDevices: true,
+            maxStorageGb: true,
+            maxUsers: true,
+            maxRules: true,
+            analyticsRetentionDays: true,
+          },
+        },
+      },
     }),
     // A tenant with no subscription falls back to the default plan rather than
     // to nothing — otherwise every unsubscribed workspace loses everything the
     // moment gating ships.
-    prisma.plan.findFirst({ where: { isDefault: true }, select: { id: true } }),
+    prisma.plan.findFirst({
+      where: { isDefault: true },
+      select: {
+        id: true,
+        name: true,
+        maxDevices: true,
+        maxStorageGb: true,
+        maxUsers: true,
+        maxRules: true,
+        analyticsRetentionDays: true,
+      },
+    }),
   ]);
 
-  const planId = subscription?.planId ?? defaultPlan?.id ?? null;
+  const plan = subscription?.plan ?? defaultPlan;
+  const planId = plan?.id ?? null;
   const overrideByKey = new Map(overrides.map((o) => [o.feature.key, o.enabled]));
   const enabled = new Set<string>();
 
@@ -117,7 +141,12 @@ export async function getTenantFeatures(tenantId: string): Promise<Set<string>> 
     // 5. default off — fall through
   }
 
-  return enabled;
+  return { features: enabled, plan, subscribed: Boolean(subscription) };
+}
+
+export async function getTenantFeatures(tenantId: string): Promise<Set<string>> {
+  const snapshot = await getTenantFeatureSnapshot(tenantId);
+  return snapshot.features;
 }
 
 export function hasFeature(features: Set<string> | undefined | null, key: string): boolean {
