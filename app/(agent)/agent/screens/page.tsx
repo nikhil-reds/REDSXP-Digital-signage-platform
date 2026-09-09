@@ -30,6 +30,7 @@ import {
   Button,
   Card,
   AccessDeniedCard,
+  CollectionPagination,
   EmptyState,
   Modal,
   SearchInput,
@@ -66,6 +67,8 @@ export default function AgentScreensPage() {
   const [locationFilter, setLocationFilter] = useState("All");
   const [modelFilter, setModelFilter] = useState("All");
   const [alertsFilter, setAlertsFilter] = useState("All");
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
   const canReadScreens = hasPermission(permissions, PERMISSIONS.DEVICE_READ);
   const canCreateScreens = hasPermission(permissions, PERMISSIONS.DEVICE_CREATE);
 
@@ -158,6 +161,9 @@ export default function AgentScreensPage() {
 
     return matchesSearch && matchesStatus && matchesGroup && matchesLocation && matchesModel && matchesAlerts;
   });
+  const totalPages = Math.max(1, Math.ceil(filteredScreens.length / pageSize));
+  const visibleScreens = filteredScreens.slice((Math.min(page, totalPages) - 1) * pageSize, Math.min(page, totalPages) * pageSize);
+  const resetToFirstPage = () => setPage(1);
 
   if (!isSessionLoading && (!canReadScreens || loadError?.status === 403)) {
     return (
@@ -246,13 +252,13 @@ export default function AgentScreensPage() {
             <SearchInput
               placeholder="Search screen, location, model…"
               value={search}
-              onChange={(e) => setSearch(e.target.value)}
+              onChange={(e) => { setSearch(e.target.value); resetToFirstPage(); }}
             />
 
             <Select
               icon={Activity}
               value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value)}
+              onChange={(e) => { setStatusFilter(e.target.value); resetToFirstPage(); }}
               aria-label="Filter by status"
             >
               <option value="All">All Statuses</option>
@@ -264,7 +270,7 @@ export default function AgentScreensPage() {
             <Select
               icon={Layers}
               value={groupFilter}
-              onChange={(e) => setGroupFilter(e.target.value)}
+              onChange={(e) => { setGroupFilter(e.target.value); resetToFirstPage(); }}
               aria-label="Filter by screen group"
             >
               <option value="All">All Screen Groups</option>
@@ -278,7 +284,7 @@ export default function AgentScreensPage() {
             <Select
               icon={MapPin}
               value={locationFilter}
-              onChange={(e) => setLocationFilter(e.target.value)}
+              onChange={(e) => { setLocationFilter(e.target.value); resetToFirstPage(); }}
               aria-label="Filter by location"
             >
               <option value="All">All Locations</option>
@@ -294,7 +300,7 @@ export default function AgentScreensPage() {
             <Select
               icon={Cpu}
               value={modelFilter}
-              onChange={(e) => setModelFilter(e.target.value)}
+              onChange={(e) => { setModelFilter(e.target.value); resetToFirstPage(); }}
               aria-label="Filter by hardware model"
             >
               <option value="All">All Hardware Models</option>
@@ -308,7 +314,7 @@ export default function AgentScreensPage() {
             <Select
               icon={ShieldAlert}
               value={alertsFilter}
-              onChange={(e) => setAlertsFilter(e.target.value)}
+              onChange={(e) => { setAlertsFilter(e.target.value); resetToFirstPage(); }}
               aria-label="Filter by alert state"
             >
               <option value="All">All Alerts</option>
@@ -345,18 +351,27 @@ export default function AgentScreensPage() {
             </Card>
           ) : viewMode === "table" ? (
             <ScreensTable
-              screens={filteredScreens}
+              screens={visibleScreens}
               onSelectScreen={(screen) => setSelectedScreen(screen)}
               selectedScreenId={selectedScreen?.id || null}
             />
           ) : (
             <ScreensMap
-              screens={filteredScreens}
+              screens={visibleScreens}
               onSelectScreen={(screen) => setSelectedScreen(screen)}
               selectedScreenId={selectedScreen?.id || null}
             />
           )}
         </div>
+        {!isFirstLoad && screens.length > 0 && (
+          <CollectionPagination
+            page={page}
+            pageSize={pageSize}
+            total={filteredScreens.length}
+            onPageChange={setPage}
+            onPageSizeChange={(nextPageSize) => { setPageSize(nextPageSize); setPage(1); }}
+          />
+        )}
       </div>
 
       {/* Sliding detail drawer panel */}
