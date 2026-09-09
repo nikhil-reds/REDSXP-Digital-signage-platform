@@ -1,3 +1,5 @@
+"use client";
+
 import React from "react";
 import { Download } from "lucide-react";
 import StatsGrid from "@/components/admin/overview/stats-grid";
@@ -6,18 +8,22 @@ import StatusHealthGrid from "@/components/admin/overview/status-health-grid";
 import TablesGrid from "@/components/admin/overview/tables-grid";
 import ActivityFeed from "@/components/admin/overview/activity-feed";
 import { Button, PageShell } from "@/components/ui";
+import { useSession } from "@/components/providers/session-provider";
+import { getSidebarProfile, getTimeGreeting } from "@/lib/sidebar-profile";
 
 export default function AdminOverviewPage() {
+  const { user, loading } = useSession();
+  const profile = user ? getSidebarProfile(user) : null;
   return (
     <PageShell>
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div className="flex flex-col gap-0.5">
           <h1 className="font-heading text-h5 font-semibold tracking-headline text-app-text">
-            Platform Overview
+            {loading ? "Platform Overview" : `${getTimeGreeting()}, ${profile?.displayName ?? "there"}`}
           </h1>
           <p className="mt-1 text-body text-app-muted">
-            Cross-tenant performance for 1–30 June 2026 · Updated 4:30 PM IST
+            Platform overview · Cross-tenant performance for 1–30 June 2026 · Updated 4:30 PM IST
           </p>
         </div>
         <Button variant="primary" size="sm" icon={Download} className="self-start sm:self-auto">Export report</Button>
