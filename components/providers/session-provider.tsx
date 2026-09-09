@@ -12,7 +12,7 @@ import {
 import type { UserRoleInfo } from "@/lib/rbac";
 
 /**
- * One fetch of "who am I and what can this workspace do", shared by every
+ * One bootstrap fetch of "who am I and what can this workspace do", shared by every
  * permission check and feature gate on the page.
  *
  * Both usePermissions() and useFeatures() used to be — or were about to be —
@@ -70,23 +70,14 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
   const refresh = useCallback(async () => {
     const mine = ++generation.current;
     try {
-      const [meRes, featuresRes] = await Promise.all([
-        fetch("/api/auth/me", { cache: "no-store" }),
-        fetch("/api/features", { cache: "no-store" }),
-      ]);
+      const bootstrapRes = await fetch("/api/auth/bootstrap", { cache: "no-store" });
       if (mine !== generation.current) return;
 
-      if (meRes.ok) {
-        const json = await meRes.json();
-        if (json.success && json.data?.user) {
-          setUser(json.data.user);
-          setPermissions(json.data.user.permissions || []);
-        }
-      }
-
-      if (featuresRes.ok) {
-        const json = await featuresRes.json();
+      if (bootstrapRes.ok) {
+        const json = await bootstrapRes.json();
         if (json.success) {
+          setUser(json.data?.user ?? null);
+          setPermissions(json.data?.user?.permissions || []);
           setFeatures(json.data?.features || []);
           setPlan(json.data?.plan ?? null);
         }
