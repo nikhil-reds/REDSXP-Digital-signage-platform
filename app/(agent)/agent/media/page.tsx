@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { Grid, List, Upload, HardDrive, Filter } from "lucide-react";
+import { Grid, List, Upload, HardDrive } from "lucide-react";
 import MediaGrid, { MediaAsset } from "@/components/agent/media/media-grid";
 import MediaTable from "@/components/agent/media/media-table";
 import MediaUploadModal from "@/components/agent/media/media-upload-modal";
@@ -9,10 +9,10 @@ import MediaPreviewDrawer from "@/components/agent/media/media-preview-drawer";
 import {
   Button,
   Card,
+  CollectionPagination,
+  CollectionToolbar,
   ProgressBar,
-  SearchInput,
   SegmentedControl,
-  Select,
   SkeletonCardGrid,
   SkeletonTable,
 } from "@/components/ui";
@@ -33,6 +33,10 @@ export default function AgentMediaPage() {
   const [typeFilter, setTypeFilter] = useState("All");
   const [orientationFilter, setOrientationFilter] = useState("All");
   const [statusFilter, setStatusFilter] = useState("All");
+  const [sort, setSort] = useState("date-desc");
+  const [groupBy, setGroupBy] = useState("none");
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(12);
 
   useEffect(() => {
     fetch("/api/media")
@@ -64,6 +68,17 @@ export default function AgentMediaPage() {
 
     return matchesSearch && matchesType && matchesOrientation && matchesStatus;
   });
+  const sortedAssets = [...filteredAssets].sort((a, b) => {
+    if (groupBy === "type") return a.type.localeCompare(b.type) || a.name.localeCompare(b.name);
+    if (groupBy === "status") return a.status.localeCompare(b.status) || a.name.localeCompare(b.name);
+    if (sort === "name-asc") return a.name.localeCompare(b.name);
+    if (sort === "name-desc") return b.name.localeCompare(a.name);
+    const difference = new Date(a.date).getTime() - new Date(b.date).getTime();
+    return sort === "date-asc" ? difference : -difference;
+  });
+  const totalPages = Math.max(1, Math.ceil(sortedAssets.length / pageSize));
+  const visibleAssets = sortedAssets.slice((Math.min(page, totalPages) - 1) * pageSize, Math.min(page, totalPages) * pageSize);
+  const resetPage = () => setPage(1);
 
   const handleUploadSuccess = (newAsset: MediaAsset) => {
     setAssets((prev) => [newAsset, ...prev]);
@@ -121,51 +136,19 @@ export default function AgentMediaPage() {
         </Card>
 
         {/* Query Filters Panel */}
-        <Card
-          size="widget"
-          padded
-          className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 shrink-0"
-        >
-          <SearchInput
-            placeholder="Search assets, uploaders…"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
+        <Card size="widget" padded className="shrink-0">
+          <CollectionToolbar
+            search={{ value: search, onChange: (value) => { setSearch(value); resetPage(); }, placeholder: "Search assets, uploaders…" }}
+            filters={[
+              { id: "type", label: "format", value: typeFilter, onChange: (value) => { setTypeFilter(value); resetPage(); }, options: [{ value: "All", label: "All formats" }, { value: "Video", label: "Video (MP4)" }, { value: "Image", label: "Image (JPG/PNG)" }, { value: "HTML5", label: "HTML5 widgets" }] },
+              { id: "orientation", label: "orientation", value: orientationFilter, onChange: (value) => { setOrientationFilter(value); resetPage(); }, options: [{ value: "All", label: "All orientations" }, { value: "Landscape", label: "Landscape (16:9)" }, { value: "Portrait", label: "Portrait (9:16)" }] },
+              { id: "status", label: "transcode state", value: statusFilter, onChange: (value) => { setStatusFilter(value); resetPage(); }, options: [{ value: "All", label: "All transcode states" }, { value: "Ready", label: "Ready" }, { value: "Transcoding", label: "Transcoding" }, { value: "Failed", label: "Failed" }] },
+            ]}
+            sort={{ value: sort, onChange: (value) => { setSort(value); resetPage(); }, options: [{ value: "date-desc", label: "Upload date: newest" }, { value: "date-asc", label: "Upload date: oldest" }, { value: "name-asc", label: "Name: A–Z" }, { value: "name-desc", label: "Name: Z–A" }] }}
+            groupBy={{ value: groupBy, onChange: (value) => { setGroupBy(value); resetPage(); }, options: [{ value: "none", label: "No grouping" }, { value: "type", label: "Group by type" }, { value: "status", label: "Group by status" }] }}
+            hasActiveControls={Boolean(search) || typeFilter !== "All" || orientationFilter !== "All" || statusFilter !== "All" || sort !== "date-desc" || groupBy !== "none"}
+            onClear={() => { setSearch(""); setTypeFilter("All"); setOrientationFilter("All"); setStatusFilter("All"); setSort("date-desc"); setGroupBy("none"); resetPage(); }}
           />
-
-          <Select
-            icon={Filter}
-            value={typeFilter}
-            onChange={(e) => setTypeFilter(e.target.value)}
-            aria-label="Filter by format"
-          >
-            <option value="All">All Formats</option>
-            <option value="Video">Video (MP4)</option>
-            <option value="Image">Image (JPG/PNG)</option>
-            <option value="HTML5">HTML5 Widgets</option>
-          </Select>
-
-          <Select
-            icon={Filter}
-            value={orientationFilter}
-            onChange={(e) => setOrientationFilter(e.target.value)}
-            aria-label="Filter by orientation"
-          >
-            <option value="All">All Orientations</option>
-            <option value="Landscape">Landscape (16:9)</option>
-            <option value="Portrait">Portrait (9:16)</option>
-          </Select>
-
-          <Select
-            icon={Filter}
-            value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value)}
-            aria-label="Filter by transcode state"
-          >
-            <option value="All">All Transcode States</option>
-            <option value="Ready">Ready</option>
-            <option value="Transcoding">Transcoding</option>
-            <option value="Failed">Failed</option>
-          </Select>
         </Card>
 
         {/* Visual Render Zone */}
@@ -179,11 +162,12 @@ export default function AgentMediaPage() {
               </Card>
             )
           ) : viewMode === "grid" ? (
-            <MediaGrid assets={filteredAssets} onSelectMedia={(a) => setSelectedAsset(a)} />
+            <MediaGrid assets={visibleAssets} onSelectMedia={(a) => setSelectedAsset(a)} />
           ) : (
-            <MediaTable assets={filteredAssets} onSelectMedia={(a) => setSelectedAsset(a)} />
+            <MediaTable assets={visibleAssets} onSelectMedia={(a) => setSelectedAsset(a)} />
           )}
         </div>
+        {!isFirstLoad && <CollectionPagination page={page} pageSize={pageSize} total={sortedAssets.length} onPageChange={setPage} onPageSizeChange={(value) => { setPageSize(value); resetPage(); }} pageSizeOptions={[12, 24, 48, 96]} />}
       </div>
 
       {/* Render Slide details drawer */}
