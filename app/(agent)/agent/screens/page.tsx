@@ -168,7 +168,7 @@ export default function AgentScreensPage() {
   if (!isSessionLoading && (!canReadScreens || loadError?.status === 403)) {
     return (
       <div className="flex h-full overflow-hidden">
-        <div className="flex min-w-0 flex-1 flex-col overflow-y-auto px-8 py-6">
+        <div className="flex min-w-0 flex-1 flex-col overflow-y-auto px-8 py-6 pb-24">
           <AccessDeniedCard resource="Screens & Device Players" roleName={user?.role.name} />
         </div>
       </div>
@@ -178,7 +178,7 @@ export default function AgentScreensPage() {
   if (loadError) {
     return (
       <div className="flex h-full overflow-hidden">
-        <div className="flex min-w-0 flex-1 flex-col overflow-y-auto px-8 py-6">
+        <div className="flex min-w-0 flex-1 flex-col overflow-y-auto px-8 py-6 pb-24">
           <Card size="panel" className="flex min-h-[400px] items-center justify-center p-6 text-center">
             <div className="max-w-md">
               <ShieldAlert className="mx-auto h-8 w-8 text-app-danger-text" aria-hidden="true" />
@@ -198,7 +198,7 @@ export default function AgentScreensPage() {
 
   return (
     <div className="flex h-full overflow-hidden relative">
-      <div className="flex-1 flex flex-col min-w-0 py-6 px-8 space-y-6 overflow-y-auto">
+      <div className="flex-1 flex flex-col min-w-0 space-y-6 overflow-y-auto px-8 py-6 pb-24">
         {/* Header Section */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b border-app-border pb-5 shrink-0">
           <div>
