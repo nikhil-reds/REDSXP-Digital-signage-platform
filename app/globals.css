@@ -381,6 +381,32 @@ body {
   font-family: Arial, Helvetica, sans-serif;
 }
 
+/* The assistant owns the scrollable message region. Keep its scroll affordance
+   present but unobtrusive, instead of inheriting the platform-wide scrollbar. */
+.chat-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: var(--app-border-strong) transparent;
+}
+
+.chat-scrollbar::-webkit-scrollbar {
+  width: 7px;
+}
+
+.chat-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.chat-scrollbar::-webkit-scrollbar-thumb {
+  background: var(--app-border-strong);
+  border: 2px solid transparent;
+  border-radius: 999px;
+  background-clip: content-box;
+}
+
+.chat-scrollbar::-webkit-scrollbar-thumb:hover {
+  background-color: var(--app-text-muted);
+}
+
 @media (prefers-reduced-motion: reduce) {
 
   *,

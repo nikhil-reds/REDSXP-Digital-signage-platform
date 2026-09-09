@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
-import SettingsNav from "@/components/admin/settings/settings-nav";
+import SettingsNav, { SETTINGS_SECTION_BY_TAB } from "@/components/admin/settings/settings-nav";
 import IdentitySettings from "@/components/admin/settings/identity-settings";
 import OnboardingSettings from "@/components/admin/settings/onboarding-settings";
 import DefaultsSettings from "@/components/admin/settings/defaults-settings";
@@ -17,6 +17,12 @@ export default function PlatformSettingsPage() {
 
   const handleDiscard = () => {
     alert("Changes discarded.");
+  };
+
+  const handleTabChange = (tab: string) => {
+    setActiveTab(tab);
+    const sectionId = SETTINGS_SECTION_BY_TAB[tab];
+    document.getElementById(sectionId)?.scrollIntoView({ behavior: "smooth", block: "start" });
   };
 
   return (
@@ -44,14 +50,22 @@ export default function PlatformSettingsPage() {
       {/* Main settings grid */}
       <div className="flex flex-col lg:flex-row gap-6 items-start">
         {/* Left tabs menu */}
-        <SettingsNav activeTab={activeTab} setActiveTab={setActiveTab} />
+        <SettingsNav activeTab={activeTab} setActiveTab={handleTabChange} />
 
         {/* Right content panels stack */}
         <div className="flex-1 space-y-6 w-full lg:max-w-4xl">
-          <IdentitySettings />
-          <OnboardingSettings />
-          <DefaultsSettings />
-          <MaintenanceSettings />
+          <section id="platform-identity" className="scroll-mt-6" aria-label="General, branding, and authentication settings">
+            <IdentitySettings />
+          </section>
+          <section id="trial-onboarding" className="scroll-mt-6" aria-label="Billing and email settings">
+            <OnboardingSettings />
+          </section>
+          <section id="tenant-defaults" className="scroll-mt-6" aria-label="Storage and API settings">
+            <DefaultsSettings />
+          </section>
+          <section id="maintenance-mode" className="scroll-mt-6" aria-label="Security and maintenance settings">
+            <MaintenanceSettings />
+          </section>
         </div>
       </div>
     </PageShell>
