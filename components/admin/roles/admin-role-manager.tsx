@@ -272,6 +272,7 @@ export function AdminRoleManager() {
           role={editingRole}
           rolesEndpoint="/api/admin/roles"
           permissionsScope="SYSTEM"
+          manageMembers={Boolean(editingRole)}
           title={editingRole ? `Edit role: ${editingRole.name}` : "Create platform role"}
           onClose={() => setIsModalOpen(false)}
           onSaved={(saved: RoleFormRole) => {
