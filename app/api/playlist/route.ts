@@ -95,7 +95,7 @@ export async function GET(request: NextRequest) {
     });
 
     const playlistBucket = process.env.AWS_BUCKET_PLAYLIST || "redsxp-playlist";
-    const region = process.env.AWS_REGION || "ap-south-1";
+    const region = process.env.AWS_REGION || process.env.REGION_NAME || "ap-south-1";
 
     const serializedPlaylists = playlists.map(p => serializePlaylist(p, playlistBucket, region));
 
@@ -118,7 +118,7 @@ export async function POST(request: NextRequest) {
     }
 
     const playlistBucket = process.env.AWS_BUCKET_PLAYLIST || "redsxp-playlist";
-    const region = process.env.AWS_REGION || "ap-south-1";
+    const region = process.env.AWS_REGION || process.env.REGION_NAME || "ap-south-1";
 
     const playlist = await prisma.$transaction(async (tx) => {
       const newPlaylist = await tx.playlist.create({
