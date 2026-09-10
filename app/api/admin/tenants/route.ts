@@ -1,8 +1,10 @@
+import bcrypt from "bcryptjs";
 import { NextRequest, NextResponse } from "next/server";
-import { apiError, databaseError, readJson } from "@/lib/api";
+import { apiError, databaseError, isEmail, readJson } from "@/lib/api";
 import { requireAdmin } from "@/lib/admin-auth";
-import { FEATURES, planHasFeature } from "@/lib/features";
+import { normalizeEmail } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { PERMISSIONS } from "@/lib/rbac";
 import type { Prisma } from "@/app/generated/prisma/client";
 
 const PAGE_SIZE = 10;
@@ -46,7 +48,7 @@ function rowStatus(
 }
 
 export async function GET(request: NextRequest) {
-  const auth = await requireAdmin(request);
+  const auth = await requireAdmin(request, PERMISSIONS.ADMIN_TENANTS_READ);
   if (auth.response) return auth.response;
 
   const search = request.nextUrl.searchParams.get("search")?.trim() || "";
@@ -199,25 +201,22 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
-  const auth = await requireAdmin(request);
+  const auth = await requireAdmin(request, PERMISSIONS.ADMIN_TENANTS_UPDATE);
   if (auth.response) return auth.response;
 
   const body = await readJson(request);
   const name = typeof body?.name === "string" ? body.name.trim() : "";
   const slug = typeof body?.slug === "string" && body.slug.trim() ? slugify(body.slug) : slugify(name);
-  const customDomain = typeof body?.customDomain === "string" ? body.customDomain.trim() : "";
-  const brandLogoUrl = typeof body?.brandLogoUrl === "string" ? body.brandLogoUrl.trim() : "";
-  const primaryColor = typeof body?.primaryColor === "string" ? body.primaryColor.trim() : "#1A4E8C";
   const planId = typeof body?.planId === "string" ? body.planId.trim() : "";
-  const trialEndDate = typeof body?.trialEndDate === "string" ? body.trialEndDate.trim() : "";
-  const trialEndsAt = trialEndDate ? new Date(trialEndDate) : null;
+  const adminEmail = typeof body?.adminEmail === "string" ? normalizeEmail(body.adminEmail) : "";
+  const adminPassword = typeof body?.adminPassword === "string" ? body.adminPassword : "";
 
   const errors = [
     ...(!name ? ["Tenant name is required."] : []),
-    ...(!slug ? ["A valid slug is required."] : []),
-    ...(!/^#[0-9a-fA-F]{6}$/.test(primaryColor) ? ["Primary color must be a hex value like #1A4E8C."] : []),
-    ...(trialEndsAt && Number.isNaN(trialEndsAt.getTime()) ? ["Trial end date is invalid."] : []),
-    ...(trialEndDate && !planId ? ["Select a plan before setting a trial end date."] : []),
+    ...(!slug ? ["A valid workspace name is required."] : []),
+    ...(!planId ? ["Select a plan."] : []),
+    ...(!isEmail(adminEmail) ? ["A valid administrator email is required."] : []),
+    ...(adminPassword.length < 8 ? ["Password must be at least 8 characters."] : []),
   ];
   if (errors.length) return apiError("Validation failed.", 422, errors);
 
@@ -226,37 +225,16 @@ export async function POST(request: NextRequest) {
       return apiError("A tenant with this slug already exists.", 409);
     }
 
-    const plan = planId
-      ? await prisma.plan.findUnique({ where: { id: planId }, select: { id: true } })
-      : null;
-    if (planId && !plan) return apiError("The selected plan no longer exists.", 422);
-
-    // Entitlement check. Custom domain and custom branding are sold on plans,
-    // and this is the endpoint that actually writes those columns — so the
-    // plan being assigned has to include them. A tenant with no plan resolves
-    // to the default plan, exactly as lib/features.ts does at read time.
-    const entitlementErrors: string[] = [];
-    if (customDomain && !(await planHasFeature(plan?.id ?? null, FEATURES.CUSTOM_DOMAIN))) {
-      entitlementErrors.push("The selected plan does not include Custom Domain.");
-    }
-    if (
-      (brandLogoUrl || primaryColor !== "#1A4E8C") &&
-      !(await planHasFeature(plan?.id ?? null, FEATURES.CUSTOM_BRANDING))
-    ) {
-      entitlementErrors.push("The selected plan does not include Custom Branding.");
-    }
-    if (entitlementErrors.length) {
-      return apiError("This plan does not include those features.", 402, entitlementErrors);
-    }
+    const plan = await prisma.plan.findUnique({ where: { id: planId }, select: { id: true } });
+    if (!plan) return apiError("The selected plan no longer exists.", 422);
+    if (await prisma.user.findUnique({ where: { email: adminEmail }, select: { id: true } })) return apiError("An account with this email already exists.", 409);
+    const passwordHash = await bcrypt.hash(adminPassword, 12);
 
     const tenant = await prisma.$transaction(async (tx) => {
       const created = await tx.tenant.create({
         data: {
           name,
           slug,
-          primaryColor,
-          ...(customDomain ? { customDomain } : {}),
-          ...(brandLogoUrl ? { brandLogoUrl } : {}),
         },
         select: { id: true, name: true, slug: true, customDomain: true, status: true },
       });
@@ -266,19 +244,22 @@ export async function POST(request: NextRequest) {
           data: {
             tenantId: created.id,
             planId: plan.id,
-            status: trialEndsAt ? "TRIAL" : "ACTIVE",
+            status: "ACTIVE",
             startDate: new Date(),
-            ...(trialEndsAt ? { endDate: trialEndsAt } : {}),
           },
         });
       }
+
+      const tenantPermissions = await tx.permission.findMany({ where: { scope: "TENANT" }, select: { id: true } });
+      const agentRole = await tx.role.create({ data: { tenantId: created.id, name: "AGENT_ADMIN", scope: "TENANT", isSystem: true, description: "Full Workspace Administrator access", permissions: { connect: tenantPermissions.map((permission) => ({ id: permission.id })) } } });
+      await tx.user.create({ data: { tenantId: created.id, roleId: agentRole.id, email: adminEmail, passwordHash, firstName: "Workspace", lastName: "Admin" } });
 
       await tx.auditLog.create({
         data: {
           tenantId: auth.admin.tenantId,
           userId: auth.admin.id,
           action: "TENANT_CREATED",
-          description: `Created tenant ${name} (${slug})`,
+          description: `Created tenant ${name} (${slug}) and primary administrator ${adminEmail}`,
           ipAddress: request.headers.get("x-forwarded-for")?.split(",")[0]?.trim(),
           userAgent: request.headers.get("user-agent"),
         },

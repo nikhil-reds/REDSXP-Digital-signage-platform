@@ -1,7 +1,9 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { uploadToS3, deleteFromS3 } from "@/lib/s3";
 import { enqueuePlaylistRenderJob } from "@/lib/playlist-render-queue";
+import { PERMISSIONS } from "@/lib/rbac";
+import { requirePermission } from "@/lib/session";
 
 type SerializableMedia = Record<string, unknown> & {
   sizeBytes: bigint | number | string;
@@ -74,11 +76,14 @@ const calculatePlaylistDuration = (items: Array<{ durationSec?: unknown; zoneId?
   return Math.max(0, ...Array.from(totals.values()));
 };
 
-export async function GET(request: Request, { params }: { params: Promise<{ id: string }> }) {
+export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  const auth = await requirePermission(request, PERMISSIONS.PLAYLIST_READ);
+  if (auth.response) return auth.response;
+
   try {
     const { id } = await params;
     const playlist = await prisma.playlist.findUnique({
-      where: { id },
+      where: { id, tenantId: auth.user.tenantId },
       include: {
         playlistItems: {
           include: {
@@ -107,13 +112,16 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
   }
 }
 
-export async function PUT(request: Request, { params }: { params: Promise<{ id: string }> }) {
+export async function PUT(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  const auth = await requirePermission(request, PERMISSIONS.PLAYLIST_UPDATE);
+  if (auth.response) return auth.response;
+
   try {
     const { id } = await params;
     const body = await request.json();
 
     const existingPlaylist = await prisma.playlist.findUnique({
-      where: { id },
+      where: { id, tenantId: auth.user.tenantId },
     });
 
     if (!existingPlaylist) {
@@ -150,6 +158,10 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
 
       // 2. Re-create playlist items if provided
       if (body.items && Array.isArray(body.items)) {
+        const mediaIds = body.items.map((item: { mediaId?: string }) => item.mediaId).filter(Boolean);
+        const mediaCount = await tx.media.count({ where: { id: { in: mediaIds }, tenantId: auth.user.tenantId } });
+        if (mediaCount !== mediaIds.length) throw new Error("One or more media items do not belong to this workspace.");
+
         // Delete all existing items
         await tx.playlistItem.deleteMany({
           where: { playlistId: id },
@@ -174,7 +186,7 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
 
     // Fetch the updated playlist with items and media
     const updatedPlaylist = await prisma.playlist.findUnique({
-      where: { id },
+      where: { id, tenantId: auth.user.tenantId },
       include: {
         playlistItems: {
           include: {
@@ -220,12 +232,15 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
   }
 }
 
-export async function DELETE(request: Request, { params }: { params: Promise<{ id: string }> }) {
+export async function DELETE(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  const auth = await requirePermission(request, PERMISSIONS.PLAYLIST_DELETE);
+  if (auth.response) return auth.response;
+
   try {
     const { id } = await params;
 
     const playlist = await prisma.playlist.findUnique({
-      where: { id },
+      where: { id, tenantId: auth.user.tenantId },
     });
 
     if (!playlist) {

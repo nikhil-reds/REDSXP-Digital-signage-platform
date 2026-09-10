@@ -6,7 +6,7 @@ import { AlertTriangle, Plus } from "lucide-react";
 import PlaylistsTable from "@/components/agent/playlists/playlists-table";
 import { PlaylistSummary } from "@/components/agent/playlists/types";
 import { deletePlaylist, fetchPlaylists } from "@/components/agent/playlists/api";
-import { Button, Card, EmptyState, PageShell, SearchInput, SkeletonTable } from "@/components/ui";
+import { Button, Card, CollectionPagination, CollectionToolbar, EmptyState, PageShell, SkeletonTable } from "@/components/ui";
 
 export default function AgentPlaylistsPage() {
   const router = useRouter();
@@ -19,6 +19,10 @@ export default function AgentPlaylistsPage() {
 
   const [error, setError] = useState<string | null>(null);
   const [search, setSearch] = useState("");
+  const [sort, setSort] = useState("updated-desc");
+  const [groupBy, setGroupBy] = useState("none");
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
   const [reloadKey, setReloadKey] = useState(0);
 
   useEffect(() => {
@@ -46,6 +50,17 @@ export default function AgentPlaylistsPage() {
   const filteredPlaylists = playlists.filter((p) =>
     p.name.toLowerCase().includes(search.toLowerCase()),
   );
+  const sortedPlaylists = [...filteredPlaylists].sort((a, b) => {
+    if (groupBy === "items") return a.itemCount - b.itemCount || a.name.localeCompare(b.name);
+    if (groupBy === "duration") return a.totalDuration - b.totalDuration || a.name.localeCompare(b.name);
+    if (sort === "name-asc") return a.name.localeCompare(b.name);
+    if (sort === "name-desc") return b.name.localeCompare(a.name);
+    const difference = new Date(a.updatedAt).getTime() - new Date(b.updatedAt).getTime();
+    return sort === "updated-asc" ? difference : -difference;
+  });
+  const totalPages = Math.max(1, Math.ceil(sortedPlaylists.length / pageSize));
+  const visiblePlaylists = sortedPlaylists.slice((Math.min(page, totalPages) - 1) * pageSize, Math.min(page, totalPages) * pageSize);
+  const resetPage = () => setPage(1);
 
   const editPlaylist = (playlist: PlaylistSummary) =>
     router.push(`/agent/playlists/create-playlist?id=${playlist.id}`);
@@ -86,13 +101,18 @@ export default function AgentPlaylistsPage() {
         </Button>
       </div>
 
-      {/* Search bar */}
+      {/* Collection controls */}
       <Card size="widget" padded>
-        <SearchInput
-          placeholder="Search playlist name…"
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          className="w-full max-w-md"
+        <CollectionToolbar
+          search={{ value: search, onChange: (value) => { setSearch(value); resetPage(); }, placeholder: "Search playlist name…" }}
+          sort={{ value: sort, onChange: (value) => { setSort(value); resetPage(); }, options: [
+            { value: "updated-desc", label: "Last updated: newest" }, { value: "updated-asc", label: "Last updated: oldest" }, { value: "name-asc", label: "Name: A–Z" }, { value: "name-desc", label: "Name: Z–A" },
+          ] }}
+          groupBy={{ value: groupBy, onChange: (value) => { setGroupBy(value); resetPage(); }, options: [
+            { value: "none", label: "No grouping" }, { value: "items", label: "Group by item count" }, { value: "duration", label: "Group by duration" },
+          ] }}
+          hasActiveControls={Boolean(search) || sort !== "updated-desc" || groupBy !== "none"}
+          onClear={() => { setSearch(""); setSort("updated-desc"); setGroupBy("none"); resetPage(); }}
         />
       </Card>
 
@@ -117,12 +137,15 @@ export default function AgentPlaylistsPage() {
           </Card>
         ) : (
           <PlaylistsTable
-            playlists={filteredPlaylists}
+            playlists={visiblePlaylists}
             onEdit={editPlaylist}
             onDelete={removePlaylist}
           />
         )}
       </div>
+      {!isFirstLoad && !error && (
+        <CollectionPagination page={page} pageSize={pageSize} total={sortedPlaylists.length} onPageChange={setPage} onPageSizeChange={(value) => { setPageSize(value); resetPage(); }} />
+      )}
     </PageShell>
   );
 }

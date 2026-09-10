@@ -38,7 +38,8 @@ export default function AgentShell({ children }: AgentShellProps) {
           isMenuOpen={isMobileNavigationOpen}
           onMenuClick={() => setIsMobileNavigationOpen(true)}
         />
-        <main className="flex-1 overflow-y-auto">{children}</main>
+        {/* Bottom safe area keeps persistent controls clear of the floating assistant. */}
+        <main className="flex-1 overflow-y-auto pb-24">{children}</main>
       </div>
       <FloatingChatbotWidget />
     </div>

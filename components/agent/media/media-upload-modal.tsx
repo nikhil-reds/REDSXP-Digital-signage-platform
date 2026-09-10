@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useRef } from "react";
-import { UploadCloud, RefreshCw, AlertCircle, CheckCircle2, Link, Eye, Save, Code } from "lucide-react";
+import { UploadCloud, RefreshCw, AlertCircle, CheckCircle2, Link, Eye, Save, Code, ShieldAlert } from "lucide-react";
 import type { MediaAsset } from "./media-grid";
 import {
   Badge,
@@ -61,6 +61,7 @@ export default function MediaUploadModal({ onClose, onUploadSuccess }: MediaUplo
   const [linkError, setLinkError] = useState("");
   const [linkPreviewUrl, setLinkPreviewUrl] = useState("");
   const [isSavingLink, setIsSavingLink] = useState(false);
+  const [accessDenied, setAccessDenied] = useState(false);
 
   const handleDrag = (e: React.DragEvent) => {
     e.preventDefault();
@@ -178,6 +179,10 @@ export default function MediaUploadModal({ onClose, onUploadSuccess }: MediaUplo
       });
 
       const data = await createRes.json().catch(() => null);
+      if (createRes.status === 403) {
+        setAccessDenied(true);
+        return;
+      }
       if (!createRes.ok) throw new Error(data?.error || "Failed to save HTML link");
 
       onUploadSuccess(data);
@@ -210,6 +215,10 @@ export default function MediaUploadModal({ onClose, onUploadSuccess }: MediaUplo
       });
       
       if (!presignedRes.ok) {
+        if (presignedRes.status === 403) {
+          setAccessDenied(true);
+          return;
+        }
         // 402 is the plan quota talking; its message names the limit.
         const problem = await presignedRes.json().catch(() => null);
         throw new Error(problem?.message || problem?.error || "Failed to get upload URL");
@@ -266,6 +275,10 @@ export default function MediaUploadModal({ onClose, onUploadSuccess }: MediaUplo
         })
       });
 
+      if (createRes.status === 403) {
+        setAccessDenied(true);
+        return;
+      }
       if (!createRes.ok) throw new Error("Failed to save media record");
       const newAsset = await createRes.json();
 
@@ -302,6 +315,20 @@ export default function MediaUploadModal({ onClose, onUploadSuccess }: MediaUplo
       }
     >
       <div className="space-y-4">
+        {accessDenied ? (
+          <Card size="panel" className="border-app-danger-border bg-app-danger-surface/40">
+            <div className="flex flex-col items-center px-6 py-10 text-center">
+              <span className="mb-4 inline-flex h-12 w-12 items-center justify-center rounded-full bg-app-danger-surface text-app-danger-text">
+                <ShieldAlert className="h-6 w-6" aria-hidden />
+              </span>
+              <h3 className="font-heading text-h6 font-semibold text-app-text">You don’t have upload access</h3>
+              <p className="mt-2 max-w-md text-body text-app-muted">
+                Your current workspace role cannot add media assets. Ask a workspace administrator to grant media upload access.
+              </p>
+              <Button className="mt-5" variant="secondary" onClick={onClose}>Close</Button>
+            </div>
+          </Card>
+        ) : <>
         <SegmentedControl
           value={activeTab}
           onChange={setActiveTab}
@@ -525,6 +552,7 @@ export default function MediaUploadModal({ onClose, onUploadSuccess }: MediaUplo
             </div>
           </div>
         )}
+        </>}
       </div>
     </Modal>
   );

@@ -1,9 +1,12 @@
 "use client";
 
-import React from "react";
+import React, { useState } from "react";
 import NextImage from "next/image";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
+import { useSession } from "@/components/providers/session-provider";
+import { getSidebarProfile } from "@/lib/sidebar-profile";
+import { hasPermission, PERMISSIONS } from "@/lib/rbac";
 import {
   LayoutDashboard,
   Globe,
@@ -18,34 +21,40 @@ import {
   Settings,
   Users,
   Shield,
-  LogOut
+  LogOut,
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-react";
 
 interface NavItem {
   name: string;
   href: string;
   icon: React.ComponentType<{ className?: string }>;
+  permission?: string[];
 }
 
 const navItems: NavItem[] = [
-  { name: "Overview", href: "/admin", icon: LayoutDashboard },
-  { name: "Tenants", href: "/admin/tenants", icon: Globe },
-  { name: "Billing & Revenue", href: "/admin/billing", icon: CreditCard },
-  { name: "Platform Analytics", href: "/admin/analytics", icon: LineChart },
-  { name: "Devices", href: "/admin/devices", icon: Monitor },
-  { name: "Plans & Features", href: "/admin/plans", icon: SlidersHorizontal },
-  { name: "Announcements", href: "/admin/announcements", icon: Megaphone },
-  { name: "Email Templates", href: "/admin/emails", icon: Mail },
-  { name: "Audit Logs", href: "/admin/audit-logs", icon: FileText },
-  { name: "System Health", href: "/admin/health", icon: Activity },
-  { name: "Platform Settings", href: "/admin/settings", icon: Settings },
-  { name: "Admin Users", href: "/admin/users", icon: Users },
-  { name: "Platform Roles", href: "/admin/roles", icon: Shield },
+  { name: "Overview", href: "/admin", icon: LayoutDashboard, permission: [PERMISSIONS.ADMIN_OVERVIEW_READ] },
+  { name: "Tenants", href: "/admin/tenants", icon: Globe, permission: [PERMISSIONS.ADMIN_TENANTS_READ] },
+  { name: "Billing & Revenue", href: "/admin/billing", icon: CreditCard, permission: [PERMISSIONS.ADMIN_BILLING_READ] },
+  { name: "Platform Analytics", href: "/admin/analytics", icon: LineChart, permission: [PERMISSIONS.ADMIN_ANALYTICS_READ] },
+  { name: "Devices", href: "/admin/devices", icon: Monitor, permission: [PERMISSIONS.ADMIN_DEVICES_READ] },
+  { name: "Plans & Features", href: "/admin/plans", icon: SlidersHorizontal, permission: [PERMISSIONS.ADMIN_PLANS_READ, PERMISSIONS.ADMIN_FEATURES_READ] },
+  { name: "Announcements", href: "/admin/announcements", icon: Megaphone, permission: [PERMISSIONS.ADMIN_ANNOUNCEMENTS_READ] },
+  { name: "Email Templates", href: "/admin/emails", icon: Mail, permission: [PERMISSIONS.ADMIN_EMAIL_TEMPLATES_READ] },
+  { name: "Audit Logs", href: "/admin/audit-logs", icon: FileText, permission: [PERMISSIONS.ADMIN_AUDIT_READ] },
+  { name: "System Health", href: "/admin/health", icon: Activity, permission: [PERMISSIONS.ADMIN_HEALTH_READ] },
+  { name: "Platform Settings", href: "/admin/settings", icon: Settings, permission: [PERMISSIONS.ADMIN_SETTINGS_READ] },
+  { name: "Admin Users", href: "/admin/users", icon: Users, permission: [PERMISSIONS.ADMIN_USERS_READ] },
+  { name: "Platform Roles", href: "/admin/roles", icon: Shield, permission: [PERMISSIONS.ADMIN_ROLES_READ] },
 ];
 
 export default function AdminSidebar() {
   const pathname = usePathname();
   const router = useRouter();
+  const { user, permissions, loading } = useSession();
+  const [isCollapsed, setIsCollapsed] = useState(false);
+  const profile = user ? getSidebarProfile(user) : null;
 
   const handleLogout = async () => {
     const response = await fetch("/api/auth/logout", { method: "POST" });
@@ -56,22 +65,46 @@ export default function AdminSidebar() {
   };
 
   return (
-    <aside className="flex h-screen w-64 shrink-0 flex-col border-r border-app-border bg-app-surface font-sans">
+    <aside
+      className={`flex h-screen shrink-0 flex-col border-r border-app-border bg-app-surface font-sans transition-[width] duration-300 ${
+        isCollapsed ? "w-20" : "w-64"
+      }`}
+    >
       {/* Brand Header */}
-      <div className="flex items-center gap-3 border-b border-app-border px-4 py-6">
-        <NextImage
-          src="/reds-xos-logo.png"
-          alt="REDS XOS Logo"
-          width={79}
-          height={17}
-          className="h-[17px] w-auto object-contain"
-          priority
-        />
+      <div className={`flex items-center justify-between border-b border-app-border py-6 ${isCollapsed ? "gap-2 px-3" : "gap-3 px-4"}`}>
+        {isCollapsed ? (
+          <NextImage
+            src="/logo-squueze.png"
+            alt="REDS"
+            width={28}
+            height={28}
+            className="h-7 w-7 object-contain"
+            priority
+          />
+        ) : (
+          <NextImage
+            src="/reds-xos-logo.png"
+            alt="REDS XOS Logo"
+            width={79}
+            height={17}
+            className="h-[17px] w-auto object-contain"
+            priority
+          />
+        )}
+        <button
+          type="button"
+          onClick={() => setIsCollapsed((collapsed) => !collapsed)}
+          className="rounded-md border border-app-border p-1 text-app-muted transition-colors hover:bg-app-surface-alt hover:text-app-text"
+          title={isCollapsed ? "Expand sidebar" : "Collapse sidebar"}
+          aria-label={isCollapsed ? "Expand sidebar" : "Collapse sidebar"}
+        >
+          {isCollapsed ? <ChevronRight className="h-3.5 w-3.5" /> : <ChevronLeft className="h-3.5 w-3.5" />}
+        </button>
       </div>
 
       {/* Navigation Links */}
       <nav className="flex-1 overflow-y-auto px-3 py-4 space-y-1.5 scrollbar-thin scrollbar-thumb-zinc-200 dark:scrollbar-thumb-zinc-800 scrollbar-track-transparent">
-        {navItems.map((item) => {
+        {navItems.filter((item) => !item.permission || item.permission.some((permission) => hasPermission(permissions, permission))).map((item) => {
           const Icon = item.icon;
           // Simple route matching: exact check for root, or startsWith for subroutes (avoid false positives with /admin/something matching /admin)
           const isActive =
@@ -83,7 +116,10 @@ export default function AdminSidebar() {
             <Link
               key={item.name}
               href={item.href}
-              className={`flex items-center gap-3.5 px-4 py-2.5 rounded-lg text-sm transition-all duration-200 relative group ${
+              title={isCollapsed ? item.name : undefined}
+              className={`flex items-center gap-3.5 rounded-lg px-4 py-2.5 text-sm transition-all duration-200 relative group ${
+                isCollapsed ? "justify-center" : ""
+              } ${
                 isActive
                   ? "bg-app-accent-surface text-app-text font-semibold"
                   : "text-app-muted hover:text-app-text hover:bg-app-surface-alt"
@@ -101,26 +137,26 @@ export default function AdminSidebar() {
                     : "text-app-muted group-hover:text-app-text"
                 }`}
               />
-              <span>{item.name}</span>
+              {!isCollapsed && <span className="truncate">{item.name}</span>}
             </Link>
           );
         })}
       </nav>
 
       {/* User Profile Footer */}
-      <div className="mt-auto flex items-center justify-between gap-3 border-t border-app-border bg-app-surface-alt p-4">
-        <div className="flex items-center gap-3 min-w-0">
+      <div className={`mt-auto flex gap-3 border-t border-app-border bg-app-surface-alt p-4 ${isCollapsed ? "flex-col items-center" : "items-center justify-between"}`}>
+        <div className="flex min-w-0 items-center gap-3">
           <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-app-accent text-caption font-semibold text-app-accent-on ring-2 ring-app-surface">
-            PS
+            {profile?.initials ?? "…"}
           </div>
-          <div className="flex flex-col min-w-0">
+          {!isCollapsed && <div className="flex flex-col min-w-0">
             <span className="mb-1 truncate text-body font-semibold leading-none text-app-text">
-              Priya Sharma
+              {profile?.displayName ?? (loading ? "Loading account" : "Account unavailable")}
             </span>
             <span className="truncate text-caption leading-none text-app-muted">
-              Super Admin
+              {profile?.roleName ?? (loading ? "Loading profile" : "")}
             </span>
-          </div>
+          </div>}
         </div>
         <button
           onClick={handleLogout}

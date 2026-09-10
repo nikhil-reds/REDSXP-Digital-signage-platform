@@ -1,17 +1,22 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { serializeGroup } from "../route";
 import { serializeDevice } from "@/app/api/screens/route";
+import { PERMISSIONS } from "@/lib/rbac";
+import { requirePermission } from "@/lib/session";
 
 const GROUP_INCLUDE = {
   playlist: true,
   devices: { include: { group: true, playlist: true } },
 } as const;
 
-export async function GET(request: Request, { params }: { params: Promise<{ id: string }> }) {
+export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  const auth = await requirePermission(request, PERMISSIONS.DEVICE_READ);
+  if (auth.response) return auth.response;
+
   try {
     const { id } = await params;
-    const group = await prisma.deviceGroup.findUnique({ where: { id }, include: GROUP_INCLUDE });
+    const group = await prisma.deviceGroup.findFirst({ where: { id, tenantId: auth.user.tenantId }, include: GROUP_INCLUDE });
 
     if (!group) {
       return NextResponse.json({ error: "Screen group not found" }, { status: 404 });
@@ -28,25 +33,30 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
   }
 }
 
-export async function PATCH(request: Request, { params }: { params: Promise<{ id: string }> }) {
+export async function PATCH(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  const auth = await requirePermission(request, PERMISSIONS.DEVICE_UPDATE);
+  if (auth.response) return auth.response;
+
   try {
     const { id } = await params;
     const body = await request.json();
+    const existingGroup = await prisma.deviceGroup.findFirst({ where: { id, tenantId: auth.user.tenantId }, select: { id: true } });
+    if (!existingGroup) return NextResponse.json({ error: "Screen group not found" }, { status: 404 });
 
     if (Array.isArray(body.deviceIds)) {
       await prisma.$transaction([
         prisma.device.updateMany({
-          where: { groupId: id, id: { notIn: body.deviceIds } },
+          where: { groupId: id, tenantId: auth.user.tenantId, id: { notIn: body.deviceIds } },
           data: { groupId: null },
         }),
         ...(body.deviceIds.length > 0
-          ? [prisma.device.updateMany({ where: { id: { in: body.deviceIds } }, data: { groupId: id } })]
+          ? [prisma.device.updateMany({ where: { id: { in: body.deviceIds }, tenantId: auth.user.tenantId }, data: { groupId: id } })]
           : []),
       ]);
     }
 
     const group = await prisma.deviceGroup.update({
-      where: { id },
+      where: { id: existingGroup.id },
       data: {
         name: body.name,
         scheduleLabel: body.scheduleLabel,
@@ -66,11 +76,14 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
   }
 }
 
-export async function DELETE(request: Request, { params }: { params: Promise<{ id: string }> }) {
+export async function DELETE(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  const auth = await requirePermission(request, PERMISSIONS.DEVICE_DELETE);
+  if (auth.response) return auth.response;
+
   try {
     const { id } = await params;
 
-    const group = await prisma.deviceGroup.findUnique({ where: { id } });
+    const group = await prisma.deviceGroup.findFirst({ where: { id, tenantId: auth.user.tenantId } });
     if (!group) {
       return NextResponse.json({ error: "Screen group not found" }, { status: 404 });
     }

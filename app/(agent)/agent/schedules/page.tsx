@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useCallback, useEffect, useMemo, useState } from "react";
-import { Plus, Calendar, Layers, ListChecks, AlertTriangle, Monitor } from "lucide-react";
+import { Plus, Calendar, ListChecks, AlertTriangle, Monitor } from "lucide-react";
 import ScheduleCalendar from "@/components/agent/schedules/schedule-calendar";
 import ScheduleFormModal from "@/components/agent/schedules/schedule-form-modal";
 import ConflictDialog from "@/components/agent/schedules/conflict-dialog";
@@ -12,9 +12,9 @@ import { ScreenGroup } from "@/components/agent/screen-groups/groups-grid";
 import {
   Button,
   Card,
+  CollectionToolbar,
   EmptyState,
   PageShell,
-  Select,
   Skeleton,
   SkeletonRegion,
   SkeletonStatGrid,
@@ -50,6 +50,8 @@ export default function AgentSchedulesPage() {
   const [schedules, setSchedules] = useState<ScheduleSummary[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [groupFilter, setGroupFilter] = useState("All");
+  const [statusFilter, setStatusFilter] = useState("All");
+  const [sort, setSort] = useState("start-asc");
   const [screenGroups, setScreenGroups] = useState<ScreenGroup[]>([]);
   const [groupDeviceIds, setGroupDeviceIds] = useState<Record<string, string[]>>({});
 
@@ -99,9 +101,15 @@ export default function AgentSchedulesPage() {
 
   // Group filter application
   const filteredSchedules = schedules.filter((sch) => {
-    if (groupFilter === "All") return true;
+    const matchesStatus = statusFilter === "All" || sch.status === statusFilter;
+    if (groupFilter === "All") return matchesStatus;
     const groupDevices = groupDeviceIds[groupFilter] ?? [];
-    return sch.deviceIds.some((id) => groupDevices.includes(id));
+    return matchesStatus && sch.deviceIds.some((id) => groupDevices.includes(id));
+  });
+  const sortedSchedules = [...filteredSchedules].sort((a, b) => {
+    if (sort === "name-asc") return a.name.localeCompare(b.name);
+    if (sort === "priority-desc") return b.priority - a.priority || a.name.localeCompare(b.name);
+    return new Date(a.startDate).getTime() - new Date(b.startDate).getTime();
   });
 
   const handleModalSaved = () => {
@@ -151,22 +159,17 @@ export default function AgentSchedulesPage() {
       </StatGrid>
       )}
 
-      {/* Group Filters panel */}
-      <Card size="widget" padded className="flex items-center gap-3">
-        <Select
-          icon={Layers}
-          value={groupFilter}
-          onChange={(e) => setGroupFilter(e.target.value)}
-          aria-label="Filter by screen group"
-          className="w-64"
-        >
-          <option value="All">All Screen Groups</option>
-          {screenGroups.map((g) => (
-            <option key={g.id} value={g.id}>
-              {g.name}
-            </option>
-          ))}
-        </Select>
+      {/* Calendar navigation provides chronological page movement; these controls refine its data. */}
+      <Card size="widget" padded>
+        <CollectionToolbar
+          filters={[
+            { id: "screen-group", label: "screen group", value: groupFilter, onChange: setGroupFilter, options: [{ value: "All", label: "All screen groups" }, ...screenGroups.map((group) => ({ value: group.id, label: group.name }))] },
+            { id: "status", label: "status", value: statusFilter, onChange: setStatusFilter, options: [{ value: "All", label: "All statuses" }, { value: "ACTIVE", label: "Active" }, { value: "INACTIVE", label: "Inactive" }] },
+          ]}
+          sort={{ value: sort, onChange: setSort, options: [{ value: "start-asc", label: "Start date: earliest" }, { value: "priority-desc", label: "Priority: highest" }, { value: "name-asc", label: "Name: A–Z" }] }}
+          hasActiveControls={groupFilter !== "All" || statusFilter !== "All" || sort !== "start-asc"}
+          onClear={() => { setGroupFilter("All"); setStatusFilter("All"); setSort("start-asc"); }}
+        />
       </Card>
 
       {/* Calendar Area */}
@@ -188,7 +191,7 @@ export default function AgentSchedulesPage() {
           </Card>
         ) : (
           <ScheduleCalendar
-            schedules={filteredSchedules}
+            schedules={sortedSchedules}
             conflicts={conflicts}
             onSelectConflict={(c1, c2) => setConflictModalData({ c1, c2 })}
             onSelectSchedule={(sch) => setSelectedSchedule(sch)}

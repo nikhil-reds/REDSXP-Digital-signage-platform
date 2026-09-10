@@ -8,7 +8,7 @@ import { readFeatureBody } from "../route";
 type Params = { params: Promise<{ id: string }> };
 
 export async function PUT(request: NextRequest, { params }: Params) {
-  const auth = await requireAdmin(request, PERMISSIONS.ADMIN_PLANS_WRITE);
+  const auth = await requireAdmin(request, PERMISSIONS.ADMIN_FEATURES_UPDATE);
   if (auth.response) return auth.response;
 
   const { id } = await params;
@@ -49,7 +49,7 @@ export async function PUT(request: NextRequest, { params }: Params) {
 }
 
 export async function DELETE(request: NextRequest, { params }: Params) {
-  const auth = await requireAdmin(request, PERMISSIONS.ADMIN_PLANS_WRITE);
+  const auth = await requireAdmin(request, PERMISSIONS.ADMIN_FEATURES_UPDATE);
   if (auth.response) return auth.response;
 
   const { id } = await params;

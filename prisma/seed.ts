@@ -61,15 +61,37 @@ function resolveSuperAdminPassword(): string {
 }
 
 export const SYSTEM_PERMISSIONS = [
+  // Platform permissions are intentionally granular. The legacy `:write` keys
+  // below remain during the transition so existing custom roles keep working.
+  { key: "admin:overview:read", name: "Read Overview", resource: "overview", action: "read", description: "View platform overview metrics" },
   { key: "admin:tenants:read", name: "Read Tenants", resource: "tenants", action: "read", description: "View workspace tenants and organization metadata" },
+  { key: "admin:tenants:update", name: "Edit Tenants", resource: "tenants", action: "update", description: "Edit or suspend workspace tenants" },
   { key: "admin:tenants:write", name: "Manage Tenants", resource: "tenants", action: "write", description: "Create, update, or suspend workspace tenants" },
   { key: "admin:tenants:delete", name: "Delete Tenants", resource: "tenants", action: "delete", description: "Delete workspace tenants" },
+  { key: "admin:tenants:export", name: "Export Tenants", resource: "tenants", action: "export", description: "Export workspace tenant data" },
 
   { key: "admin:plans:read", name: "Read Plans", resource: "plans", action: "read", description: "View subscription plans and quota limits" },
+  { key: "admin:plans:update", name: "Edit Plans", resource: "plans", action: "update", description: "Edit subscription plans and quota limits" },
   { key: "admin:plans:write", name: "Manage Plans", resource: "plans", action: "write", description: "Create and modify subscription plans" },
+  { key: "admin:features:read", name: "Read Features", resource: "features", action: "read", description: "View platform features and overrides" },
+  { key: "admin:features:update", name: "Edit Features", resource: "features", action: "update", description: "Edit platform features and overrides" },
 
   { key: "admin:billing:read", name: "Read System Billing", resource: "billing", action: "read", description: "View system-wide revenue, payments, and invoices" },
+  { key: "admin:billing:update", name: "Edit System Billing", resource: "billing", action: "update", description: "Edit system billing records" },
   { key: "admin:billing:write", name: "Manage System Billing", resource: "billing", action: "write", description: "Modify billing records and payment gateways" },
+  { key: "admin:billing:delete", name: "Delete System Billing", resource: "billing", action: "delete", description: "Delete system billing records" },
+  { key: "admin:billing:export", name: "Export System Billing", resource: "billing", action: "export", description: "Export revenue, payment, and invoice data" },
+  { key: "admin:analytics:read", name: "Read Platform Analytics", resource: "analytics", action: "read", description: "View platform analytics" },
+  { key: "admin:analytics:export", name: "Export Platform Analytics", resource: "analytics", action: "export", description: "Export platform analytics" },
+  { key: "admin:devices:read", name: "Read Devices", resource: "devices", action: "read", description: "View platform devices" },
+  { key: "admin:devices:read_details", name: "Read Device Details", resource: "devices", action: "read_details", description: "View individual device details and diagnostics" },
+  { key: "admin:announcements:read", name: "Read Announcements", resource: "announcements", action: "read", description: "View platform announcements" },
+  { key: "admin:announcements:create", name: "Add Announcements", resource: "announcements", action: "create", description: "Create platform announcements" },
+  { key: "admin:announcements:update", name: "Edit Announcements", resource: "announcements", action: "update", description: "Edit platform announcements" },
+  { key: "admin:email_templates:read", name: "Read Email Templates", resource: "email_templates", action: "read", description: "View email templates" },
+  { key: "admin:email_templates:update", name: "Edit Email Templates", resource: "email_templates", action: "update", description: "Edit email templates" },
+  { key: "admin:email_templates:delete", name: "Delete Email Templates", resource: "email_templates", action: "delete", description: "Delete email templates" },
+  { key: "admin:email_templates:export", name: "Export Email Templates", resource: "email_templates", action: "export", description: "Export email templates" },
 
   { key: "admin:users:read", name: "Read System Users", resource: "users", action: "read", description: "View platform users across all tenants" },
   { key: "admin:users:write", name: "Manage System Users", resource: "users", action: "write", description: "Create and edit platform administrators" },
@@ -78,6 +100,17 @@ export const SYSTEM_PERMISSIONS = [
   { key: "admin:roles:write", name: "Manage Admin Roles", resource: "roles", action: "write", description: "Create and edit custom platform administrator roles" },
 
   { key: "admin:audit:read", name: "Read System Audit Logs", resource: "audit", action: "read", description: "View system audit logs across all tenants" },
+  { key: "admin:audit:export", name: "Export System Audit Logs", resource: "audit", action: "export", description: "Export system audit logs" },
+  { key: "admin:health:read", name: "Read System Health", resource: "health", action: "read", description: "View platform health and incidents" },
+  { key: "admin:settings:read", name: "Read Platform Settings", resource: "settings", action: "read", description: "View platform settings" },
+  { key: "admin:settings:update", name: "Edit Platform Settings", resource: "settings", action: "update", description: "Edit platform settings" },
+  { key: "admin:users:create", name: "Add System Users", resource: "users", action: "create", description: "Create platform administrators" },
+  { key: "admin:users:update", name: "Edit System Users", resource: "users", action: "update", description: "Edit platform administrators" },
+  { key: "admin:users:delete", name: "Delete System Users", resource: "users", action: "delete", description: "Delete platform administrators" },
+  { key: "admin:users:export", name: "Export System Users", resource: "users", action: "export", description: "Export platform administrator data" },
+  { key: "admin:roles:create", name: "Create Admin Roles", resource: "roles", action: "create", description: "Create custom platform roles" },
+  { key: "admin:roles:update", name: "Edit Admin Roles", resource: "roles", action: "update", description: "Edit custom platform roles" },
+  { key: "admin:roles:delete", name: "Delete Admin Roles", resource: "roles", action: "delete", description: "Delete custom platform roles" },
 ];
 
 export const TENANT_PERMISSIONS = [
@@ -137,6 +170,31 @@ export async function main() {
   }
 
   console.log("✅ Seeded permissions (SYSTEM & TENANT).");
+
+  // Upgrade custom roles that were created before permissions were split into
+  // individual actions. This is additive: an operator keeps their access while
+  // administrators can later remove the legacy broad capability from the role.
+  const legacyGrants: Record<string, string[]> = {
+    "admin:tenants:write": ["admin:tenants:update"],
+    "admin:plans:write": ["admin:plans:update", "admin:features:update"],
+    "admin:billing:write": ["admin:billing:update", "admin:billing:delete"],
+    "admin:users:write": ["admin:users:create", "admin:users:update", "admin:users:delete"],
+    "admin:roles:write": ["admin:roles:create", "admin:roles:update", "admin:roles:delete"],
+  };
+  const systemRoles = await prisma.role.findMany({
+    where: { scope: RoleScope.SYSTEM },
+    include: { permissions: { select: { key: true } } },
+  });
+  for (const role of systemRoles) {
+    const grantedKeys = new Set(role.permissions.map((permission) => permission.key));
+    const upgradeKeys = Object.entries(legacyGrants).flatMap(([legacy, modern]) =>
+      grantedKeys.has(legacy) ? modern : [],
+    );
+    if (upgradeKeys.length) {
+      const permissions = await prisma.permission.findMany({ where: { key: { in: upgradeKeys } }, select: { id: true } });
+      await prisma.role.update({ where: { id: role.id }, data: { permissions: { connect: permissions.map((permission) => ({ id: permission.id })) } } });
+    }
+  }
 
   // 3. Seed Default SUPER_ADMIN Role (System Scope)
   const systemPerms = await prisma.permission.findMany({ where: { scope: RoleScope.SYSTEM } });

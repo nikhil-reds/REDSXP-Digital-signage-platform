@@ -1,11 +1,19 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { PERMISSIONS } from "@/lib/rbac";
+import { requirePermission } from "@/lib/session";
 
-export async function GET(_request: Request, { params }: { params: Promise<{ id: string }> }) {
+export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  const auth = await requirePermission(request, PERMISSIONS.PLAYLIST_READ);
+  if (auth.response) return auth.response;
+
   try {
     const { id } = await params;
+    const playlist = await prisma.playlist.findFirst({ where: { id, tenantId: auth.user.tenantId }, select: { id: true } });
+    if (!playlist) return NextResponse.json({ error: "Playlist not found" }, { status: 404 });
+
     const render = await prisma.playerPlaylistRender.findUnique({
-      where: { playlistId: id },
+      where: { playlistId: playlist.id },
     });
 
     if (!render) {

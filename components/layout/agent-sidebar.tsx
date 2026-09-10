@@ -4,6 +4,8 @@ import React, { useEffect, useState } from "react";
 import NextImage from "next/image";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
+import { useSession } from "@/components/providers/session-provider";
+import { getSidebarProfile } from "@/lib/sidebar-profile";
 import {
   LayoutDashboard,
   Monitor,
@@ -22,6 +24,7 @@ import {
   ChevronRight,
   X,
   Settings,
+  UserRound,
   ShieldCheck
 } from "lucide-react";
 
@@ -44,6 +47,7 @@ const navItems: NavItem[] = [
   { name: "Analytics", href: "/agent/analytics", icon: LineChart },
   { name: "Reports", href: "/agent/reports", icon: FileText },
   { name: "Activity Log", href: "/agent/activity-log", icon: History },
+  { name: "Workspace Users", href: "/agent/users", icon: UserRound },
   { name: "Roles & Permissions", href: "/agent/roles", icon: ShieldCheck },
   { name: "Help & Support", href: "/agent/support", icon: LifeBuoy },
 ];
@@ -59,8 +63,10 @@ export default function AgentSidebar({
 }: AgentSidebarProps) {
   const pathname = usePathname();
   const router = useRouter();
+  const { user, loading } = useSession();
   const [isCollapsed, setIsCollapsed] = useState(false);
   const isVisuallyCollapsed = isCollapsed && !isMobileOpen;
+  const profile = user ? getSidebarProfile(user) : null;
 
   useEffect(() => {
     onMobileClose?.();
@@ -91,16 +97,16 @@ export default function AgentSidebar({
         } ${isCollapsed ? "md:w-20" : "md:w-64"}`}
       >
       {/* Brand Header */}
-      <div className="px-4 py-6 border-b border-app-border flex items-center justify-between">
+      <div className={`flex items-center justify-between border-b border-app-border py-6 ${isVisuallyCollapsed ? "px-3" : "px-4"}`}>
         <div className="flex items-center gap-3 overflow-hidden">
           {isVisuallyCollapsed ? (
             <div className="w-6 h-6 flex items-center justify-center shrink-0">
               <NextImage
-                src="/reds-xos-logo.png"
-                alt="REDS XOS Logo"
-                width={24}
-                height={24}
-                className="w-full h-full object-contain"
+                src="/logo-squueze.png"
+                alt="REDS"
+                width={28}
+                height={28}
+                className="h-7 w-7 object-contain"
                 priority
               />
             </div>
@@ -201,15 +207,15 @@ export default function AgentSidebar({
         <div className={`flex items-center gap-3 min-w-0 ${isVisuallyCollapsed ? "justify-center" : "justify-between"}`}>
           <div className="flex items-center gap-2.5 min-w-0">
             <div className="w-9 h-9 rounded-full bg-app-accent text-app-accent-on text-caption font-semibold flex items-center justify-center ring-2 ring-app-surface shadow-sm shrink-0">
-              AM
+              {profile?.initials ?? "…"}
             </div>
             {!isVisuallyCollapsed && (
               <div className="flex flex-col min-w-0 gap-1">
                 <span className="text-body font-semibold text-app-text truncate leading-none">
-                  Aarav Mehta
+                  {profile?.displayName ?? (loading ? "Loading account" : "Account unavailable")}
                 </span>
                 <span className="text-caption text-app-muted truncate leading-none">
-                  Operations Agent
+                  {profile?.roleName ?? (loading ? "Loading profile" : "")}
                 </span>
               </div>
             )}
@@ -235,12 +241,14 @@ export default function AgentSidebar({
         </div>
 
         {/* Region Information */}
-        {!isVisuallyCollapsed && (
+        {!isVisuallyCollapsed && profile?.tenantName && (
           <div className="text-caption font-semibold text-app-muted border-t border-app-border pt-2 flex justify-between items-center gap-2">
-            <span className="truncate">Bengaluru Region</span>
-            <span className="bg-app-accent-surface text-app-accent-text px-1.5 py-0.5 rounded-sm font-semibold uppercase tracking-headline shrink-0 leading-none">
-              CCD-BLR
-            </span>
+            <span className="truncate">{profile.tenantName}</span>
+            {profile.tenantSlug && (
+              <span className="bg-app-accent-surface text-app-accent-text px-1.5 py-0.5 rounded-sm font-semibold uppercase tracking-headline shrink-0 leading-none">
+                {profile.tenantSlug}
+              </span>
+            )}
           </div>
         )}
       </div>

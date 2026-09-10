@@ -1,7 +1,9 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { uploadToS3 } from "@/lib/s3";
 import { enqueuePlaylistRenderJob } from "@/lib/playlist-render-queue";
+import { PERMISSIONS } from "@/lib/rbac";
+import { requirePermission } from "@/lib/session";
 
 type SerializableMedia = Record<string, unknown> & {
   sizeBytes: bigint | number | string;
@@ -72,13 +74,13 @@ const calculatePlaylistDuration = (items: Array<{ durationSec?: unknown; zoneId?
   return Math.max(0, ...Array.from(totals.values()));
 };
 
-export async function GET(request: Request) {
+export async function GET(request: NextRequest) {
+  const auth = await requirePermission(request, PERMISSIONS.PLAYLIST_READ);
+  if (auth.response) return auth.response;
+
   try {
-    const { searchParams } = new URL(request.url);
-    const tenantId = searchParams.get("tenantId");
-    
     const playlists = await prisma.playlist.findMany({
-      where: tenantId ? { tenantId } : undefined,
+      where: { tenantId: auth.user.tenantId },
       include: {
         playlistItems: {
           include: {
@@ -104,20 +106,12 @@ export async function GET(request: Request) {
   }
 }
 
-export async function POST(request: Request) {
+export async function POST(request: NextRequest) {
+  const auth = await requirePermission(request, PERMISSIONS.PLAYLIST_CREATE);
+  if (auth.response) return auth.response;
+
   try {
     const body = await request.json();
-    
-    let resolvedTenantId = body.tenantId;
-    if (!resolvedTenantId) {
-      let tenant = await prisma.tenant.findFirst();
-      if (!tenant) {
-        tenant = await prisma.tenant.create({ 
-          data: { name: "Default Tenant", slug: "default-tenant" } 
-        });
-      }
-      resolvedTenantId = tenant.id;
-    }
 
     if (!body.name) {
       return NextResponse.json({ error: "Playlist name is required" }, { status: 400 });
@@ -138,11 +132,14 @@ export async function POST(request: Request) {
           gridRows: normalizeGridSize(body.gridRows),
           gridColumns: normalizeGridSize(body.gridColumns),
           zonesJson: Array.isArray(body.zones) ? body.zones : undefined,
-          tenantId: resolvedTenantId,
+          tenantId: auth.user.tenantId,
         },
       });
 
       if (body.items && Array.isArray(body.items)) {
+        const mediaIds = body.items.map((item: { mediaId?: string }) => item.mediaId).filter(Boolean);
+        const mediaCount = await tx.media.count({ where: { id: { in: mediaIds }, tenantId: auth.user.tenantId } });
+        if (mediaCount !== mediaIds.length) throw new Error("One or more media items do not belong to this workspace.");
         for (const item of body.items) {
           await tx.playlistItem.create({
             data: {

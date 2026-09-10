@@ -24,7 +24,7 @@ import {
 interface MediaPreviewDrawerProps {
   asset: MediaAsset;
   onClose: () => void;
-  onDeleteAsset: (id: string) => void;
+  onDeleteAsset: (id: string) => Promise<boolean>;
 }
 
 function statusTone(status: MediaAsset["status"]): Tone {
@@ -191,9 +191,9 @@ export default function MediaPreviewDrawer({
                   variant="danger"
                   size="sm"
                   className="flex-1"
-                  onClick={() => {
-                    onDeleteAsset(asset.id);
-                    onClose();
+                  onClick={async () => {
+                    const deleted = await onDeleteAsset(asset.id);
+                    if (deleted) onClose();
                   }}
                 >
                   Confirm Delete

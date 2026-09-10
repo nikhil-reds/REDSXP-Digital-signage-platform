@@ -19,6 +19,19 @@ interface SettingsNavProps {
   setActiveTab: (tab: string) => void;
 }
 
+/** Each navigation choice has a real destination in the current settings form. */
+export const SETTINGS_SECTION_BY_TAB: Record<string, string> = {
+  General: "platform-identity",
+  Branding: "platform-identity",
+  "Authentication & SSO": "platform-identity",
+  "Billing & Payments": "trial-onboarding",
+  "Email & Notifications": "trial-onboarding",
+  "Storage & CDN": "tenant-defaults",
+  "API & Webhooks": "tenant-defaults",
+  "Security & Compliance": "maintenance-mode",
+  "Maintenance Mode": "maintenance-mode",
+};
+
 export default function SettingsNav({ activeTab, setActiveTab }: SettingsNavProps) {
   const tabs = [
     { name: "General", icon: Sliders },
@@ -33,7 +46,7 @@ export default function SettingsNav({ activeTab, setActiveTab }: SettingsNavProp
   ];
 
   return (
-    <Card size="panel" padded className="h-fit w-64 shrink-0 select-none space-y-1 overflow-hidden !p-3">
+    <Card size="panel" padded className="h-fit w-64 shrink-0 select-none space-y-1 overflow-hidden !p-3 lg:sticky lg:top-6">
       {tabs.map((tab) => {
         const Icon = tab.icon;
         const isActive = tab.name === activeTab;

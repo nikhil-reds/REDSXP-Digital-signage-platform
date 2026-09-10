@@ -1,3 +1,5 @@
+"use client";
+
 import React from "react";
 import { RefreshCw, Send, Calendar } from "lucide-react";
 import AgentStatsGrid from "@/components/agent/overview/stats-grid";
@@ -5,18 +7,22 @@ import HealthMapSection from "@/components/agent/overview/health-map-section";
 import SchedulesPlayingSection from "@/components/agent/overview/schedules-playing-section";
 import TrendsActivitySection from "@/components/agent/overview/trends-activity-section";
 import { Button, IconButton, PageShell } from "@/components/ui";
+import { useSession } from "@/components/providers/session-provider";
+import { getSidebarProfile, getTimeGreeting } from "@/lib/sidebar-profile";
 
 export default function AgentPage() {
+  const { user, loading } = useSession();
+  const profile = user ? getSidebarProfile(user) : null;
   return (
     <PageShell>
       {/* 1. Header Section */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b border-app-border pb-5">
         <div>
           <h1 className="font-heading text-h5 font-semibold tracking-headline text-app-text">
-            Good afternoon, Aarav
+            {loading ? "Welcome" : `${getTimeGreeting()}, ${profile?.displayName ?? "there"}`}
           </h1>
           <p className="text-body text-app-muted mt-1">
-            Bengaluru Region · 19 locations · Updated just now (4 July 2026, 4:30 PM IST)
+            {profile?.tenantName ?? "Your workspace"} · 19 locations · Updated just now (4 July 2026, 4:30 PM IST)
           </p>
         </div>
 

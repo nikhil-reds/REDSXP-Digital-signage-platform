@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import {
   Monitor,
   Map,
@@ -11,7 +11,10 @@ import {
   MapPin,
   Cpu,
   ShieldAlert,
+  RefreshCw,
 } from "lucide-react";
+import { useSession } from "@/components/providers/session-provider";
+import { hasPermission, PERMISSIONS } from "@/lib/rbac";
 import ScreensTable, { ScreenDevice } from "@/components/agent/screens/screens-table";
 import ScreensMap from "@/components/agent/screens/screens-map";
 import ScreensDetailDrawer from "@/components/agent/screens/screens-detail-drawer";
@@ -21,10 +24,13 @@ import {
   createPlayerDownload,
   createScreen,
   fetchScreens,
+  ApiRequestError,
 } from "@/components/agent/screens/api";
 import {
   Button,
   Card,
+  AccessDeniedCard,
+  CollectionPagination,
   EmptyState,
   Modal,
   SearchInput,
@@ -40,8 +46,10 @@ function uniqueSorted(values: (string | undefined)[]): string[] {
 }
 
 export default function AgentScreensPage() {
+  const { user, permissions, loading: isSessionLoading } = useSession();
   const [screens, setScreens] = useState<ScreenDevice[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [loadError, setLoadError] = useState<ApiRequestError | null>(null);
   const [viewMode, setViewMode] = useState<"table" | "map">("table");
   const [selectedScreen, setSelectedScreen] = useState<ScreenDevice | null>(null);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
@@ -59,13 +67,43 @@ export default function AgentScreensPage() {
   const [locationFilter, setLocationFilter] = useState("All");
   const [modelFilter, setModelFilter] = useState("All");
   const [alertsFilter, setAlertsFilter] = useState("All");
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
+  const canReadScreens = hasPermission(permissions, PERMISSIONS.DEVICE_READ);
+  const canCreateScreens = hasPermission(permissions, PERMISSIONS.DEVICE_CREATE);
+
+  const loadScreens = useCallback(async () => {
+    setLoadError(null);
+    setIsLoading(true);
+    try {
+      setScreens(await fetchScreens());
+    } catch (error) {
+      setLoadError(
+        error instanceof ApiRequestError
+          ? error
+          : new ApiRequestError("Unable to load screens. Please try again.", 0),
+      );
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
 
   useEffect(() => {
+    if (isSessionLoading || !canReadScreens) return;
     fetchScreens()
-      .then(setScreens)
-      .catch((err) => console.error("Failed to load screens:", err))
+      .then((loadedScreens) => {
+        setScreens(loadedScreens);
+        setLoadError(null);
+      })
+      .catch((error) => {
+        setLoadError(
+          error instanceof ApiRequestError
+            ? error
+            : new ApiRequestError("Unable to load screens. Please try again.", 0),
+        );
+      })
       .finally(() => setIsLoading(false));
-  }, []);
+  }, [canReadScreens, isSessionLoading]);
 
   const groupOptions = uniqueSorted(screens.map((s) => s.group));
   const locationOptions = uniqueSorted(screens.map((s) => s.location));
@@ -123,10 +161,44 @@ export default function AgentScreensPage() {
 
     return matchesSearch && matchesStatus && matchesGroup && matchesLocation && matchesModel && matchesAlerts;
   });
+  const totalPages = Math.max(1, Math.ceil(filteredScreens.length / pageSize));
+  const visibleScreens = filteredScreens.slice((Math.min(page, totalPages) - 1) * pageSize, Math.min(page, totalPages) * pageSize);
+  const resetToFirstPage = () => setPage(1);
+
+  if (!isSessionLoading && (!canReadScreens || loadError?.status === 403)) {
+    return (
+      <div className="flex h-full overflow-hidden">
+        <div className="flex min-w-0 flex-1 flex-col overflow-y-auto px-8 py-6 pb-24">
+          <AccessDeniedCard resource="Screens & Device Players" roleName={user?.role.name} />
+        </div>
+      </div>
+    );
+  }
+
+  if (loadError) {
+    return (
+      <div className="flex h-full overflow-hidden">
+        <div className="flex min-w-0 flex-1 flex-col overflow-y-auto px-8 py-6 pb-24">
+          <Card size="panel" className="flex min-h-[400px] items-center justify-center p-6 text-center">
+            <div className="max-w-md">
+              <ShieldAlert className="mx-auto h-8 w-8 text-app-danger-text" aria-hidden="true" />
+              <h2 className="mt-4 font-heading text-h5 font-semibold tracking-headline text-app-text">
+                Unable to load screens
+              </h2>
+              <p className="mt-2 text-body text-app-muted">{loadError.message}</p>
+              <Button variant="secondary" size="sm" icon={RefreshCw} className="mt-5" onClick={loadScreens}>
+                Try again
+              </Button>
+            </div>
+          </Card>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex h-full overflow-hidden relative">
-      <div className="flex-1 flex flex-col min-w-0 py-6 px-8 space-y-6 overflow-y-auto">
+      <div className="flex-1 flex flex-col min-w-0 space-y-6 overflow-y-auto px-8 py-6 pb-24">
         {/* Header Section */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b border-app-border pb-5 shrink-0">
           <div>
@@ -160,9 +232,11 @@ export default function AgentScreensPage() {
               Player
             </Button>
 
-            <Button variant="primary" size="sm" icon={Plus} onClick={() => setIsCreateModalOpen(true)}>
-              Add Screen
-            </Button>
+            {canCreateScreens && (
+              <Button variant="primary" size="sm" icon={Plus} onClick={() => setIsCreateModalOpen(true)}>
+                Add Screen
+              </Button>
+            )}
           </div>
         </div>
 
@@ -178,13 +252,13 @@ export default function AgentScreensPage() {
             <SearchInput
               placeholder="Search screen, location, model…"
               value={search}
-              onChange={(e) => setSearch(e.target.value)}
+              onChange={(e) => { setSearch(e.target.value); resetToFirstPage(); }}
             />
 
             <Select
               icon={Activity}
               value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value)}
+              onChange={(e) => { setStatusFilter(e.target.value); resetToFirstPage(); }}
               aria-label="Filter by status"
             >
               <option value="All">All Statuses</option>
@@ -196,7 +270,7 @@ export default function AgentScreensPage() {
             <Select
               icon={Layers}
               value={groupFilter}
-              onChange={(e) => setGroupFilter(e.target.value)}
+              onChange={(e) => { setGroupFilter(e.target.value); resetToFirstPage(); }}
               aria-label="Filter by screen group"
             >
               <option value="All">All Screen Groups</option>
@@ -210,7 +284,7 @@ export default function AgentScreensPage() {
             <Select
               icon={MapPin}
               value={locationFilter}
-              onChange={(e) => setLocationFilter(e.target.value)}
+              onChange={(e) => { setLocationFilter(e.target.value); resetToFirstPage(); }}
               aria-label="Filter by location"
             >
               <option value="All">All Locations</option>
@@ -226,7 +300,7 @@ export default function AgentScreensPage() {
             <Select
               icon={Cpu}
               value={modelFilter}
-              onChange={(e) => setModelFilter(e.target.value)}
+              onChange={(e) => { setModelFilter(e.target.value); resetToFirstPage(); }}
               aria-label="Filter by hardware model"
             >
               <option value="All">All Hardware Models</option>
@@ -240,7 +314,7 @@ export default function AgentScreensPage() {
             <Select
               icon={ShieldAlert}
               value={alertsFilter}
-              onChange={(e) => setAlertsFilter(e.target.value)}
+              onChange={(e) => { setAlertsFilter(e.target.value); resetToFirstPage(); }}
               aria-label="Filter by alert state"
             >
               <option value="All">All Alerts</option>
@@ -268,27 +342,36 @@ export default function AgentScreensPage() {
                 icon={Monitor}
                 title="No screens yet"
                 description="Add your first screen to get started."
-                action={
+                action={canCreateScreens ? (
                   <Button variant="primary" size="sm" icon={Plus} onClick={() => setIsCreateModalOpen(true)}>
                     Add Screen
                   </Button>
-                }
+                ) : undefined}
               />
             </Card>
           ) : viewMode === "table" ? (
             <ScreensTable
-              screens={filteredScreens}
+              screens={visibleScreens}
               onSelectScreen={(screen) => setSelectedScreen(screen)}
               selectedScreenId={selectedScreen?.id || null}
             />
           ) : (
             <ScreensMap
-              screens={filteredScreens}
+              screens={visibleScreens}
               onSelectScreen={(screen) => setSelectedScreen(screen)}
               selectedScreenId={selectedScreen?.id || null}
             />
           )}
         </div>
+        {!isFirstLoad && screens.length > 0 && (
+          <CollectionPagination
+            page={page}
+            pageSize={pageSize}
+            total={filteredScreens.length}
+            onPageChange={setPage}
+            onPageSizeChange={(nextPageSize) => { setPageSize(nextPageSize); setPage(1); }}
+          />
+        )}
       </div>
 
       {/* Sliding detail drawer panel */}
@@ -306,7 +389,7 @@ export default function AgentScreensPage() {
 
       <Modal
         open={isDownloadModalOpen}
-        onClose={() => setIsDownloadModalOpen(false)}
+        onClose={closeDownloadModal}
         title="Download Player"
         description="Bootstrap packages for the on-device player."
         size="md"

@@ -1,6 +1,8 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { serializeDevice } from "@/app/api/screens/route";
+import { PERMISSIONS } from "@/lib/rbac";
+import { requirePermission } from "@/lib/session";
 
 type GroupWithRelations = {
   id: string;
@@ -35,13 +37,13 @@ export function serializeGroup(group: GroupWithRelations) {
   };
 }
 
-export async function GET(request: Request) {
-  try {
-    const { searchParams } = new URL(request.url);
-    const tenantId = searchParams.get("tenantId");
+export async function GET(request: NextRequest) {
+  const auth = await requirePermission(request, PERMISSIONS.DEVICE_READ);
+  if (auth.response) return auth.response;
 
+  try {
     const groups = await prisma.deviceGroup.findMany({
-      where: tenantId ? { tenantId } : undefined,
+      where: { tenantId: auth.user.tenantId },
       include: {
         playlist: true,
         devices: { select: { status: true, location: true, alertsCount: true } },
@@ -56,18 +58,12 @@ export async function GET(request: Request) {
   }
 }
 
-export async function POST(request: Request) {
+export async function POST(request: NextRequest) {
+  const auth = await requirePermission(request, PERMISSIONS.DEVICE_CREATE);
+  if (auth.response) return auth.response;
+
   try {
     const body = await request.json();
-
-    let resolvedTenantId = body.tenantId;
-    if (!resolvedTenantId) {
-      let tenant = await prisma.tenant.findFirst();
-      if (!tenant) {
-        tenant = await prisma.tenant.create({ data: { name: "Default Tenant", slug: "default-tenant" } });
-      }
-      resolvedTenantId = tenant.id;
-    }
 
     if (!body.name) {
       return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
@@ -75,7 +71,7 @@ export async function POST(request: Request) {
 
     const group = await prisma.deviceGroup.create({
       data: {
-        tenantId: resolvedTenantId,
+        tenantId: auth.user.tenantId,
         name: body.name,
         scheduleLabel: body.scheduleLabel || null,
         currentPlaylistId: body.currentPlaylistId || null,
@@ -84,7 +80,7 @@ export async function POST(request: Request) {
 
     if (Array.isArray(body.deviceIds) && body.deviceIds.length > 0) {
       await prisma.device.updateMany({
-        where: { id: { in: body.deviceIds } },
+        where: { id: { in: body.deviceIds }, tenantId: auth.user.tenantId },
         data: { groupId: group.id },
       });
     }

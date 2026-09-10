@@ -37,6 +37,43 @@ export async function POST(request: NextRequest) {
 
   try {
     const result = await runAssistant(history, auth.agent.tenantId);
+    if (request.headers.get("accept")?.includes("application/x-ndjson")) {
+      const encoder = new TextEncoder();
+      const send = (controller: ReadableStreamDefaultController<Uint8Array>, event: unknown) => {
+        controller.enqueue(encoder.encode(`${JSON.stringify(event)}\n`));
+      };
+      const chunks = result.reply.match(/\S+\s*/g) ?? [result.reply];
+      let index = 0;
+      let timer: ReturnType<typeof setTimeout> | undefined;
+
+      const stream = new ReadableStream<Uint8Array>({
+        start(controller) {
+          send(controller, { type: "status" });
+          const emitNext = () => {
+            if (index < chunks.length) {
+              send(controller, { type: "delta", text: chunks[index++] });
+              timer = setTimeout(emitNext, 12);
+              return;
+            }
+            if (result.cards.length) send(controller, { type: "cards", cards: result.cards });
+            send(controller, { type: "complete" });
+            controller.close();
+          };
+          emitNext();
+        },
+        cancel() {
+          if (timer) clearTimeout(timer);
+        },
+      });
+
+      return new Response(stream, {
+        headers: {
+          "Content-Type": "application/x-ndjson; charset=utf-8",
+          "Cache-Control": "no-cache, no-transform",
+          "X-Accel-Buffering": "no",
+        },
+      });
+    }
     return NextResponse.json({ success: true, data: result });
   } catch (error) {
     console.error(

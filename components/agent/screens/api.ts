@@ -1,5 +1,15 @@
 import { ScreenDevice } from "./screens-table";
 
+export class ApiRequestError extends Error {
+  constructor(
+    message: string,
+    public readonly status: number,
+  ) {
+    super(message);
+    this.name = "ApiRequestError";
+  }
+}
+
 async function request<T>(url: string, init?: RequestInit): Promise<T> {
   const res = await fetch(url, {
     ...init,
@@ -8,7 +18,7 @@ async function request<T>(url: string, init?: RequestInit): Promise<T> {
   const data = await res.json().catch(() => null);
   if (!res.ok) {
     const message = (data && (data.error || data.message)) || `Request failed (${res.status})`;
-    throw new Error(message);
+    throw new ApiRequestError(message, res.status);
   }
   return data as T;
 }
