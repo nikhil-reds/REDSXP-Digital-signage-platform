@@ -2,10 +2,10 @@ import { S3Client, PutObjectCommand, DeleteObjectCommand, GetObjectCommand } fro
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 
 const s3Client = new S3Client({
-  region: process.env.AWS_REGION!,
+  region: process.env.AWS_REGION || process.env.REGION_NAME || 'ap-south-1',
   credentials: {
-    accessKeyId: process.env.AWS_ACCESS_KEY_ID!,
-    secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY!,
+    accessKeyId: process.env.AWS_ACCESS_KEY_ID || process.env.ACCESS_KEY_ID || '',
+    secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY || process.env.SECRET_ACCESS_KEY || '',
   },
 });
 
@@ -16,7 +16,7 @@ export async function uploadToS3(
   bucketName?: string
 ): Promise<string> {
   const fileBuffer = file instanceof File ? Buffer.from(await file.arrayBuffer()) : file;
-  const bucket = bucketName || process.env.AWS_BUCKET!;
+  const bucket = bucketName || process.env.AWS_BUCKET || process.env.BUCKET_NAME!;
 
   const params = {
     Bucket: bucket,
@@ -32,7 +32,7 @@ export async function uploadToS3(
     await s3Client.send(command);
     // Construct the URL manually or use a specific domain if configured (e.g. CloudFront)
     // Standard format: https://<bucket-name>.s3.<region>.amazonaws.com/<key>
-    return `https://${bucket}.s3.${process.env.AWS_REGION}.amazonaws.com/${fileName}`;
+    return `https://${bucket}.s3.${process.env.AWS_REGION || process.env.REGION_NAME}.amazonaws.com/${fileName}`;
   } catch (error) {
     console.error("Error uploading to S3:", error);
     throw new Error("Failed to upload file to S3");
@@ -43,7 +43,7 @@ export async function deleteFromS3(fileUrl: string, bucketName?: string): Promis
   if (!fileUrl) return;
 
   try {
-    const region = process.env.AWS_REGION;
+    const region = process.env.AWS_REGION || process.env.REGION_NAME;
     let bucket = bucketName;
     let key = "";
 
@@ -66,7 +66,7 @@ export async function deleteFromS3(fileUrl: string, bucketName?: string): Promis
         }
         key = decodeURIComponent(url.pathname.substring(1));
       } else {
-        const defaultBucket = bucket || process.env.AWS_BUCKET!;
+        const defaultBucket = bucket || process.env.AWS_BUCKET || process.env.BUCKET_NAME!;
         const urlPattern = new RegExp(`^https://${defaultBucket}\\.s3\\.${region}\\.amazonaws\\.com/(.+)$`);
         const match = fileUrl.match(urlPattern);
         if (match) {
@@ -75,7 +75,7 @@ export async function deleteFromS3(fileUrl: string, bucketName?: string): Promis
         }
       }
     } catch (e) {
-      const defaultBucket = bucket || process.env.AWS_BUCKET!;
+      const defaultBucket = bucket || process.env.AWS_BUCKET || process.env.BUCKET_NAME!;
       const urlPattern = new RegExp(`^https://${defaultBucket}\\.s3\\.${region}\\.amazonaws\\.com/(.+)$`);
       const match = fileUrl.match(urlPattern);
       if (match) {
@@ -104,7 +104,7 @@ export async function deleteFromS3(fileUrl: string, bucketName?: string): Promis
 
 export async function getPresignedDownloadUrl(key: string, expiresIn: number = 3600): Promise<string> {
   const command = new GetObjectCommand({
-    Bucket: process.env.AWS_BUCKET,
+    Bucket: process.env.AWS_BUCKET || process.env.BUCKET_NAME,
     Key: key,
   });
 
@@ -118,7 +118,7 @@ export async function getPresignedDownloadUrl(key: string, expiresIn: number = 3
 
 export async function getPresignedUploadUrl(key: string, contentType: string, expiresIn: number = 3600): Promise<string> {
   const command = new PutObjectCommand({
-    Bucket: process.env.AWS_BUCKET,
+    Bucket: process.env.AWS_BUCKET || process.env.BUCKET_NAME,
     Key: key,
     ContentType: contentType,
   });
@@ -136,7 +136,7 @@ export async function getS3ObjectStream(
   bucketName?: string,
 ): Promise<{ body: NodeJS.ReadableStream; contentLength: number | null }> {
   const command = new GetObjectCommand({
-    Bucket: bucketName || process.env.AWS_BUCKET,
+    Bucket: bucketName || process.env.AWS_BUCKET || process.env.BUCKET_NAME,
     Key: key,
   });
 
