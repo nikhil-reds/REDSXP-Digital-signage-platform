@@ -34,7 +34,7 @@ export async function POST(request: NextRequest) {
     const s3Key = `uploads/${auth.user.tenantId}/${timestamp}-${safeName}`;
 
     const presignedUrl = await getPresignedUploadUrl(s3Key, contentType);
-    const cdnUrl = `https://${process.env.AWS_BUCKET}.s3.${process.env.AWS_REGION}.amazonaws.com/${s3Key}`;
+    const cdnUrl = `https://${process.env.AWS_BUCKET || process.env.BUCKET_NAME}.s3.${process.env.AWS_REGION || process.env.REGION_NAME}.amazonaws.com/${s3Key}`;
 
     return NextResponse.json({ presignedUrl, s3Key, cdnUrl });
   } catch (error) {

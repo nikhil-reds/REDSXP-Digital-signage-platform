@@ -23,8 +23,8 @@ let client: BedrockRuntimeClient | null = null;
 
 function getClient() {
   if (!client) {
-    const accessKeyId = process.env.BEDROCK_ACCESS_KEY_ID || process.env.AWS_ACCESS_KEY_ID;
-    const secretAccessKey = process.env.BEDROCK_SECRET_ACCESS_KEY || process.env.AWS_SECRET_ACCESS_KEY;
+    const accessKeyId = process.env.BEDROCK_ACCESS_KEY_ID || process.env.AWS_ACCESS_KEY_ID || process.env.ACCESS_KEY_ID;
+    const secretAccessKey = process.env.BEDROCK_SECRET_ACCESS_KEY || process.env.AWS_SECRET_ACCESS_KEY || process.env.SECRET_ACCESS_KEY;
     if (!accessKeyId || !secretAccessKey) {
       throw new Error("Bedrock credentials are not configured (set BEDROCK_ACCESS_KEY_ID/BEDROCK_SECRET_ACCESS_KEY or AWS_ACCESS_KEY_ID/AWS_SECRET_ACCESS_KEY).");
     }

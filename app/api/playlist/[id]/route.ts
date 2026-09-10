@@ -101,7 +101,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
     }
 
     const playlistBucket = process.env.AWS_BUCKET_PLAYLIST || "redsxp-playlist";
-    const region = process.env.AWS_REGION || "ap-south-1";
+    const region = process.env.AWS_REGION || process.env.REGION_NAME || "ap-south-1";
 
     const serializedPlaylist = serializePlaylist(playlist, playlistBucket, region);
 
@@ -129,7 +129,7 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
     }
 
     const playlistBucket = process.env.AWS_BUCKET_PLAYLIST || "redsxp-playlist";
-    const region = process.env.AWS_REGION || "ap-south-1";
+    const region = process.env.AWS_REGION || process.env.REGION_NAME || "ap-south-1";
 
     await prisma.$transaction(async (tx) => {
       // 1. Update playlist details
@@ -248,7 +248,7 @@ export async function DELETE(request: NextRequest, { params }: { params: Promise
     }
 
     const playlistBucket = process.env.AWS_BUCKET_PLAYLIST || "redsxp-playlist";
-    const region = process.env.AWS_REGION || "ap-south-1";
+    const region = process.env.AWS_REGION || process.env.REGION_NAME || "ap-south-1";
 
     // Delete the serialized JSON from S3
     const s3Url = `https://${playlistBucket}.s3.${region}.amazonaws.com/playlists/${id}.json`;
