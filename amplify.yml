@@ -13,6 +13,10 @@ frontend:
         - env | grep -e SECRET_ACCESS_KEY >> .env.production
         - env | grep -e BUCKET_NAME >> .env.production
         - env | grep -e REGION_NAME >> .env.production
+        - env | grep '^PLAYLIST_BUCKET_NAME=' >> .env.production
+        - env | grep '^PLAYER_MANIFEST_PUBLIC_BASE_URL=' >> .env.production
+        - env | grep '^PLAYER_CDN_URL=' >> .env.production
+        - env | grep '^PLAYER_WEBSOCKET_URL=' >> .env.production
         - npm run build
 
   artifacts:

@@ -94,7 +94,7 @@ export async function GET(request: NextRequest) {
       orderBy: { createdAt: "desc" },
     });
 
-    const playlistBucket = process.env.AWS_BUCKET_PLAYLIST || "redsxp-playlist";
+    const playlistBucket = process.env.PLAYLIST_BUCKET_NAME || process.env.AWS_BUCKET_PLAYLIST || "redsxp-playlist";
     const region = process.env.AWS_REGION || process.env.REGION_NAME || "ap-south-1";
 
     const serializedPlaylists = playlists.map(p => serializePlaylist(p, playlistBucket, region));
@@ -117,7 +117,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Playlist name is required" }, { status: 400 });
     }
 
-    const playlistBucket = process.env.AWS_BUCKET_PLAYLIST || "redsxp-playlist";
+    const playlistBucket = process.env.PLAYLIST_BUCKET_NAME || process.env.AWS_BUCKET_PLAYLIST || "redsxp-playlist";
     const region = process.env.AWS_REGION || process.env.REGION_NAME || "ap-south-1";
 
     const playlist = await prisma.$transaction(async (tx) => {

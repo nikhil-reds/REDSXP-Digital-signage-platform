@@ -7,6 +7,10 @@ import { readPlayerTelemetry, readText } from "@/lib/player-telemetry";
 import { nextScreenName } from "@/lib/screen-naming";
 import { prisma } from "@/lib/prisma";
 
+function publicUrl(value: string | undefined): string {
+  return (value || "").trim().replace(/\/$/, "");
+}
+
 export async function POST(request: NextRequest) {
   const body = await readJson(request);
   const registrationId = readText(body?.registrationId, 80);
@@ -130,6 +134,11 @@ export async function POST(request: NextRequest) {
       console.error("Failed to enqueue player registration worker job:", error);
     });
 
+    const manifestBaseUrl = publicUrl(
+      process.env.PLAYER_MANIFEST_PUBLIC_BASE_URL || process.env.PLAYER_CDN_URL,
+    );
+    const webSocketUrl = publicUrl(process.env.PLAYER_WEBSOCKET_URL);
+
     return NextResponse.json({
       success: true,
       data: {
@@ -138,6 +147,11 @@ export async function POST(request: NextRequest) {
         deviceToken: result.device.deviceToken,
         deviceName: result.device.name,
         status: result.registration.status,
+        manifestUrl: manifestBaseUrl
+          ? `${manifestBaseUrl}/manifests/${result.device.id}.json`
+          : null,
+        webSocketUrl: webSocketUrl || null,
+        cdnUrl: manifestBaseUrl || null,
       },
     });
   } catch (error) {

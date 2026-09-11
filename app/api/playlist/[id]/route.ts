@@ -100,7 +100,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
       return NextResponse.json({ error: "Playlist not found" }, { status: 404 });
     }
 
-    const playlistBucket = process.env.AWS_BUCKET_PLAYLIST || "redsxp-playlist";
+    const playlistBucket = process.env.PLAYLIST_BUCKET_NAME || process.env.AWS_BUCKET_PLAYLIST || "redsxp-playlist";
     const region = process.env.AWS_REGION || process.env.REGION_NAME || "ap-south-1";
 
     const serializedPlaylist = serializePlaylist(playlist, playlistBucket, region);
@@ -128,7 +128,7 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
       return NextResponse.json({ error: "Playlist not found" }, { status: 404 });
     }
 
-    const playlistBucket = process.env.AWS_BUCKET_PLAYLIST || "redsxp-playlist";
+    const playlistBucket = process.env.PLAYLIST_BUCKET_NAME || process.env.AWS_BUCKET_PLAYLIST || "redsxp-playlist";
     const region = process.env.AWS_REGION || process.env.REGION_NAME || "ap-south-1";
 
     await prisma.$transaction(async (tx) => {
@@ -247,7 +247,7 @@ export async function DELETE(request: NextRequest, { params }: { params: Promise
       return NextResponse.json({ error: "Playlist not found" }, { status: 404 });
     }
 
-    const playlistBucket = process.env.AWS_BUCKET_PLAYLIST || "redsxp-playlist";
+    const playlistBucket = process.env.PLAYLIST_BUCKET_NAME || process.env.AWS_BUCKET_PLAYLIST || "redsxp-playlist";
     const region = process.env.AWS_REGION || process.env.REGION_NAME || "ap-south-1";
 
     // Delete the serialized JSON from S3
