@@ -10,7 +10,9 @@ interface PlaylistRenderJobInput {
   sourceHash?: string | null;
 }
 
-const rabbitmqEnabled = process.env.RABBITMQ_ENABLED !== "false";
+// The Lightsail renderer polls the database by default. Only attempt a queue
+// connection when RabbitMQ has been deliberately provisioned and enabled.
+const rabbitmqEnabled = process.env.RABBITMQ_ENABLED === "true";
 const rabbitmqUrl = process.env.RABBITMQ_URL || "amqp://guest:guest@localhost:5672";
 const queueName = process.env.RABBITMQ_PLAYLIST_RENDER_QUEUE || "playlist.render.requested";
 
