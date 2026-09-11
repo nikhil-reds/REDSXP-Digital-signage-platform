@@ -128,10 +128,13 @@ export default function AgentScreensPage() {
     setIsCreateModalOpen(false);
   };
 
-  const handleDownloadPlayer = async (platform: "LINUX" | "WINDOWS") => {
+  const handleDownloadPlayer = async (
+    platform: "LINUX" | "WINDOWS",
+    arch: "x64" | "arm64" = "x64",
+  ) => {
     setDownloadError(null);
     try {
-      const download = await createPlayerDownload(platform);
+      const download = await createPlayerDownload(platform, arch);
       setPendingDownload(download);
       window.location.assign(download.downloadUrl);
     } catch (err) {
@@ -402,13 +405,21 @@ export default function AgentScreensPage() {
             [
               {
                 platform: "LINUX" as const,
+                arch: "x64" as const,
                 name: "Linux Player",
-                desc: "Download shell bootstrap from public player package.",
+                desc: "For Intel/AMD 64-bit Linux devices.",
+              },
+              {
+                platform: "LINUX" as const,
+                arch: "arm64" as const,
+                name: "Linux Player (ARM64)",
+                desc: "For aarch64 / ARM64 Linux devices, including Raspberry Pi 64-bit.",
               },
               {
                 platform: "WINDOWS" as const,
+                arch: "x64" as const,
                 name: "Windows Player",
-                desc: "Download Windows bootstrap config from public player package.",
+                desc: "For 64-bit Windows devices.",
               },
             ]
           ).map((opt) => (
@@ -418,7 +429,7 @@ export default function AgentScreensPage() {
               size="row"
               padded
               interactive
-              onClick={() => handleDownloadPlayer(opt.platform)}
+              onClick={() => handleDownloadPlayer(opt.platform, opt.arch)}
               className="w-full flex items-center justify-between gap-3 text-left"
             >
               <span>
