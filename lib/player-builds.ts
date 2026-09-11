@@ -19,7 +19,9 @@ export const SUPPORTED_ARCHS: Record<PlayerPlatformKey, PlayerArch[]> = {
 };
 
 export function playerBuildVersion() {
-  return process.env.PLAYER_BUILD_VERSION || "1.0.2";
+  // CMS downloads always resolve through this stable release channel. The
+  // publisher updates player-builds/latest alongside each numbered release.
+  return process.env.PLAYER_BUILD_VERSION || "latest";
 }
 
 export function parseArch(value: unknown, platform: PlayerPlatformKey): PlayerArch | null {
