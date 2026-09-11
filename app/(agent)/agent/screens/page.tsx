@@ -25,6 +25,7 @@ import {
   createScreen,
   fetchScreens,
   ApiRequestError,
+  PlayerDownload,
 } from "@/components/agent/screens/api";
 import {
   Button,
@@ -59,6 +60,7 @@ export default function AgentScreensPage() {
 
   const [isDownloadModalOpen, setIsDownloadModalOpen] = useState(false);
   const [downloadError, setDownloadError] = useState<string | null>(null);
+  const [pendingDownload, setPendingDownload] = useState<PlayerDownload | null>(null);
 
   // Filters State
   const [search, setSearch] = useState("");
@@ -130,8 +132,8 @@ export default function AgentScreensPage() {
     setDownloadError(null);
     try {
       const download = await createPlayerDownload(platform);
+      setPendingDownload(download);
       window.location.assign(download.downloadUrl);
-      setIsDownloadModalOpen(false);
     } catch (err) {
       setDownloadError(err instanceof Error ? err.message : "Failed to prepare player download");
     }
@@ -140,6 +142,7 @@ export default function AgentScreensPage() {
   const closeDownloadModal = () => {
     setIsDownloadModalOpen(false);
     setDownloadError(null);
+    setPendingDownload(null);
   };
 
   // Filter application
@@ -428,6 +431,15 @@ export default function AgentScreensPage() {
 
           {downloadError && (
             <p className="text-body font-semibold text-app-danger-text">{downloadError}</p>
+          )}
+
+          {pendingDownload && (
+            <div className="rounded-lg border border-app-accent-border bg-app-accent-soft p-4 text-body text-app-text">
+              <p className="font-semibold">Installer download started.</p>
+              <p className="mt-1">After installation, enter this pairing code in the Player:</p>
+              <p className="mt-2 font-mono text-lg font-bold tracking-widest">{pendingDownload.pairingCode}</p>
+              <p className="mt-1 text-caption text-app-muted">Use this CMS address: {window.location.origin}</p>
+            </div>
           )}
         </div>
       </Modal>
