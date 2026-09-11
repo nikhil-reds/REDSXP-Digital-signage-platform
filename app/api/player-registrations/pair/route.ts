@@ -4,6 +4,15 @@ import { createToken, hashToken } from "@/lib/auth";
 import { normalizePairingCode } from "@/lib/pairing-code";
 import { prisma } from "@/lib/prisma";
 
+function publicAppUrl(request: NextRequest): string {
+  const configured = (process.env.NEXT_PUBLIC_APP_URL || "").trim().replace(/\/$/, "");
+  // Never send a local development URL to a Player installed on a real screen.
+  if (configured && !/^https?:\/\/(localhost|127\.0\.0\.1)(?::\d+)?$/i.test(configured)) {
+    return configured;
+  }
+  return request.nextUrl.origin;
+}
+
 /**
  * Recovery path for a player that never received its provisioning.json (the
  * agent moved the installer away from the unzipped folder, or installed from a
@@ -46,7 +55,7 @@ export async function POST(request: NextRequest) {
       data: { installTokenHash: hashToken(installToken) },
     });
 
-    const apiBaseUrl = process.env.NEXT_PUBLIC_APP_URL || request.nextUrl.origin;
+    const apiBaseUrl = publicAppUrl(request);
 
     return NextResponse.json({
       success: true,
