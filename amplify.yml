@@ -17,9 +17,15 @@ frontend:
         - env | grep '^PLAYER_MANIFEST_PUBLIC_BASE_URL=' >> .env.production
         - env | grep '^PLAYER_CDN_URL=' >> .env.production
         - env | grep '^PLAYER_WEBSOCKET_URL=' >> .env.production
-        - env | grep '^RABBITMQ_ENABLED=' >> .env.production
-        - env | grep '^RABBITMQ_URL=' >> .env.production
-        - env | grep '^RABBITMQ_PLAYLIST_RENDER_QUEUE=' >> .env.production
+        - |
+          for variable in RABBITMQ_ENABLED RABBITMQ_URL RABBITMQ_PLAYLIST_RENDER_QUEUE; do
+            if value="$(printenv "$variable")"; then
+              printf '%s=%s\n' "$variable" "$value" >> .env.production
+              echo "Loaded $variable for the CMS runtime."
+            else
+              echo "WARNING: $variable is not available in the Amplify build environment."
+            fi
+          done
         - npm run build
 
   artifacts:
