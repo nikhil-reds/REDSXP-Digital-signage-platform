@@ -10,25 +10,48 @@ interface PlaylistRenderJobInput {
   sourceHash?: string | null;
 }
 
-// The Lightsail renderer polls the database by default. Only attempt a queue
-// connection when RabbitMQ has been deliberately provisioned and enabled.
-const rabbitmqEnabled = process.env.RABBITMQ_ENABLED === "true";
-const rabbitmqUrl = process.env.RABBITMQ_URL || "amqp://guest:guest@localhost:5672";
-const queueName = process.env.RABBITMQ_PLAYLIST_RENDER_QUEUE || "playlist.render.requested";
+interface RabbitMqConfig {
+  enabled: boolean;
+  queueName: string;
+  url?: string;
+  explicitSetting?: string;
+}
+
+/**
+ * Read settings when a publish request arrives instead of freezing them at
+ * module load. This is important for managed server runtimes where environment
+ * variables are supplied to the request process after the bundle is built.
+ * A configured URL enables RabbitMQ unless it is explicitly disabled.
+ */
+function getRabbitMqConfig(): RabbitMqConfig {
+  const explicitSetting = process.env["RABBITMQ_ENABLED"]?.trim().toLowerCase();
+  const url = process.env["RABBITMQ_URL"];
+
+  return {
+    enabled: Boolean(url) && explicitSetting !== "false",
+    url,
+    queueName: process.env["RABBITMQ_PLAYLIST_RENDER_QUEUE"] || "playlist.render.requested",
+    explicitSetting,
+  };
+}
 
 let connectionPromise: Promise<ChannelModel> | null = null;
 let channelPromise: Promise<Channel> | null = null;
 
-async function getConnection(): Promise<ChannelModel> {
+async function getConnection(config: RabbitMqConfig): Promise<ChannelModel> {
+  if (!config.url) {
+    throw new Error("RABBITMQ_URL is not configured");
+  }
+
   if (!connectionPromise) {
-    console.info("[PlaylistRenderQueue] Connecting to RabbitMQ", { queueName });
-    connectionPromise = amqp.connect(rabbitmqUrl).then((connection) => {
-      console.info("[PlaylistRenderQueue] RabbitMQ connection established", { queueName });
+    console.info("[PlaylistRenderQueue] Connecting to RabbitMQ", { queueName: config.queueName });
+    connectionPromise = amqp.connect(config.url).then((connection) => {
+      console.info("[PlaylistRenderQueue] RabbitMQ connection established", { queueName: config.queueName });
       return connection;
     }).catch((error) => {
       connectionPromise = null;
       console.error("[PlaylistRenderQueue] RabbitMQ connection failed", {
-        queueName,
+        queueName: config.queueName,
         error: error instanceof Error ? error.message : String(error),
       });
       throw error;
@@ -38,15 +61,15 @@ async function getConnection(): Promise<ChannelModel> {
   return connectionPromise;
 }
 
-async function getChannel(): Promise<Channel | null> {
-  if (!rabbitmqEnabled) return null;
+async function getChannel(config: RabbitMqConfig): Promise<Channel | null> {
+  if (!config.enabled) return null;
 
   if (!channelPromise) {
     channelPromise = (async () => {
-      const connection = await getConnection();
+      const connection = await getConnection(config);
       const channel = await connection.createChannel();
 
-      await channel.assertQueue(queueName, {
+      await channel.assertQueue(config.queueName, {
         durable: true,
         arguments: {
           "x-queue-type": "classic",
@@ -71,11 +94,15 @@ export async function enqueuePlaylistRenderJob({
   durationSec,
   sourceHash,
 }: PlaylistRenderJobInput): Promise<void> {
+  const rabbitmq = getRabbitMqConfig();
+
   console.info("[PlaylistRenderQueue] Render enqueue requested", {
     playlistId,
     tenantId,
-    rabbitmqEnabled,
-    queueName,
+    rabbitmqEnabled: rabbitmq.enabled,
+    rabbitmqUrlConfigured: Boolean(rabbitmq.url),
+    rabbitmqExplicitSetting: rabbitmq.explicitSetting ?? "unset",
+    queueName: rabbitmq.queueName,
   });
 
   await prisma.playerPlaylistRender.upsert({
@@ -106,11 +133,13 @@ export async function enqueuePlaylistRenderJob({
     playlistId,
   });
 
-  const channel = await getChannel();
+  const channel = await getChannel(rabbitmq);
   if (!channel) {
     console.warn("[PlaylistRenderQueue] RabbitMQ is disabled; render job was not queued", {
       playlistId,
-      queueName,
+      rabbitmqUrlConfigured: Boolean(rabbitmq.url),
+      rabbitmqExplicitSetting: rabbitmq.explicitSetting ?? "unset",
+      queueName: rabbitmq.queueName,
     });
     return;
   }
@@ -133,7 +162,7 @@ export async function enqueuePlaylistRenderJob({
     },
   };
 
-  const accepted = channel.sendToQueue(queueName, Buffer.from(JSON.stringify(job)), {
+  const accepted = channel.sendToQueue(rabbitmq.queueName, Buffer.from(JSON.stringify(job)), {
     persistent: true,
     contentType: "application/json",
     messageId: job.jobId,
@@ -147,12 +176,12 @@ export async function enqueuePlaylistRenderJob({
   });
 
   if (!accepted) {
-    throw new Error(`RabbitMQ did not accept job for queue ${queueName}`);
+    throw new Error(`RabbitMQ did not accept job for queue ${rabbitmq.queueName}`);
   }
 
   console.info("[PlaylistRenderQueue] Render job queued", {
     playlistId,
     jobId: job.jobId,
-    queueName,
+    queueName: rabbitmq.queueName,
   });
 }
