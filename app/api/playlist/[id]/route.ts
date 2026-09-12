@@ -215,6 +215,10 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
     );
 
     if (body.publish === true) {
+      console.info("[Playlist API] Publish requested", {
+        playlistId: updatedPlaylist.id,
+        tenantId: updatedPlaylist.tenantId,
+      });
       await enqueuePlaylistRenderJob({
         playlistId: updatedPlaylist.id,
         tenantId: updatedPlaylist.tenantId,
@@ -222,6 +226,9 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
         displayHeight: updatedPlaylist.displayHeight,
         durationSec: calculatePlaylistDuration(body.items || updatedPlaylist.playlistItems),
         sourceHash: updatedPlaylist.updatedAt.getTime().toString(),
+      });
+      console.info("[Playlist API] Publish processing completed", {
+        playlistId: updatedPlaylist.id,
       });
     }
 

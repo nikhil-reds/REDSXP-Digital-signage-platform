@@ -189,6 +189,10 @@ export async function POST(request: NextRequest) {
     );
 
     if (body.publish === true) {
+      console.info("[Playlist API] Publish requested", {
+        playlistId: fullPlaylist.id,
+        tenantId: fullPlaylist.tenantId,
+      });
       await enqueuePlaylistRenderJob({
         playlistId: fullPlaylist.id,
         tenantId: fullPlaylist.tenantId,
@@ -196,6 +200,9 @@ export async function POST(request: NextRequest) {
         displayHeight: fullPlaylist.displayHeight,
         durationSec: calculatePlaylistDuration(body.items || []),
         sourceHash: fullPlaylist.updatedAt.getTime().toString(),
+      });
+      console.info("[Playlist API] Publish processing completed", {
+        playlistId: fullPlaylist.id,
       });
     }
 

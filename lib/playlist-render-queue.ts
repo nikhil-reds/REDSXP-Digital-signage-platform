@@ -21,8 +21,16 @@ let channelPromise: Promise<Channel> | null = null;
 
 async function getConnection(): Promise<ChannelModel> {
   if (!connectionPromise) {
-    connectionPromise = amqp.connect(rabbitmqUrl).catch((error) => {
+    console.info("[PlaylistRenderQueue] Connecting to RabbitMQ", { queueName });
+    connectionPromise = amqp.connect(rabbitmqUrl).then((connection) => {
+      console.info("[PlaylistRenderQueue] RabbitMQ connection established", { queueName });
+      return connection;
+    }).catch((error) => {
       connectionPromise = null;
+      console.error("[PlaylistRenderQueue] RabbitMQ connection failed", {
+        queueName,
+        error: error instanceof Error ? error.message : String(error),
+      });
       throw error;
     });
   }
@@ -63,6 +71,13 @@ export async function enqueuePlaylistRenderJob({
   durationSec,
   sourceHash,
 }: PlaylistRenderJobInput): Promise<void> {
+  console.info("[PlaylistRenderQueue] Render enqueue requested", {
+    playlistId,
+    tenantId,
+    rabbitmqEnabled,
+    queueName,
+  });
+
   await prisma.playerPlaylistRender.upsert({
     where: { playlistId },
     create: {
@@ -87,8 +102,18 @@ export async function enqueuePlaylistRenderJob({
     },
   });
 
+  console.info("[PlaylistRenderQueue] Render tracking record marked pending", {
+    playlistId,
+  });
+
   const channel = await getChannel();
-  if (!channel) return;
+  if (!channel) {
+    console.warn("[PlaylistRenderQueue] RabbitMQ is disabled; render job was not queued", {
+      playlistId,
+      queueName,
+    });
+    return;
+  }
 
   const requestedAt = new Date().toISOString();
   const job = {
@@ -124,4 +149,10 @@ export async function enqueuePlaylistRenderJob({
   if (!accepted) {
     throw new Error(`RabbitMQ did not accept job for queue ${queueName}`);
   }
+
+  console.info("[PlaylistRenderQueue] Render job queued", {
+    playlistId,
+    jobId: job.jobId,
+    queueName,
+  });
 }
