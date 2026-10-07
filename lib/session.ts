@@ -1,3 +1,4 @@
+import { cookies } from "next/headers";
 import { NextRequest } from "next/server";
 import { apiError } from "@/lib/api";
 import { hashToken, SESSION_COOKIE } from "@/lib/auth";
@@ -108,4 +109,30 @@ export async function requireAgent(request: NextRequest) {
   const user = await getAuthenticatedUser(request);
   if (!user) return { response: apiError("Authentication required.", 401) };
   return { agent: user, user };
+}
+
+/**
+ * Where a signed-in visitor's dashboard lives, for public pages (the homepage
+ * navbar). Null when there is no valid session. Mirrors the checks in proxy.ts:
+ * unexpired session, ACTIVE user, portal chosen by role scope.
+ */
+export async function getPortalHome(): Promise<"/admin" | "/agent" | null> {
+  const token = (await cookies()).get(SESSION_COOKIE)?.value;
+  if (!token) return null;
+
+  try {
+    const session = await prisma.session.findUnique({
+      where: { tokenHash: hashToken(token) },
+      select: {
+        expiresAt: true,
+        user: { select: { status: true, role: { select: { scope: true } } } },
+      },
+    });
+    if (!session || session.expiresAt <= new Date() || session.user.status !== "ACTIVE") {
+      return null;
+    }
+    return session.user.role.scope === "SYSTEM" ? "/admin" : "/agent";
+  } catch {
+    return null;
+  }
 }
