@@ -98,10 +98,10 @@ export default function RegisterForm() {
   };
 
   return (
-    <div className="flex flex-col gap-6">
+    <div className="flex flex-col gap-5 sm:gap-6">
       {/* Header — Sora with positive tracking */}
       <div className="flex flex-col gap-1 text-center sm:text-left">
-        <h1 className="font-heading text-h5 font-semibold tracking-headline text-app-text">
+        <h1 className="font-heading text-h6 font-semibold tracking-headline text-app-text sm:text-h5">
           Create an account
         </h1>
         <p className="text-body text-app-muted">
@@ -109,7 +109,7 @@ export default function RegisterForm() {
         </p>
       </div>
 
-      <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+      <form onSubmit={handleSubmit} className="flex flex-col gap-4 sm:gap-5">
         {/* Error — functional red, announced to assistive tech */}
         {error && (
           <div
@@ -121,7 +121,7 @@ export default function RegisterForm() {
           </div>
         )}
 
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 gap-4 min-[400px]:grid-cols-2 min-[400px]:gap-3">
           <div>
             <FieldLabel htmlFor="firstName">First Name</FieldLabel>
             <TextInput
@@ -262,7 +262,7 @@ export default function RegisterForm() {
         </Button>
       </form>
 
-      <div className="text-center text-body text-app-muted border-t border-app-border pt-5">
+      <div className="border-t border-app-border pt-4 text-center text-body text-app-muted sm:pt-5">
         Already have an account?{" "}
         <Link
           href="/login"

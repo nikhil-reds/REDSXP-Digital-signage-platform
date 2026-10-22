@@ -61,7 +61,7 @@ export default function RootLayout({
           }}
         />
       </head>
-      <body className="min-h-full flex flex-col">
+      <body className="flex h-screen w-screen max-w-[100vw] flex-col overflow-hidden">
         <ThemeProvider>{children}</ThemeProvider>
       </body>
     </html>
