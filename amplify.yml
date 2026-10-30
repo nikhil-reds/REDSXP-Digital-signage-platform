@@ -18,7 +18,7 @@ frontend:
         - env | grep '^PLAYER_CDN_URL=' >> .env.production
         - env | grep '^PLAYER_WEBSOCKET_URL=' >> .env.production
         - |
-          for variable in RABBITMQ_ENABLED RABBITMQ_URL RABBITMQ_PLAYLIST_RENDER_QUEUE; do
+          for variable in RABBITMQ_ENABLED RABBITMQ_URL RABBITMQ_PLAYLIST_RENDER_QUEUE SENSOR_MANIFEST_V4_ENABLED; do
             if value="$(printenv "$variable")"; then
               printf '%s=%s\n' "$variable" "$value" >> .env.production
               echo "Loaded $variable for the CMS runtime."

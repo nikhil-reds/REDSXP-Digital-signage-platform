@@ -47,7 +47,7 @@ export default function PublishProgressModal({
   const description = error
     ? error
     : sensorQueued && !saving
-      ? "Saved and queued for scheduled displays. Delivery requires an online player with mock sensors enabled; this is not a playback confirmation."
+      ? "Saved and queued for scheduled displays. Delivery requires an online player with a supported sensor adapter; this is not a playback confirmation."
     : succeeded
       ? `“${playlistName}” is live and syncing to your display targets.`
       : `Saving “${playlistName}” and pushing it to deployment.`;
