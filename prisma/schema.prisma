@@ -25,23 +25,23 @@ model Tenant {
   createdAt    DateTime     @default(now()) @map("created_at")
   updatedAt    DateTime     @updatedAt @map("updated_at")
 
-  users              User[]
-  devices            Device[]
-  deviceGroups       DeviceGroup[]
+  users               User[]
+  devices             Device[]
+  deviceGroups        DeviceGroup[]
   playerRegistrations PlayerRegistration[]
-  media              Media[]
-  mediaCategories    MediaCategory[]
-  playlists          Playlist[]
-  playlistCategories PlaylistCategory[]
-  calendars          Calendar[]
-  auditLogs          AuditLog[]
-  tags               Tag[]
-  subscriptions      Subscription[]
-  payments           Payment[]
-  invoices           Invoice[]
-  tickets            Ticket[]
-  roles              Role[]
-  featureOverrides   TenantFeature[]
+  media               Media[]
+  mediaCategories     MediaCategory[]
+  playlists           Playlist[]
+  playlistCategories  PlaylistCategory[]
+  calendars           Calendar[]
+  auditLogs           AuditLog[]
+  tags                Tag[]
+  subscriptions       Subscription[]
+  payments            Payment[]
+  invoices            Invoice[]
+  tickets             Ticket[]
+  roles               Role[]
+  featureOverrides    TenantFeature[]
 
   @@map("tenants")
 }
@@ -208,6 +208,8 @@ model Playlist {
   categories    PlaylistCategory[] @relation("PlaylistToCategory")
   tags          Tag[]              @relation("PlaylistToTag")
   playlistItems PlaylistItem[]
+  flowNodes     PlaylistFlowNode[]
+  flowEdges     PlaylistFlowEdge[]
   devices       Device[]
   deviceGroups  DeviceGroup[]
   calendars     Calendar[]
@@ -242,10 +244,57 @@ model PlaylistItem {
   createdAt      DateTime @default(now()) @map("created_at")
   updatedAt      DateTime @updatedAt @map("updated_at")
 
-  playlist Playlist @relation(fields: [playlistId], references: [id], onDelete: Cascade)
-  media    Media    @relation(fields: [mediaId], references: [id], onDelete: Cascade)
+  playlist Playlist          @relation(fields: [playlistId], references: [id], onDelete: Cascade)
+  media    Media             @relation(fields: [mediaId], references: [id], onDelete: Cascade)
+  flowNode PlaylistFlowNode?
 
   @@map("playlist_items")
+}
+
+model PlaylistFlowNode {
+  id             String   @id @default(uuid())
+  playlistId     String   @map("playlist_id")
+  playlistItemId String?  @unique @map("playlist_item_id")
+  kind           String
+  name           String
+  connectionType String?  @map("connection_type")
+  serialPort     String?  @map("serial_port")
+  port           String?
+  operator       String?
+  expectedValue  Json?    @map("expected_value")
+  enabled        Boolean  @default(true)
+  x              Float    @default(0)
+  y              Float    @default(0)
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  playlist      Playlist           @relation(fields: [playlistId], references: [id], onDelete: Cascade)
+  playlistItem  PlaylistItem?      @relation(fields: [playlistItemId], references: [id], onDelete: Cascade)
+  outgoingEdges PlaylistFlowEdge[] @relation("FlowEdgeSource")
+  incomingEdges PlaylistFlowEdge[] @relation("FlowEdgeTarget")
+
+  @@index([playlistId])
+  @@map("playlist_flow_nodes")
+}
+
+model PlaylistFlowEdge {
+  id           String   @id @default(uuid())
+  playlistId   String   @map("playlist_id")
+  sourceNodeId String   @unique @map("source_node_id")
+  targetNodeId String   @map("target_node_id")
+  cooldownMs   Int      @default(2000) @map("cooldown_ms")
+  debounceMs   Int      @default(100) @map("debounce_ms")
+  enabled      Boolean  @default(true)
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  playlist   Playlist         @relation(fields: [playlistId], references: [id], onDelete: Cascade)
+  sourceNode PlaylistFlowNode @relation("FlowEdgeSource", fields: [sourceNodeId], references: [id], onDelete: Cascade)
+  targetNode PlaylistFlowNode @relation("FlowEdgeTarget", fields: [targetNodeId], references: [id], onDelete: Cascade)
+
+  @@index([playlistId])
+  @@index([targetNodeId])
+  @@map("playlist_flow_edges")
 }
 
 model Calendar {
@@ -270,39 +319,39 @@ model Calendar {
 }
 
 model Device {
-  id              String        @id @default(uuid())
-  tenantId        String        @map("tenant_id")
-  serialNumber    String        @unique @map("serial_number")
-  deviceToken     String        @map("device_token")
-  model           String
-  name            String
-  location        String?
-  firmwareVersion String?       @map("firmware_version")
-  lastSeen        DateTime?     @map("last_seen")
-  status          DeviceStatus  @default(OFFLINE)
-  storagePercent  Int?          @map("storage_percent")
-  alertsCount     Int           @default(0) @map("alerts_count")
-  alertsSeverity  AlertSeverity @default(NONE) @map("alerts_severity")
-  installId       String?       @unique @map("install_id")
-  platform        PlayerPlatform?
-  screenResolution String?      @map("screen_resolution")
-  displayCount    Int?          @map("display_count")
-  timezone        String?
-  macAddress      String?       @map("mac_address")
-  appInstallPath  String?       @map("app_install_path")
-  lastHeartbeatAt DateTime?     @map("last_heartbeat_at")
-  createdAt       DateTime      @default(now()) @map("created_at")
-  updatedAt       DateTime      @updatedAt @map("updated_at")
+  id               String          @id @default(uuid())
+  tenantId         String          @map("tenant_id")
+  serialNumber     String          @unique @map("serial_number")
+  deviceToken      String          @map("device_token")
+  model            String
+  name             String
+  location         String?
+  firmwareVersion  String?         @map("firmware_version")
+  lastSeen         DateTime?       @map("last_seen")
+  status           DeviceStatus    @default(OFFLINE)
+  storagePercent   Int?            @map("storage_percent")
+  alertsCount      Int             @default(0) @map("alerts_count")
+  alertsSeverity   AlertSeverity   @default(NONE) @map("alerts_severity")
+  installId        String?         @unique @map("install_id")
+  platform         PlayerPlatform?
+  screenResolution String?         @map("screen_resolution")
+  displayCount     Int?            @map("display_count")
+  timezone         String?
+  macAddress       String?         @map("mac_address")
+  appInstallPath   String?         @map("app_install_path")
+  lastHeartbeatAt  DateTime?       @map("last_heartbeat_at")
+  createdAt        DateTime        @default(now()) @map("created_at")
+  updatedAt        DateTime        @updatedAt @map("updated_at")
 
-  currentPlaylistId String?      @map("current_playlist_id")
-  playerRegistrationId String?   @unique @map("player_registration_id")
+  currentPlaylistId    String?             @map("current_playlist_id")
+  playerRegistrationId String?             @unique @map("player_registration_id")
   playerRegistration   PlayerRegistration? @relation(fields: [playerRegistrationId], references: [id], onDelete: SetNull)
-  playlist          Playlist?    @relation(fields: [currentPlaylistId], references: [id], onDelete: SetNull)
-  groupId           String?      @map("group_id")
-  group             DeviceGroup? @relation(fields: [groupId], references: [id], onDelete: SetNull)
-  tenant            Tenant       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  tags              Tag[]        @relation("DeviceToTag")
-  calendars         Calendar[]   @relation("CalendarToDevice")
+  playlist             Playlist?           @relation(fields: [currentPlaylistId], references: [id], onDelete: SetNull)
+  groupId              String?             @map("group_id")
+  group                DeviceGroup?        @relation(fields: [groupId], references: [id], onDelete: SetNull)
+  tenant               Tenant              @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  tags                 Tag[]               @relation("DeviceToTag")
+  calendars            Calendar[]          @relation("CalendarToDevice")
 
   @@map("devices")
 }
@@ -335,9 +384,9 @@ model PlayerRegistration {
   createdAt         DateTime                 @default(now()) @map("created_at")
   updatedAt         DateTime                 @updatedAt @map("updated_at")
 
-  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  agentUser User? @relation(fields: [agentUserId], references: [id], onDelete: SetNull)
-  device Device?
+  tenant    Tenant  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  agentUser User?   @relation(fields: [agentUserId], references: [id], onDelete: SetNull)
+  device    Device?
 
   @@index([tenantId, status])
   @@index([agentUserId])
@@ -402,24 +451,24 @@ model Tag {
 // ═══════════════════════════════════════
 
 model Plan {
-  id           String   @id @default(uuid())
-  name         String   @unique // e.g. "Starter", "Growth", "Business", "Enterprise"
-  description  String?
-  priceMonthly Int      @map("price_monthly")
-  priceYearly  Int      @map("price_yearly")
-  currency     String   @default("INR")
+  id                     String   @id @default(uuid())
+  name                   String   @unique // e.g. "Starter", "Growth", "Business", "Enterprise"
+  description            String?
+  priceMonthly           Int      @map("price_monthly")
+  priceYearly            Int      @map("price_yearly")
+  currency               String   @default("INR")
   /// Quotas: null means unlimited. Deliberately not a -1 sentinel, which
   /// someone eventually compares with `<` and silently caps Enterprise at -1.
-  maxDevices             Int? @map("max_devices")
-  maxStorageGb           Int? @map("max_storage_gb")
-  maxUsers               Int? @map("max_users")
-  maxRules               Int? @map("max_rules")
-  analyticsRetentionDays Int? @map("analytics_retention_days")
+  maxDevices             Int?     @map("max_devices")
+  maxStorageGb           Int?     @map("max_storage_gb")
+  maxUsers               Int?     @map("max_users")
+  maxRules               Int?     @map("max_rules")
+  analyticsRetentionDays Int?     @map("analytics_retention_days")
   /// Fallback plan for tenants with no subscription. Exactly one row carries it.
-  isDefault Boolean  @default(false) @map("is_default")
-  sortOrder Int      @default(0) @map("sort_order")
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt @map("updated_at")
+  isDefault              Boolean  @default(false) @map("is_default")
+  sortOrder              Int      @default(0) @map("sort_order")
+  createdAt              DateTime @default(now()) @map("created_at")
+  updatedAt              DateTime @updatedAt @map("updated_at")
 
   subscriptions Subscription[]
   features      PlanFeature[]
@@ -437,11 +486,11 @@ model Feature {
   description String?
   kind        FeatureKind @default(ENTITLEMENT)
   /// FLAG only. The kill switch — false beats every plan and every override.
-  enabled Boolean? @map("enabled")
+  enabled     Boolean?    @map("enabled")
   /// FLAG only. 0-100, bucketed on a stable hash of the tenant id.
-  rolloutPct Int?     @map("rollout_pct")
-  createdAt  DateTime @default(now()) @map("created_at")
-  updatedAt  DateTime @updatedAt @map("updated_at")
+  rolloutPct  Int?        @map("rollout_pct")
+  createdAt   DateTime    @default(now()) @map("created_at")
+  updatedAt   DateTime    @updatedAt @map("updated_at")
 
   plans     PlanFeature[]
   overrides TenantFeature[]

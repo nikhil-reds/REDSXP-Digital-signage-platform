@@ -33,6 +33,7 @@ import {
   MediaFit,
   MediaPosition,
   PlaylistClip,
+  EditorFlow,
   PlaylistLayoutMode,
   Transition,
   ViewMode,
@@ -79,6 +80,8 @@ export function usePlaylistEditor({ playlistId }: UsePlaylistEditorOptions = {})
   const [libraryAssets, setLibraryAssets] = useState<LibraryAsset[]>([]);
   const [playlistName, setPlaylistName] = useState("");
   const [items, setItems] = useState<PlaylistClip[]>([]);
+  const [flowState, setFlowState] = useState<EditorFlow>({ sensors: [], connections: [] });
+  const [revision, setRevision] = useState<string | undefined>();
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState("All");
@@ -95,6 +98,7 @@ export function usePlaylistEditor({ playlistId }: UsePlaylistEditorOptions = {})
   const [device, setDevice] = useState(INITIAL_DEVICE);
   const [displayConfigOpen, setDisplayConfigOpen] = useState(false);
   const [publishModalOpen, setPublishModalOpen] = useState(false);
+  const [sensorPublishState, setSensorPublishState] = useState<string | null>(null);
   const [publishRenderStatus, setPublishRenderStatus] = useState<PlaylistRenderStatus | null>(null);
   const [configTab, setConfigTab] = useState<DisplayConfigTab>("presets");
   const [customW, setCustomW] = useState(1920);
@@ -155,6 +159,7 @@ export function usePlaylistEditor({ playlistId }: UsePlaylistEditorOptions = {})
             return {
               instanceId: genInstanceId(),
               mediaId: item.mediaId,
+              playlistItemId: item.id,
               name: asset?.name ?? "Unknown asset",
               type: asset?.type ?? "Image",
               w: asset?.w ?? 0,
@@ -171,6 +176,9 @@ export function usePlaylistEditor({ playlistId }: UsePlaylistEditorOptions = {})
             };
           });
           setPlaylistName(detail.name);
+          setRevision(detail.updatedAt);
+          const itemClientIds = new Map(detail.items.map((item, index) => [item.id, hydrated[index].instanceId]));
+          setFlowState({ sensors: detail.flow.sensors, connections: detail.flow.connections.map(c => ({ ...c, targetItemClientId: itemClientIds.get(c.targetItemClientId) ?? c.targetItemClientId })) });
           setDisplayState({ name: detail.displayName, w: detail.displayWidth, h: detail.displayHeight });
           setLayoutMode(detail.layoutMode);
           setGridRows(detail.gridRows);
@@ -181,6 +189,7 @@ export function usePlaylistEditor({ playlistId }: UsePlaylistEditorOptions = {})
           setSelectedId(hydrated[0]?.instanceId ?? null);
         } else {
           setPlaylistName("Untitled Playlist");
+          setFlowState({ sensors: [], connections: [] });
           setBaseline([]);
           setSelectedId(null);
         }
@@ -267,7 +276,10 @@ export function usePlaylistEditor({ playlistId }: UsePlaylistEditorOptions = {})
         gridColumns,
         zones: allZones,
         publish: publishRender,
+        flow: flowState,
         items: items.map((it, i) => ({
+          id: it.playlistItemId,
+          clientId: it.instanceId,
           mediaId: it.mediaId,
           position: i,
           durationSec: it.duration,
@@ -276,33 +288,37 @@ export function usePlaylistEditor({ playlistId }: UsePlaylistEditorOptions = {})
           zoneId: it.zoneId,
         })),
       };
-      if (currentPlaylistId) {
-        await updatePlaylist(currentPlaylistId, payload);
-        setBaseline(items);
-        return currentPlaylistId;
-      } else {
-        const created = await createPlaylist(payload);
-        setCurrentPlaylistId(created.id);
-        router.replace(`/agent/playlists/create-playlist?id=${created.id}`);
-        setBaseline(items);
-        return created.id;
-      }
+      const saved = currentPlaylistId
+        ? await updatePlaylist(currentPlaylistId, payload, revision)
+        : await createPlaylist(payload);
+      setRevision(saved.updatedAt);
+      const savedItems = items.map((item, index) => ({ ...item, playlistItemId: saved.items[index]?.id }));
+      setItems(savedItems);
+      setFlowState({ sensors: saved.flow.sensors, connections: saved.flow.connections.map(c => ({ ...c,
+        targetItemClientId: savedItems.find(item => item.playlistItemId === c.targetItemClientId)?.instanceId ?? c.targetItemClientId })) });
+      setCurrentPlaylistId(saved.id);
+      setBaseline(savedItems);
+      if (!currentPlaylistId) router.replace(`/agent/playlists/create-playlist?id=${saved.id}`);
+      setSensorPublishState(saved.publishState ?? null);
+      if (saved.syncError) { setSaveError(saved.syncError); return null; }
+      return saved.id;
     } catch (err) {
       setSaveError(err instanceof Error ? err.message : "Failed to save playlist");
       return null;
     } finally {
       setSaving(false);
     }
-  }, [allZones, playlistName, display.name, display.w, display.h, layoutMode, gridRows, gridColumns, items, currentPlaylistId, router, setBaseline]);
+  }, [allZones, playlistName, display.name, display.w, display.h, layoutMode, gridRows, gridColumns, items, flowState, revision, currentPlaylistId, router, setBaseline]);
 
   const publish = useCallback(async () => {
     setPublishModalOpen(true);
     setPublishRenderStatus(null);
+    setSensorPublishState(null);
     const savedPlaylistId = await save(true);
-    if (!savedPlaylistId) return;
+    if (!savedPlaylistId || flowState.sensors.length > 0) return;
     const status = await fetchPlaylistRenderStatus(savedPlaylistId).catch(() => null);
     setPublishRenderStatus(status);
-  }, [save]);
+  }, [save, flowState.sensors.length]);
 
   const closePublishModal = useCallback(() => setPublishModalOpen(false), []);
 
@@ -363,7 +379,7 @@ export function usePlaylistEditor({ playlistId }: UsePlaylistEditorOptions = {})
     const idx = items.indexOf(sel);
     const next = items.slice();
     const newInstanceId = genInstanceId();
-    next.splice(idx + 1, 0, { ...sel, instanceId: newInstanceId });
+    next.splice(idx + 1, 0, { ...sel, playlistItemId: undefined, instanceId: newInstanceId });
     setSelectedId(newInstanceId);
     commit(next);
   }, [items, selectedId, genInstanceId, commit]);
@@ -826,7 +842,7 @@ export function usePlaylistEditor({ playlistId }: UsePlaylistEditorOptions = {})
       dispIconW,
       dispIconH,
       onOpenDisplayConfig: () => setDisplayConfigOpen(true),
-      onSaveDraft: save,
+      onSaveDraft: () => save(false),
       onPublish: publish,
     },
 
@@ -939,6 +955,9 @@ export function usePlaylistEditor({ playlistId }: UsePlaylistEditorOptions = {})
       },
     },
 
+    flowItems: items,
+    flowState,
+    setFlowState,
     timeline: {
       itemCount: items.length,
       totalLabel,
@@ -1014,6 +1033,7 @@ export function usePlaylistEditor({ playlistId }: UsePlaylistEditorOptions = {})
       displayName: display.name,
       displayRes: `${display.w} × ${display.h}`,
       deviceName: device,
+      sensorPublishState,
       renderStatus: publishRenderStatus?.renderStatus ?? null,
       renderUrl: publishRenderStatus?.s3Url ?? publishRenderStatus?.outputPath ?? null,
     },

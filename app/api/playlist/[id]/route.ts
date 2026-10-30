@@ -1,3 +1,6 @@
+import { enqueueSensorPublishJob } from "@/lib/sensor-publish-queue";
+import { savePlaylistGraph } from "@/lib/playlist-graph-save";
+import { parseFlow, serializeFlow, playlistDetailInclude, PlaylistPayloadError } from "@/lib/playlist-flow";
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { uploadToS3, deleteFromS3 } from "@/lib/s3";
@@ -24,6 +27,7 @@ const serializePlaylist = (playlist: SerializablePlaylist, bucketName: string, r
   return {
     ...playlist,
     s3Url,
+    flow: "flowNodes" in playlist && "flowEdges" in playlist ? serializeFlow(playlist as unknown as Parameters<typeof serializeFlow>[0]) : undefined,
     playlistItems: playlist.playlistItems?.map((item) => ({
       ...item,
       media: item.media ? {
@@ -84,16 +88,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
     const { id } = await params;
     const playlist = await prisma.playlist.findUnique({
       where: { id, tenantId: auth.user.tenantId },
-      include: {
-        playlistItems: {
-          include: {
-            media: true,
-          },
-          orderBy: {
-            position: "asc",
-          },
-        },
-      },
+      include: playlistDetailInclude,
     });
 
     if (!playlist) {
@@ -120,6 +115,7 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
     const { id } = await params;
     const body = await request.json();
 
+    const flow = parseFlow(body.flow, body.items || [], body.publish === true);
     const existingPlaylist = await prisma.playlist.findUnique({
       where: { id, tenantId: auth.user.tenantId },
     });
@@ -128,6 +124,8 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
       return NextResponse.json({ error: "Playlist not found" }, { status: 404 });
     }
 
+    const revision = request.headers.get("if-match");
+    if (revision && revision !== existingPlaylist.updatedAt.toISOString()) return NextResponse.json({ error: "Playlist changed in another editor. Reload before saving." }, { status: 409 });
     const playlistBucket = process.env.PLAYLIST_BUCKET_NAME || process.env.AWS_BUCKET_PLAYLIST || "redsxp-playlist";
     const region = process.env.AWS_REGION || process.env.REGION_NAME || "ap-south-1";
 
@@ -156,47 +154,13 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
         },
       });
 
-      // 2. Re-create playlist items if provided
-      if (body.items && Array.isArray(body.items)) {
-        const mediaIds = body.items.map((item: { mediaId?: string }) => item.mediaId).filter(Boolean);
-        const mediaCount = await tx.media.count({ where: { id: { in: mediaIds }, tenantId: auth.user.tenantId } });
-        if (mediaCount !== mediaIds.length) throw new Error("One or more media items do not belong to this workspace.");
-
-        // Delete all existing items
-        await tx.playlistItem.deleteMany({
-          where: { playlistId: id },
-        });
-
-        // Insert new items
-        for (const item of body.items) {
-          await tx.playlistItem.create({
-            data: {
-              playlistId: id,
-              mediaId: item.mediaId,
-              position: item.position || 0,
-              durationSec: normalizePlaylistItemDuration(item.durationSec),
-              fit: normalizePlaylistItemFit(item.fit),
-              objectPosition: normalizePlaylistItemPosition(item.objectPosition),
-              zoneId: normalizePlaylistItemZone(item.zoneId),
-            },
-          });
-        }
-      }
+      await savePlaylistGraph(tx, id, auth.user.tenantId, body.items, flow);
     });
 
     // Fetch the updated playlist with items and media
     const updatedPlaylist = await prisma.playlist.findUnique({
       where: { id, tenantId: auth.user.tenantId },
-      include: {
-        playlistItems: {
-          include: {
-            media: true,
-          },
-          orderBy: {
-            position: "asc",
-          },
-        },
-      },
+      include: playlistDetailInclude,
     });
 
     if (!updatedPlaylist) {
@@ -205,14 +169,28 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
 
     const serializedPlaylist = serializePlaylist(updatedPlaylist, playlistBucket, region);
 
+    if (body.publish === true && serializedPlaylist.flow?.sensors.length) {
+      try {
+        const publishJobId = await enqueueSensorPublishJob(updatedPlaylist);
+        return NextResponse.json({ ...serializedPlaylist, publishState: "queued", publishJobId }, { status: 200 });
+      } catch (error) {
+        return NextResponse.json({ ...serializedPlaylist, publishState: "queue_failed",
+          publishError: error instanceof Error ? error.message : "Sensor publication could not be queued." }, { status: 200 });
+      }
+    }
+
     // Save/Overwrite in S3
     const s3Key = `playlists/${id}.json`;
+    try {
     await uploadToS3(
       Buffer.from(JSON.stringify(serializedPlaylist, null, 2)),
       s3Key,
       "application/json",
       playlistBucket
     );
+    } catch {
+      return NextResponse.json({ ...serializedPlaylist, publishState: "sync_failed", publishError: "Playlist saved, but S3 sync failed. Retry saving to sync it." }, { status: 200 });
+    }
 
     if (body.publish === true) {
       console.info("[Playlist API] Publish requested", {
@@ -234,6 +212,7 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
 
     return NextResponse.json(serializedPlaylist);
   } catch (error) {
+    if (error instanceof PlaylistPayloadError) return NextResponse.json({ error: error.message, fields: error.fields }, { status: error.status });
     console.error("Error updating playlist:", error);
     return NextResponse.json({ error: "Failed to update playlist" }, { status: 500 });
   }
@@ -272,3 +251,4 @@ export async function DELETE(request: NextRequest, { params }: { params: Promise
     return NextResponse.json({ error: "Failed to delete playlist" }, { status: 500 });
   }
 }
+
