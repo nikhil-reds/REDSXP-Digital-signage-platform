@@ -64,7 +64,7 @@ export async function POST(request: NextRequest) {
       ) {
         await tx.playerRegistration.update({
           where: { id: existingDevice.playerRegistrationId },
-          data: { status: "EXPIRED", deviceId: null },
+          data: { status: "EXPIRED", deviceId: null, installId: null },
         });
       }
 
