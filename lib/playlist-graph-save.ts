@@ -30,7 +30,7 @@ export async function savePlaylistGraph(tx: Tx, playlistId: string, tenantId: st
     for (const edge of flow.connections) if (edge.id && !existingEdges.some(e => e.id === edge.id)) throw new PlaylistPayloadError({ flow: 'Connection is inaccessible.' }, 404);
     const nodeMap = new Map<string, string>();
     for (const sensor of flow.sensors) {
-      const row = await tx.playlistFlowNode.create({ data: { id: sensor.id, playlistId, kind: 'SENSOR', name: sensor.name.trim(), connectionType: sensor.connectionType, port: sensor.port, serialPort: sensor.serialPort || null, operator: sensor.operator, expectedValue: sensor.expectedValue, enabled: sensor.enabled, x: sensor.x, y: sensor.y } });
+      const row = await tx.playlistFlowNode.create({ data: { id: sensor.id, playlistId, kind: 'SENSOR', name: sensor.name.trim(), connectionType: sensor.connectionType, port: sensor.triggerKind === 'serial-message' ? null : sensor.port, serialPort: sensor.serialPort || null, operator: sensor.operator, expectedValue: sensor.triggerKind === 'serial-message' ? undefined : sensor.expectedValue, matchMode: sensor.triggerKind === 'serial-message' ? 'exact' : null, matchValue: sensor.triggerKind === 'serial-message' ? sensor.message : null, enabled: sensor.enabled, x: sensor.x, y: sensor.y } });
       nodeMap.set(sensor.clientId, row.id);
     }
     for (const edge of flow.connections) {

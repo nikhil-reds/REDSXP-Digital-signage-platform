@@ -262,6 +262,8 @@ model PlaylistFlowNode {
   port           String?
   operator       String?
   expectedValue  Json?    @map("expected_value")
+  matchMode      String?  @map("match_mode")
+  matchValue     String?  @map("match_value")
   enabled        Boolean  @default(true)
   x              Float    @default(0)
   y              Float    @default(0)

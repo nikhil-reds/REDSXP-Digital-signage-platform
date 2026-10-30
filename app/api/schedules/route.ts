@@ -93,6 +93,10 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Playlist not found" }, { status: 404 });
     }
 
+    if (await prisma.playlistFlowNode.count({ where: { playlistId: playlist.id, kind: 'SENSOR', matchMode: 'exact' } }) > 0) {
+      return NextResponse.json({ error: "This playlist has controller-message rules that cannot be scheduled until the worker and player support them." }, { status: 409 });
+    }
+
     // Only screens in this tenant may be targeted, otherwise a schedule could be
     // pointed at another workspace's device.
     const deviceIds: string[] = Array.isArray(body.deviceIds) ? body.deviceIds : [];

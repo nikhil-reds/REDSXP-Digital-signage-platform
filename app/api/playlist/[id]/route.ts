@@ -124,6 +124,11 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
       return NextResponse.json({ error: "Playlist not found" }, { status: 404 });
     }
 
+    if (flow?.sensors.some(sensor => sensor.triggerKind === 'serial-message') &&
+        await prisma.calendar.count({ where: { playlistId: id, tenantId: auth.user.tenantId } }) > 0) {
+      return NextResponse.json({ error: "Controller-message rules cannot be added to a scheduled playlist until the worker and player support them." }, { status: 409 });
+    }
+
     const revision = request.headers.get("if-match");
     if (revision && revision !== existingPlaylist.updatedAt.toISOString()) return NextResponse.json({ error: "Playlist changed in another editor. Reload before saving." }, { status: 409 });
     const playlistBucket = process.env.PLAYLIST_BUCKET_NAME || process.env.AWS_BUCKET_PLAYLIST || "redsxp-playlist";

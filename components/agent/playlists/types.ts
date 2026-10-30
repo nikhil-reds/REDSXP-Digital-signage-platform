@@ -91,7 +91,7 @@ export interface PlaylistSummary {
   totalDuration: number;
   updatedAt: string;
 }
-export interface EditorSensor { id?: string; clientId: string; name: string; connectionType: 'gpio'; port: string; serialPort?: string; operator: 'equals'; expectedValue: boolean; enabled: boolean; x: number; y: number }
+export interface EditorSensor { id?: string; clientId: string; name: string; connectionType: 'gpio'; port: string; serialPort?: string; operator: 'equals'; expectedValue: boolean; enabled: boolean; x: number; y: number; triggerKind?: 'legacy-button' | 'serial-message'; message?: string }
 export interface EditorConnection { id?: string; clientId: string; sourceSensorClientId: string; targetItemClientId: string; cooldownMs: number; debounceMs: number; enabled: boolean }
 export interface EditorFlow { sensors: EditorSensor[]; connections: EditorConnection[] }
 
