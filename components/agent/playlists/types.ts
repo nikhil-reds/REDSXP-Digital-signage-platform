@@ -21,6 +21,7 @@ export interface PlaylistClip {
   instanceId: string;
   /** Real Media.id this clip references. */
   mediaId: string;
+  playlistItemId?: string;
   name: string;
   type: ClipType;
   w: number;
@@ -90,3 +91,7 @@ export interface PlaylistSummary {
   totalDuration: number;
   updatedAt: string;
 }
+export interface EditorSensor { id?: string; clientId: string; name: string; connectionType: 'gpio'; port: string; serialPort?: string; operator: 'equals'; expectedValue: boolean; enabled: boolean; x: number; y: number }
+export interface EditorConnection { id?: string; clientId: string; sourceSensorClientId: string; targetItemClientId: string; cooldownMs: number; debounceMs: number; enabled: boolean }
+export interface EditorFlow { sensors: EditorSensor[]; connections: EditorConnection[] }
+

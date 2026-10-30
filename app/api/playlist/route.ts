@@ -1,3 +1,6 @@
+import { enqueueSensorPublishJob } from "@/lib/sensor-publish-queue";
+import { savePlaylistGraph } from "@/lib/playlist-graph-save";
+import { parseFlow, serializeFlow, playlistDetailInclude, PlaylistPayloadError } from "@/lib/playlist-flow";
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { uploadToS3 } from "@/lib/s3";
@@ -24,6 +27,7 @@ const serializePlaylist = (playlist: SerializablePlaylist, bucketName: string, r
   return {
     ...playlist,
     s3Url,
+    flow: "flowNodes" in playlist && "flowEdges" in playlist ? serializeFlow(playlist as unknown as Parameters<typeof serializeFlow>[0]) : undefined,
     playlistItems: playlist.playlistItems?.map((item) => ({
       ...item,
       media: item.media ? {
@@ -120,6 +124,7 @@ export async function POST(request: NextRequest) {
     const playlistBucket = process.env.PLAYLIST_BUCKET_NAME || process.env.AWS_BUCKET_PLAYLIST || "redsxp-playlist";
     const region = process.env.AWS_REGION || process.env.REGION_NAME || "ap-south-1";
 
+    const flow = parseFlow(body.flow, body.items || [], body.publish === true);
     const playlist = await prisma.$transaction(async (tx) => {
       const newPlaylist = await tx.playlist.create({
         data: {
@@ -136,24 +141,7 @@ export async function POST(request: NextRequest) {
         },
       });
 
-      if (body.items && Array.isArray(body.items)) {
-        const mediaIds = body.items.map((item: { mediaId?: string }) => item.mediaId).filter(Boolean);
-        const mediaCount = await tx.media.count({ where: { id: { in: mediaIds }, tenantId: auth.user.tenantId } });
-        if (mediaCount !== mediaIds.length) throw new Error("One or more media items do not belong to this workspace.");
-        for (const item of body.items) {
-          await tx.playlistItem.create({
-            data: {
-              playlistId: newPlaylist.id,
-              mediaId: item.mediaId,
-              position: item.position || 0,
-              durationSec: normalizePlaylistItemDuration(item.durationSec),
-              fit: normalizePlaylistItemFit(item.fit),
-              objectPosition: normalizePlaylistItemPosition(item.objectPosition),
-              zoneId: normalizePlaylistItemZone(item.zoneId),
-            },
-          });
-        }
-      }
+      await savePlaylistGraph(tx, newPlaylist.id, auth.user.tenantId, body.items || [], flow);
 
       return newPlaylist;
     });
@@ -161,16 +149,7 @@ export async function POST(request: NextRequest) {
     // Fetch complete playlist to generate S3 payload
     const fullPlaylist = await prisma.playlist.findUnique({
       where: { id: playlist.id },
-      include: {
-        playlistItems: {
-          include: {
-            media: true,
-          },
-          orderBy: {
-            position: "asc",
-          },
-        },
-      },
+      include: playlistDetailInclude,
     });
 
     if (!fullPlaylist) {
@@ -179,14 +158,28 @@ export async function POST(request: NextRequest) {
 
     const serializedPlaylist = serializePlaylist(fullPlaylist, playlistBucket, region);
 
+    if (body.publish === true && serializedPlaylist.flow?.sensors.length) {
+      try {
+        const publishJobId = await enqueueSensorPublishJob(fullPlaylist);
+        return NextResponse.json({ ...serializedPlaylist, publishState: "queued", publishJobId }, { status: 201 });
+      } catch (error) {
+        return NextResponse.json({ ...serializedPlaylist, publishState: "queue_failed",
+          publishError: error instanceof Error ? error.message : "Sensor publication could not be queued." }, { status: 201 });
+      }
+    }
+
     // Save to S3
     const s3Key = `playlists/${playlist.id}.json`;
+    try {
     await uploadToS3(
       Buffer.from(JSON.stringify(serializedPlaylist, null, 2)),
       s3Key,
       "application/json",
       playlistBucket
     );
+    } catch {
+      return NextResponse.json({ ...serializedPlaylist, publishState: "sync_failed", publishError: "Playlist saved, but S3 sync failed. Retry saving to sync it." }, { status: 201 });
+    }
 
     if (body.publish === true) {
       console.info("[Playlist API] Publish requested", {
@@ -208,7 +201,10 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json(serializedPlaylist, { status: 201 });
   } catch (error) {
+    if (error instanceof PlaylistPayloadError) return NextResponse.json({ error: error.message, fields: error.fields }, { status: error.status });
     console.error("Error creating playlist:", error);
     return NextResponse.json({ error: "Failed to create playlist" }, { status: 500 });
   }
 }
+
+

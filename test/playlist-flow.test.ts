@@ -1,0 +1,11 @@
+import { test } from 'node:test';
+import { strict as assert } from 'node:assert';
+import { parseFlow, PlaylistPayloadError } from '../lib/playlist-flow';
+const item = { clientId: 'video-1', mediaId: 'media-1' };
+const sensor = { clientId: 'sensor-1', name: 'Door', connectionType: 'gpio', port: '17', operator: 'equals', expectedValue: true, enabled: true, x: 10, y: 20 };
+const edge = { clientId: 'wire-1', sourceSensorClientId: 'sensor-1', targetItemClientId: 'video-1', cooldownMs: 2000, debounceMs: 100, enabled: true };
+test('ordinary playlist has no flow', () => assert.equal(parseFlow(undefined, [item], false), undefined));
+test('GPIO sensor keeps boolean value and video target', () => assert.deepEqual(parseFlow({ sensors: [sensor], connections: [edge] }, [item], true)?.sensors[0].expectedValue, true));
+test('invalid GPIO port is rejected', () => assert.throws(() => parseFlow({ sensors: [{ ...sensor, port: '99' }], connections: [edge] }, [item], false), PlaylistPayloadError));
+test('publish requires a target', () => assert.throws(() => parseFlow({ sensors: [sensor], connections: [] }, [item], true), PlaylistPayloadError));
+test('duplicate port is rejected', () => assert.throws(() => parseFlow({ sensors: [sensor, { ...sensor, clientId: 'sensor-2' }], connections: [] }, [item], false), PlaylistPayloadError));
