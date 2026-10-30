@@ -55,10 +55,10 @@ export default function LoginForm() {
   };
 
   return (
-    <div className="flex flex-col gap-6">
+    <div className="flex flex-col gap-5 sm:gap-6">
       {/* Header — Sora with positive tracking, never tracking-tight */}
       <div className="flex flex-col gap-1 text-center sm:text-left">
-        <h1 className="font-heading text-h5 font-semibold tracking-headline text-app-text">
+        <h1 className="font-heading text-h6 font-semibold tracking-headline text-app-text sm:text-h5">
           Welcome back
         </h1>
         <p className="text-body text-app-muted">
@@ -66,7 +66,7 @@ export default function LoginForm() {
         </p>
       </div>
 
-      <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+      <form onSubmit={handleSubmit} className="flex flex-col gap-4 sm:gap-5">
         {/* Error — a real error state, so it uses the functional red */}
         {error && (
           <div
@@ -92,7 +92,7 @@ export default function LoginForm() {
         </div>
 
         <div>
-          <div className="flex items-center justify-between gap-2">
+          <div className="flex flex-wrap items-center justify-between gap-x-2 gap-y-1">
             <FieldLabel htmlFor="password">Password</FieldLabel>
             <Link
               href="/forgot-password"
@@ -116,7 +116,7 @@ export default function LoginForm() {
               type="button"
               onClick={() => setShowPassword(!showPassword)}
               disabled={isLoading}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-app-muted hover:text-app-text transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-app-accent-text rounded"
+              className="absolute right-3 top-1/2 z-10 -translate-y-1/2 cursor-pointer rounded text-black transition-colors hover:text-black focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-app-accent-text"
               aria-label={showPassword ? "Hide password" : "Show password"}
             >
               {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
@@ -152,7 +152,7 @@ export default function LoginForm() {
         </Button>
       </form>
 
-      <div className="text-center text-body text-app-muted border-t border-app-border pt-5">
+      <div className="border-t border-app-border pt-4 text-center text-body text-app-muted sm:pt-5">
         Don&apos;t have an account?{" "}
         <Link
           href="/register"

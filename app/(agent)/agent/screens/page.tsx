@@ -424,7 +424,7 @@ export default function AgentScreensPage() {
             ]
           ).map((opt) => (
             <Card
-              key={opt.platform}
+              key={`${opt.platform}-${opt.arch}`}
               as="button"
               size="row"
               padded

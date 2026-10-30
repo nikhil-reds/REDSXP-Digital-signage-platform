@@ -17,6 +17,7 @@ interface PublishProgressModalProps {
   displayName: string;
   displayRes: string;
   deviceName: string;
+  sensorPublishState?: string | null;
   renderStatus: string | null;
   renderUrl: string | null;
 }
@@ -34,15 +35,19 @@ export default function PublishProgressModal({
   displayName,
   displayRes,
   deviceName,
+  sensorPublishState,
   renderStatus,
   renderUrl,
 }: PublishProgressModalProps) {
   const succeeded = !saving && !error;
 
-  const title = error ? "Publish failed" : succeeded ? "Published successfully" : "Publishing loop…";
+  const sensorQueued = sensorPublishState === "queued";
+  const title = sensorQueued && !error && !saving ? "Sensor publication queued" : error ? "Publish failed" : succeeded ? "Published successfully" : "Publishing loop…";
 
   const description = error
     ? error
+    : sensorQueued && !saving
+      ? "Saved and queued for scheduled displays. Delivery requires an online player with mock sensors enabled; this is not a playback confirmation."
     : succeeded
       ? `“${playlistName}” is live and syncing to your display targets.`
       : `Saving “${playlistName}” and pushing it to deployment.`;
@@ -58,7 +63,7 @@ export default function PublishProgressModal({
       </>,
     ],
     ["Output", deviceName],
-    ["Render", <span key="r" className="capitalize">{renderStatus?.replaceAll("_", " ") ?? "Queued"}</span>],
+    [sensorQueued ? "Delivery" : "Render", <span key="r" className="capitalize">{sensorQueued ? "Queued for scheduler" : renderStatus?.replaceAll("_", " ") ?? "Queued"}</span>],
   ];
   if (renderUrl) rows.push(["Video", <span key="v" className="truncate">{renderUrl}</span>]);
 

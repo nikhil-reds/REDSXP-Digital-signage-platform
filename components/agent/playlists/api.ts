@@ -1,3 +1,4 @@
+import type { EditorFlow } from "./types";
 import { CLIP_TYPE_COLORS, DEFAULT_ZONE_ID } from "./constants";
 import { ClipType, LibraryAsset, MediaFit, MediaPosition, MediaStatus, PlaylistLayoutMode, PlaylistSummary, PlaylistZone } from "./types";
 
@@ -51,6 +52,9 @@ interface RawPlaylist {
   zonesJson?: PlaylistZone[] | null;
   updatedAt: string;
   playlistItems: RawPlaylistItem[];
+  flow?: EditorFlow;
+  publishState?: string;
+  publishError?: string;
 }
 
 function formatUpdatedAt(iso: string): string {
@@ -103,12 +107,20 @@ export interface PlaylistDetail {
   gridRows: number;
   gridColumns: number;
   zones: PlaylistZone[];
-  items: { mediaId: string; position: number; durationSec: number; fit: MediaFit; positionMode: MediaPosition; zoneId: string }[];
+  updatedAt: string;
+  syncError?: string;
+  publishState?: string;
+  flow: EditorFlow;
+  items: { id: string; mediaId: string; position: number; durationSec: number; fit: MediaFit; positionMode: MediaPosition; zoneId: string }[];
 }
 
 function toPlaylistDetail(p: RawPlaylist): PlaylistDetail {
   return {
     id: p.id,
+    updatedAt: p.updatedAt,
+    publishState: p.publishState,
+    syncError: ["sync_failed", "queue_failed"].includes(p.publishState || "") ? p.publishError : undefined,
+    flow: p.flow ?? { sensors: [], connections: [] },
     name: p.name,
     displayName: p.displayName ?? "Landscape 16:9",
     displayWidth: p.displayWidth ?? 1920,
@@ -121,6 +133,7 @@ function toPlaylistDetail(p: RawPlaylist): PlaylistDetail {
       .slice()
       .sort((a, b) => a.position - b.position)
       .map((it) => ({
+        id: it.id,
         mediaId: it.mediaId,
         position: it.position,
         durationSec: it.durationSec,
@@ -141,7 +154,8 @@ export interface SavePlaylistPayload {
   gridColumns: number;
   zones: PlaylistZone[];
   publish?: boolean;
-  items: { mediaId: string; position: number; durationSec: number; fit: MediaFit; objectPosition: MediaPosition; zoneId: string }[];
+  flow: EditorFlow;
+  items: { id?: string; clientId: string; mediaId: string; position: number; durationSec: number; fit: MediaFit; objectPosition: MediaPosition; zoneId: string }[];
 }
 
 export interface PlaylistRenderStatus {
@@ -179,9 +193,10 @@ export async function createPlaylist(payload: SavePlaylistPayload): Promise<Play
   return toPlaylistDetail(raw);
 }
 
-export async function updatePlaylist(id: string, payload: SavePlaylistPayload): Promise<PlaylistDetail> {
+export async function updatePlaylist(id: string, payload: SavePlaylistPayload, revision?: string): Promise<PlaylistDetail> {
   const raw = await request<RawPlaylist>(`/api/playlist/${id}`, {
     method: "PUT",
+    headers: revision ? { "If-Match": revision } : undefined,
     body: JSON.stringify(payload),
   });
   return toPlaylistDetail(raw);
@@ -194,3 +209,4 @@ export async function fetchPlaylistRenderStatus(id: string): Promise<PlaylistRen
 export async function deletePlaylist(id: string): Promise<void> {
   await request(`/api/playlist/${id}`, { method: "DELETE" });
 }
+

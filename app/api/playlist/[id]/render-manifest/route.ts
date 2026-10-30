@@ -1,3 +1,4 @@
+import { serializeFlow } from "@/lib/playlist-flow";
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { PERMISSIONS } from "@/lib/rbac";
@@ -12,6 +13,8 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
     const playlist = await prisma.playlist.findUnique({
       where: { id, tenantId: auth.user.tenantId },
       include: {
+        flowNodes: true,
+        flowEdges: true,
         playlistItems: {
           include: { media: { include: { mediaType: true } } },
           orderBy: { position: "asc" },
@@ -38,6 +41,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
         gridColumns: playlist.gridColumns,
         zones: playlist.zonesJson ?? [],
       },
+      flow: serializeFlow(playlist),
       items: playlist.playlistItems.map((item) => ({
         id: item.id,
         mediaId: item.mediaId,
