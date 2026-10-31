@@ -4,6 +4,7 @@ import { assertQuota } from "@/lib/features";
 import { PERMISSIONS } from "@/lib/rbac";
 import { requirePermission } from "@/lib/session";
 import { getPresignedUploadUrl } from "@/lib/s3";
+import { validateMediaFile } from "@/lib/media-upload";
 
 const BYTES_PER_GB = 1024 ** 3;
 
@@ -15,7 +16,7 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const { filename, contentType, sizeBytes } = body;
 
-    if (!filename || !contentType) {
+    if (typeof filename !== "string" || !filename || typeof contentType !== "string" || !contentType) {
       return NextResponse.json({ error: "Filename and contentType are required" }, { status: 400 });
     }
 
@@ -23,13 +24,15 @@ export async function POST(request: NextRequest) {
     // bytes land. Checking on completion lets every tenant exceed its cap by
     // exactly one large file, every time.
     const declared = Number(sizeBytes);
+    const validationError = validateMediaFile({ name: filename, size: declared });
+    if (validationError) return NextResponse.json({ error: validationError }, { status: 400 });
     const addingGb = Number.isFinite(declared) && declared > 0 ? declared / BYTES_PER_GB : 0;
     const overQuota = await assertQuota(auth.user.tenantId, "storageGb", addingGb);
     if (overQuota) return overQuota;
 
     // Namespaced per tenant so one workspace's objects are never reachable by
     // guessing another's key.
-    const timestamp = Date.now();
+    const timestamp = crypto.randomUUID();
     const safeName = filename.replace(/[^a-zA-Z0-9.\-_]/g, "_");
     const s3Key = `uploads/${auth.user.tenantId}/${timestamp}-${safeName}`;
 
