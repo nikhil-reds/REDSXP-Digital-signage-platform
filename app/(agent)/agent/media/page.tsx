@@ -1,8 +1,9 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
+import "@/components/agent/media/media-responsive.css";
 import { CircleAlert, Grid, List, Upload, HardDrive } from "lucide-react";
-import MediaGrid, { MediaAsset } from "@/components/agent/media/media-grid";
+import MediaGrid, { MediaAsset, isPortraitMedia } from "@/components/agent/media/media-grid";
 import MediaTable from "@/components/agent/media/media-table";
 import MediaUploadModal from "@/components/agent/media/media-upload-modal";
 import MediaPreviewDrawer from "@/components/agent/media/media-preview-drawer";
@@ -14,6 +15,7 @@ import {
   EmptyState,
   ProgressBar,
   SegmentedControl,
+  SearchInput,
   SkeletonCardGrid,
   SkeletonTable,
 } from "@/components/ui";
@@ -31,6 +33,7 @@ export default function AgentMediaPage() {
 
 
   // Filters State
+  const [filtersOpen, setFiltersOpen] = useState(false);
   const [search, setSearch] = useState("");
   const [typeFilter, setTypeFilter] = useState("All");
   const [orientationFilter, setOrientationFilter] = useState("All");
@@ -58,9 +61,7 @@ export default function AgentMediaPage() {
 
     const matchesType = typeFilter === "All" || asset.type === typeFilter;
 
-    // Landscape starts 1920 or Flexible; Portrait starts 1080/2160 (height bigger)
-    const isPortrait =
-      asset.dimensions?.startsWith("1080") || asset.dimensions?.startsWith("2160");
+    const isPortrait = isPortraitMedia(asset.dimensions);
     const matchesOrientation =
       orientationFilter === "All" ||
       (orientationFilter === "Landscape" && !isPortrait) ||
@@ -80,10 +81,11 @@ export default function AgentMediaPage() {
   });
   const totalPages = Math.max(1, Math.ceil(sortedAssets.length / pageSize));
   const visibleAssets = sortedAssets.slice((Math.min(page, totalPages) - 1) * pageSize, Math.min(page, totalPages) * pageSize);
+  const activeFilterCount = [typeFilter, orientationFilter, statusFilter].filter((value) => value !== "All").length + Number(sort !== "date-desc") + Number(groupBy !== "none");
   const resetPage = () => setPage(1);
 
   const handleUploadSuccess = (newAsset: MediaAsset) => {
-    setAssets((prev) => [newAsset, ...prev]);
+    setAssets((prev) => [newAsset, ...prev.filter(asset => asset.id !== newAsset.id)]);
   };
 
   const showToast = (message: string, tone: "danger" | "success") => {
@@ -115,10 +117,10 @@ export default function AgentMediaPage() {
   };
 
   return (
-    <div className="flex h-full overflow-hidden relative">
-      <div className="flex-1 flex flex-col min-w-0 space-y-6 overflow-y-auto px-8 py-6 pb-24">
+    <div className="media-page flex h-full min-h-0 overflow-hidden relative">
+      <div className="media-content flex-1 flex flex-col min-w-0 min-h-0 gap-4 overflow-y-auto px-3 py-4 sm:px-6 lg:px-8">
         {/* Header Section */}
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b border-app-border pb-5 shrink-0">
+        <div className="flex flex-wrap items-center justify-between gap-4 border-b border-app-border pb-5 shrink-0">
           <div>
             <h1 className="font-heading text-h5 font-semibold tracking-headline text-app-text">
               Media Library
@@ -128,7 +130,7 @@ export default function AgentMediaPage() {
             </p>
           </div>
 
-          <div className="flex items-center gap-2 self-start sm:self-auto">
+          <div className="flex flex-wrap items-center gap-2">
             <SegmentedControl
               value={viewMode}
               onChange={setViewMode}
@@ -148,40 +150,45 @@ export default function AgentMediaPage() {
         <Card
           size="widget"
           padded
-          className="flex flex-col md:flex-row md:items-center justify-between gap-3 shrink-0"
+          className="media-storage flex flex-wrap items-center justify-between gap-3 shrink-0"
         >
-          <div className="flex items-center gap-2 text-body text-app-muted">
+          <div className="flex flex-wrap items-center gap-2 text-body text-app-muted">
             <HardDrive className="w-4 h-4 shrink-0" />
             <span>Storage Space Allocation:</span>
             <span className="font-semibold text-app-text">112 GB of 250 GB Used</span>
           </div>
-          <ProgressBar value={112} max={250} className="flex-1 max-w-md w-full md:mx-4" />
+          <ProgressBar value={112} max={250} className="media-storage-progress w-full" />
           <span className="text-caption font-semibold text-app-muted uppercase tracking-headline">
             44.8% Used · 138 GB free
           </span>
         </Card>
 
         {/* Query Filters Panel */}
-        <Card size="widget" padded className="shrink-0">
-          <CollectionToolbar
-            search={{ value: search, onChange: (value) => { setSearch(value); resetPage(); }, placeholder: "Search assets, uploaders…" }}
-            filters={[
-              { id: "type", label: "format", value: typeFilter, onChange: (value) => { setTypeFilter(value); resetPage(); }, options: [{ value: "All", label: "All formats" }, { value: "Video", label: "Video (MP4)" }, { value: "Image", label: "Image (JPG/PNG)" }, { value: "HTML5", label: "HTML5 widgets" }] },
-              { id: "orientation", label: "orientation", value: orientationFilter, onChange: (value) => { setOrientationFilter(value); resetPage(); }, options: [{ value: "All", label: "All orientations" }, { value: "Landscape", label: "Landscape (16:9)" }, { value: "Portrait", label: "Portrait (9:16)" }] },
-              { id: "status", label: "transcode state", value: statusFilter, onChange: (value) => { setStatusFilter(value); resetPage(); }, options: [{ value: "All", label: "All transcode states" }, { value: "Ready", label: "Ready" }, { value: "Transcoding", label: "Transcoding" }, { value: "Failed", label: "Failed" }] },
-            ]}
-            sort={{ value: sort, onChange: (value) => { setSort(value); resetPage(); }, options: [{ value: "date-desc", label: "Upload date: newest" }, { value: "date-asc", label: "Upload date: oldest" }, { value: "name-asc", label: "Name: A–Z" }, { value: "name-desc", label: "Name: Z–A" }] }}
-            groupBy={{ value: groupBy, onChange: (value) => { setGroupBy(value); resetPage(); }, options: [{ value: "none", label: "No grouping" }, { value: "type", label: "Group by type" }, { value: "status", label: "Group by status" }] }}
-            hasActiveControls={Boolean(search) || typeFilter !== "All" || orientationFilter !== "All" || statusFilter !== "All" || sort !== "date-desc" || groupBy !== "none"}
-            onClear={() => { setSearch(""); setTypeFilter("All"); setOrientationFilter("All"); setStatusFilter("All"); setSort("date-desc"); setGroupBy("none"); resetPage(); }}
-          />
+        <Card size="widget" padded className="shrink-0 space-y-3">
+          <div className="flex flex-wrap gap-3">
+            <SearchInput className="min-w-0 flex-[1_1_220px]" aria-label="Search media" value={search} onChange={(event) => { setSearch(event.target.value); resetPage(); }} placeholder="Search assets, uploaders…" />
+            <Button variant="secondary" className="media-filter-toggle" aria-expanded={filtersOpen} aria-controls="media-filters" onClick={() => setFiltersOpen(!filtersOpen)}>Filters & sort{activeFilterCount ? " (" + activeFilterCount + ")" : ""}</Button>
+          </div>
+          <div id="media-filters" className={"media-filters " + (filtersOpen ? "is-open" : "")}>
+            <CollectionToolbar
+              filters={[
+                { id: "type", label: "format", value: typeFilter, onChange: (value) => { setTypeFilter(value); resetPage(); }, options: [{ value: "All", label: "All formats" }, { value: "Video", label: "Video (MP4)" }, { value: "Image", label: "Image (JPG/PNG)" }, { value: "HTML5", label: "HTML5 widgets" }] },
+                { id: "orientation", label: "orientation", value: orientationFilter, onChange: (value) => { setOrientationFilter(value); resetPage(); }, options: [{ value: "All", label: "All orientations" }, { value: "Landscape", label: "Landscape (16:9)" }, { value: "Portrait", label: "Portrait (9:16)" }] },
+                { id: "status", label: "transcode state", value: statusFilter, onChange: (value) => { setStatusFilter(value); resetPage(); }, options: [{ value: "All", label: "All transcode states" }, { value: "Ready", label: "Ready" }, { value: "Transcoding", label: "Transcoding" }, { value: "Failed", label: "Failed" }] },
+              ]}
+              sort={{ value: sort, onChange: (value) => { setSort(value); resetPage(); }, options: [{ value: "date-desc", label: "Upload date: newest" }, { value: "date-asc", label: "Upload date: oldest" }, { value: "name-asc", label: "Name: A–Z" }, { value: "name-desc", label: "Name: Z–A" }] }}
+              groupBy={{ value: groupBy, onChange: (value) => { setGroupBy(value); resetPage(); }, options: [{ value: "none", label: "No grouping" }, { value: "type", label: "Group by type" }, { value: "status", label: "Group by status" }] }}
+              hasActiveControls={Boolean(search) || typeFilter !== "All" || orientationFilter !== "All" || statusFilter !== "All" || sort !== "date-desc" || groupBy !== "none"}
+              onClear={() => { setSearch(""); setTypeFilter("All"); setOrientationFilter("All"); setStatusFilter("All"); setSort("date-desc"); setGroupBy("none"); resetPage(); }}
+            />
+          </div>
         </Card>
 
         {/* Visual Render Zone */}
-        <div className="flex-1">
+        <div className="min-w-0 shrink-0">
           {isFirstLoad ? (
             viewMode === "grid" ? (
-              <SkeletonCardGrid count={8} columns={4} label="Loading media…" />
+              <SkeletonCardGrid count={8} columns={4} label="Loading media…" className="media-loading-grid" />
             ) : (
               <Card size="panel" className="overflow-hidden">
                 <SkeletonTable rows={6} cols={9} label="Loading media…" />
@@ -224,9 +231,11 @@ export default function AgentMediaPage() {
       {/* Render Slide details drawer */}
       {selectedAsset && (
         <MediaPreviewDrawer
+          key={selectedAsset.id}
           asset={selectedAsset}
           onClose={() => setSelectedAsset(null)}
           onDeleteAsset={handleDeleteAsset}
+          errorMessage={toast?.tone === "danger" ? toast.message : undefined}
         />
       )}
 
@@ -241,7 +250,7 @@ export default function AgentMediaPage() {
       {toast && (
         <div
           role="status"
-          className={`fixed bottom-24 right-6 z-50 flex max-w-sm items-start gap-3 rounded-xl border p-4 shadow-lg ${
+          className={`fixed bottom-24 inset-x-3 sm:left-auto sm:right-6 z-50 flex sm:max-w-sm items-start gap-3 rounded-xl border p-4 shadow-lg ${
             toast.tone === "danger"
               ? "border-app-danger-border bg-app-danger-surface text-app-danger-text"
               : "border-app-accent-border bg-app-accent-surface text-app-accent-text"
