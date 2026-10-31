@@ -48,7 +48,7 @@ export default function ScreensMap({
   return (
     <Card
       size="panel"
-      className="flex-1 flex flex-col min-w-0 bg-app-surface-alt overflow-hidden min-h-[550px] relative justify-center items-center select-none"
+      className="flex-1 flex flex-col min-w-0 bg-app-surface-alt overflow-hidden min-h-[320px] h-[55dvh] max-h-[700px] relative justify-center items-center select-none"
     >
       {/* Schematic Map Background */}
       <svg
@@ -97,12 +97,12 @@ export default function ScreensMap({
             onClick={() => onSelectScreen(screen)}
             style={{ top: pos.top, left: pos.left }}
             aria-label={`${screen.name} — ${screen.status}`}
-            className={`absolute -translate-x-1/2 -translate-y-1/2 group cursor-pointer z-10 transition-transform focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-app-accent-text rounded-full ${
+            className={`absolute flex h-11 w-11 items-center justify-center -translate-x-1/2 -translate-y-1/2 group cursor-pointer z-10 transition-transform focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-app-accent-text rounded-full ${
               isSelected ? "scale-125 z-20" : "hover:scale-110"
             }`}
           >
             <span
-              className={`absolute -top-1.5 -left-1.5 w-6 h-6 rounded-full opacity-60 animate-ping ${PIN_TONE[status]}`}
+              className={`absolute top-2.5 left-2.5 w-6 h-6 rounded-full opacity-60 animate-ping ${PIN_TONE[status]}`}
             />
             <span
               className={`block w-3.5 h-3.5 rounded-full border-2 border-app-surface ${PIN_TONE[status]} ${
@@ -111,7 +111,7 @@ export default function ScreensMap({
             />
 
             {/* Hover Tooltip Overlay */}
-            <span className="absolute top-5 left-1/2 -translate-x-1/2 block bg-app-surface border border-app-border p-2.5 rounded-lg shadow-xs z-20 text-left opacity-0 group-hover:opacity-100 group-focus-visible:opacity-100 transition-opacity pointer-events-none w-52">
+            <span className={`absolute ${parseFloat(pos.top) > 50 ? "bottom-full" : "top-full"} ${parseFloat(pos.left) > 60 ? "right-0" : parseFloat(pos.left) < 40 ? "left-0" : "left-1/2 -translate-x-1/2"} block bg-app-surface border border-app-border p-2.5 rounded-lg shadow-xs z-20 text-left opacity-0 group-hover:opacity-100 group-focus-visible:opacity-100 transition-opacity pointer-events-none w-40 sm:w-52`}>
               <span className="block text-body font-semibold text-app-text">{screen.name}</span>
               <span className="block text-caption text-app-muted uppercase tracking-headline mt-0.5">
                 {screen.location}
