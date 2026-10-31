@@ -27,19 +27,23 @@ interface MediaGridProps {
   onSelectMedia: (asset: MediaAsset) => void;
 }
 
+export function isPortraitMedia(dimensions: string): boolean {
+  const match = dimensions?.match(/(\d+)\s*[x×]\s*(\d+)/i);
+  return Boolean(match && Number(match[2]) > Number(match[1]));
+}
+
 export default function MediaGrid({ assets, onSelectMedia }: MediaGridProps) {
   return (
     // Was up to 15 columns with 6px labels. The scale floor is 12px, so tiles
     // are sized to fit real text rather than shrinking the type to fit tiles.
-    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-4">
+    <div className="media-grid grid gap-4">
       {assets.map((asset) => {
         const isVideo = asset.type === "Video";
         const isHtml = asset.type === "HTML5";
         const isProcessing = asset.status === "Transcoding" || asset.status === "Uploading";
         const isFailed = asset.status === "Failed";
         const isExternalLink = asset.sourceType === "external_url";
-        const isPortrait =
-          asset.dimensions?.startsWith("1080") || asset.dimensions?.startsWith("2160");
+        const isPortrait = isPortraitMedia(asset.dimensions);
 
         const FallbackIcon = isVideo ? Film : isHtml ? Code : ImageIcon;
 
@@ -50,7 +54,7 @@ export default function MediaGrid({ assets, onSelectMedia }: MediaGridProps) {
             size="row"
             interactive
             onClick={() => onSelectMedia(asset)}
-            className="overflow-hidden group flex flex-col text-left w-full"
+            className="overflow-hidden group flex flex-col text-left w-full min-w-0"
           >
             {/* Visual Thumbnail representation */}
             <div className="relative aspect-video w-full bg-app-surface-alt flex items-center justify-center border-b border-app-border overflow-hidden">
@@ -59,13 +63,15 @@ export default function MediaGrid({ assets, onSelectMedia }: MediaGridProps) {
                 <img
                   src={asset.cdnUrl}
                   alt={asset.name}
-                  className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform"
+                  loading="lazy"
+                  className="absolute inset-0 w-full h-full object-contain group-hover:scale-105 transition-transform"
                 />
               )}
               {asset.cdnUrl && isVideo && (
                 <video
                   src={asset.cdnUrl}
-                  className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform"
+                  className="absolute inset-0 w-full h-full object-contain group-hover:scale-105 transition-transform"
+                  preload="metadata"
                   muted
                   playsInline
                 />
@@ -90,7 +96,7 @@ export default function MediaGrid({ assets, onSelectMedia }: MediaGridProps) {
 
               {isPortrait && (
                 <span className="absolute top-1.5 right-1.5">
-                  <Badge tone="accent">9:16</Badge>
+                  <Badge tone="accent">Portrait</Badge>
                 </span>
               )}
 
@@ -123,13 +129,14 @@ export default function MediaGrid({ assets, onSelectMedia }: MediaGridProps) {
 
             {/* Asset Metadata Footer */}
             <div className="p-3 min-w-0 w-full">
-              <span className="block text-body font-semibold text-app-text truncate">
+              <span className="block text-body font-semibold text-app-text line-clamp-2 break-words">
                 {asset.name}
               </span>
-              <span className="flex justify-between items-center gap-2 text-caption text-app-muted mt-0.5">
+              <span className="flex flex-wrap justify-between items-center gap-2 text-caption text-app-muted mt-0.5">
                 <span className="truncate">{asset.dimensions}</span>
                 <span className="shrink-0">{asset.size}</span>
               </span>
+              <span className="mt-2 block"><Badge tone={isFailed ? "danger" : asset.status === "Ready" ? "accent" : "neutral"}>{asset.status}</Badge></span>
             </div>
           </Card>
         );
