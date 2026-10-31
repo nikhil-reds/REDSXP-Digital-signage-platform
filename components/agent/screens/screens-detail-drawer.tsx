@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import {
   X,
   RefreshCw,
@@ -121,10 +121,41 @@ const DOT_TONE: Record<Status, string> = {
 
 export default function ScreensDetailDrawer({ screen, onClose }: ScreensDetailDrawerProps) {
   const [activeTab, setActiveTab] = useState<TabId>("Overview");
+  const [copyStatus, setCopyStatus] = useState("");
+  const panelRef = useRef<HTMLDialogElement>(null);
+  const [docked, setDocked] = useState(false);
+  useEffect(() => {
+    const panel = panelRef.current;
+    const host = panel?.parentElement;
+    if (!panel || !host) return;
+    const previousFocus = document.activeElement as HTMLElement | null;
+    const observer = new ResizeObserver(([entry]) => setDocked(entry.contentRect.width >= 1440));
+    observer.observe(host);
+    return () => {
+      observer.disconnect();
+      panel.close();
+      previousFocus?.focus();
+    };
+  }, []);
+  useEffect(() => {
+    const panel = panelRef.current;
+    if (!panel) return;
+    panel.close();
+    if (docked) panel.show();
+    else panel.showModal();
+    const content = panel.parentElement?.querySelector<HTMLElement>(".screens-content");
+    const previousOverflow = content?.style.overflow;
+    if (!docked && content) content.style.overflow = "hidden";
+    return () => { if (content) content.style.overflow = previousOverflow ?? ""; };
+  }, [docked]);
   const storagePct = parseInt(screen.storage, 10) || 0;
 
   return (
-    <div className="w-108 bg-app-surface border-l border-app-border flex flex-col h-full font-sans shadow-2xl shrink-0 overflow-hidden relative">
+    <dialog ref={panelRef} aria-label={screen.name + " details"}
+      onKeyDown={(event) => { if (docked && event.key === "Escape") { event.preventDefault(); onClose(); } }}
+      onCancel={(event) => { event.preventDefault(); onClose(); }}
+      onClick={(event) => { if (!docked && event.target === event.currentTarget) { const rect = event.currentTarget.getBoundingClientRect(); if (event.clientX < rect.left || event.clientX > rect.right) onClose(); } }}
+      className={"screen-details " + (docked ? "screen-details-docked" : "screen-details-overlay") + " bg-app-surface text-app-text border-l border-app-border font-sans shadow-2xl"}>
       {/* Header */}
       <div className="p-5 border-b border-app-border flex justify-between items-start gap-3 shrink-0">
         <div className="flex items-start gap-3 min-w-0">
@@ -132,12 +163,12 @@ export default function ScreensDetailDrawer({ screen, onClose }: ScreensDetailDr
             <Wifi className="w-5 h-5" />
           </span>
           <div className="min-w-0">
-            <h2 className="font-heading text-h5 font-semibold tracking-headline text-app-text truncate">
+            <h2 className="font-heading text-h5 font-semibold tracking-headline text-app-text break-words">
               {screen.name}
             </h2>
             <div className="mt-2 flex items-center gap-2 flex-wrap">
               <StatusDot status={DEVICE_STATUS[screen.status]} label={screen.status} />
-              <span className="text-caption text-app-muted font-semibold truncate">{screen.group}</span>
+              <span className="text-caption text-app-muted font-semibold break-words">{screen.group}</span>
             </div>
           </div>
         </div>
@@ -145,8 +176,17 @@ export default function ScreensDetailDrawer({ screen, onClose }: ScreensDetailDr
       </div>
 
       {/* Tab Navigation */}
-      <div className="shrink-0">
-        <Tabs value={activeTab} onChange={setActiveTab} tabs={tabs} />
+      <div className="shrink-0" onKeyDown={(event) => {
+        const index = tabs.findIndex((tab) => tab.id === activeTab);
+        const next = event.key === "ArrowRight" ? (index + 1) % tabs.length
+          : event.key === "ArrowLeft" ? (index + tabs.length - 1) % tabs.length
+          : event.key === "Home" ? 0 : event.key === "End" ? tabs.length - 1 : -1;
+        if (next < 0) return;
+        event.preventDefault();
+        setActiveTab(tabs[next].id);
+        event.currentTarget.querySelectorAll<HTMLButtonElement>('[role="tab"]')[next]?.focus();
+      }}>
+        <Tabs value={activeTab} onChange={setActiveTab} tabs={tabs} className="screen-detail-tabs" />
       </div>
 
       {/* Action shortcuts panel */}
@@ -158,12 +198,19 @@ export default function ScreensDetailDrawer({ screen, onClose }: ScreensDetailDr
       </div>
 
       {/* Tab Contents Viewport */}
-      <div className="flex-1 overflow-y-auto p-5 space-y-4">
+      <div role="tabpanel" aria-label={activeTab} className="screen-detail-content min-h-0 flex-1 overflow-y-auto p-4 sm:p-5 space-y-4">
         {activeTab === "Overview" && (
           <>
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 min-[400px]:grid-cols-2 gap-3">
               <Card size="row" padded>
                 <DataField label="Serial Number" value={`BS-${screen.model}-${screen.id}124`} />
+                <Button variant="ghost" size="sm" className="mt-2" onClick={async () => {
+                  try {
+                    await navigator.clipboard.writeText(`BS-${screen.model}-${screen.id}124`);
+                    setCopyStatus("Copied serial number");
+                  } catch { setCopyStatus("Unable to copy. Select the serial number to copy it manually."); }
+                }}>Copy serial</Button>
+                <span role="status" className="block text-caption text-app-muted">{copyStatus}</span>
               </Card>
               <Card size="row" padded>
                 <DataField label="BrightSign Model" value={`${screen.model} Series`} />
@@ -185,7 +232,7 @@ export default function ScreensDetailDrawer({ screen, onClose }: ScreensDetailDr
               <h4 className="text-body font-semibold text-app-text border-b border-app-border pb-2">
                 Network &amp; Diagnostics
               </h4>
-              <div className="grid grid-cols-2 gap-y-3 gap-x-3">
+              <div className="grid grid-cols-1 min-[400px]:grid-cols-2 gap-y-3 gap-x-3">
                 <DataField label="IP Address" value={`192.168.1.1${screen.id}`} />
                 <DataField label="Connection Type" value="Ethernet (PoE+)" />
                 <DataField label="Firmware version" value={`v${screen.firmware}`} />
@@ -368,6 +415,6 @@ export default function ScreensDetailDrawer({ screen, onClose }: ScreensDetailDr
           </>
         )}
       </div>
-    </div>
+    </dialog>
   );
 }
