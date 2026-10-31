@@ -50,7 +50,7 @@ export function parseFlow(value: unknown, items: Array<{ id?: string; clientId?:
   if (!unique(connections.map(c => c.sourceSensorClientId))) errors['flow.connections'] = 'Only one target per sensor is supported.';
   if (publish && sensors.some(s => !connections.some(c => c.sourceSensorClientId === s.clientId))) errors['flow.connections'] = 'Every sensor needs a target video.';
   if (Object.keys(errors).length) throw new PlaylistPayloadError(errors);
-  if (publish && sensors.some(s => s.triggerKind === 'serial-message')) throw new PlaylistPayloadError({ flow: 'Controller-message rules can be saved as drafts, but publishing requires the updated worker and player.' }, 409);
+  if (publish && sensors.some(s => s.triggerKind === 'serial-message') && process.env.SENSOR_MANIFEST_V5_ENABLED !== 'true') throw new PlaylistPayloadError({ flow: 'Controller-message publishing is not enabled on this CMS. Enable SENSOR_MANIFEST_V5_ENABLED after updating the worker and player.' }, 409);
   return { sensors, connections };
 }
 export const playlistDetailInclude = { playlistItems: { include: { media: { include: { mediaType: true } } }, orderBy: { position: 'asc' as const } }, flowNodes: true, flowEdges: true };
