@@ -956,6 +956,7 @@ export function usePlaylistEditor({ playlistId }: UsePlaylistEditorOptions = {})
     },
 
     flowItems: items,
+    selectClip: setSelectedId,
     flowState,
     setFlowState,
     timeline: {
