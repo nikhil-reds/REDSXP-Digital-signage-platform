@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import { Sparkles, Trash2 } from "lucide-react";
 import { Button, Modal } from "@/components/ui";
 import { ScheduleSummary, SaveSchedulePayload, createSchedule, updateSchedule, deleteSchedule } from "./api";
@@ -47,11 +47,26 @@ export default function ScheduleFormModal({ schedule, onClose, onSaved }: Schedu
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [screenQuery, setScreenQuery] = useState("");
+  const [confirmDiscard, setConfirmDiscard] = useState(false);
+  const feedbackRef = useRef<HTMLDivElement>(null);
+  const discardRef = useRef<HTMLDivElement>(null);
+  const [reloadKey, setReloadKey] = useState(0);
+  const [isPickingGroup, setIsPickingGroup] = useState(false);
+  const submitLock = useRef(false);
   const [error, setError] = useState<string | null>(null);
+  useEffect(() => { if (confirmDiscard) { discardRef.current?.querySelector<HTMLButtonElement>('button')?.focus(); discardRef.current?.scrollIntoView({block:'nearest'}); } }, [confirmDiscard]);
+  useEffect(() => { if (error) { feedbackRef.current?.focus(); feedbackRef.current?.scrollIntoView({block:'nearest'}); } }, [error]);
 
+  const snapshot = JSON.stringify({name,description,playlistId,startDate,endDate,dailyStartTime,dailyEndTime,priority,status,daysOfWeek:[...daysOfWeek].sort(),deviceIds:[...deviceIds].sort()});
+  const initialSnapshot = useRef(snapshot);
+  const requestClose = () => { if (isSubmitting || isDeleting || isPickingGroup) return; if (snapshot !== initialSnapshot.current) setConfirmDiscard(true); else onClose(); };
   useEffect(() => {
     let cancelled = false;
 
+    // Restart option loading when the user requests a retry.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setIsLoading(true);
     Promise.all([fetchPlaylists(), fetchScreens(), fetchScreenGroups()])
       .then(([playlistList, screenList, groupList]) => {
         if (cancelled) return;
@@ -65,7 +80,7 @@ export default function ScheduleFormModal({ schedule, onClose, onSaved }: Schedu
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [reloadKey]);
 
   const toggleDay = (value: number) => {
     setDaysOfWeek((prev) => (prev.includes(value) ? prev.filter((d) => d !== value) : [...prev, value]));
@@ -78,21 +93,29 @@ export default function ScheduleFormModal({ schedule, onClose, onSaved }: Schedu
   const handleGroupQuickPick = async (groupId: string) => {
     setGroupQuickPick(groupId);
     if (!groupId) return;
+    setIsPickingGroup(true);
     try {
       const detail = await fetchScreenGroup(groupId);
       setDeviceIds((prev) => Array.from(new Set([...prev, ...detail.deviceIds])));
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to load screen group");
-    }
+    } finally { setIsPickingGroup(false); }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (submitLock.current || isDeleting || isLoading || isPickingGroup) return;
+    if (!name.trim() || !playlistId) { setError("Enter a name and choose a playlist."); return; }
+    if (endDate < startDate) { setError("End date must be on or after the start date."); return; }
+    if (!daysOfWeek.length || !deviceIds.length) { setError("Select at least one weekday and one target screen."); return; }
+    if (!dailyStartTime || !dailyEndTime || dailyEndTime <= dailyStartTime) { setError("Daily end time must be after start time. Use separate schedules for overnight playback."); return; }
+    if (!Number.isInteger(Number(priority)) || Number(priority)<0 || Number(priority)>100) { setError("Priority must be a whole number from 0 to 100."); return; }
+    submitLock.current = true;
     setIsSubmitting(true);
     setError(null);
     try {
       const payload: SaveSchedulePayload = {
-        name,
+        name: name.trim(),
         description: description || null,
         playlistId,
         startDate,
@@ -113,6 +136,7 @@ export default function ScheduleFormModal({ schedule, onClose, onSaved }: Schedu
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to save schedule");
       setIsSubmitting(false);
+      submitLock.current = false;
     }
   };
 
@@ -133,10 +157,11 @@ export default function ScheduleFormModal({ schedule, onClose, onSaved }: Schedu
   return (
     <Modal
       open
-      onClose={onClose}
+      onClose={requestClose}
       title={isCreateMode ? "Create Content Schedule" : "Edit Content Schedule"}
       description="Deploy playlists on target displays with timeline calendar boundaries and override rules."
       size="lg"
+      className="schedule-form-dialog"
       footer={
         <>
           {!isCreateMode && (
@@ -145,22 +170,25 @@ export default function ScheduleFormModal({ schedule, onClose, onSaved }: Schedu
               variant="secondary"
               icon={Trash2}
               onClick={handleDelete}
-              disabled={isDeleting || isSubmitting}
+              disabled={isDeleting || isSubmitting || confirmDiscard || isPickingGroup}
               className="mr-auto text-app-danger-text border-app-danger/30 hover:bg-app-danger-surface"
             >
               {isDeleting ? "Deleting…" : "Delete"}
             </Button>
           )}
-          <Button type="button" variant="secondary" onClick={onClose}>
+          <Button type="button" variant="secondary" onClick={requestClose} disabled={isSubmitting || isDeleting || isPickingGroup}>
             Discard
           </Button>
-          <Button type="submit" form="schedule-form" variant="primary" disabled={isSubmitting}>
+          <Button type="submit" form="schedule-form" variant="primary" disabled={isSubmitting || isDeleting || isLoading || isPickingGroup || confirmDiscard}>
             {isSubmitting ? "Publishing…" : "Publish Schedule"}
           </Button>
         </>
       }
     >
-      <form id="schedule-form" onSubmit={handleSubmit} className="space-y-4">
+      {confirmDiscard && <div ref={discardRef} role="alert" className="mb-4 rounded-lg border border-app-warning p-3"><p>Discard your unsaved schedule changes?</p><div className="flex flex-wrap gap-2 mt-2"><Button onClick={() => setConfirmDiscard(false)}>Keep editing</Button><Button variant="secondary" onClick={onClose}>Discard changes</Button></div></div>}
+      {error && <div ref={feedbackRef} tabIndex={-1} role="alert" className="mb-3 text-app-danger-text">{error}{!playlists.length && <Button onClick={() => { setError(null); setReloadKey(value=>value+1); }}>Retry loading options</Button>}</div>}
+      <form id="schedule-form" onSubmit={handleSubmit} className="space-y-4" inert={confirmDiscard || isSubmitting || isDeleting}>
+        <p className="text-caption text-app-muted">Dates and times use your browser timezone: {Intl.DateTimeFormat().resolvedOptions().timeZone}. Daily windows end on the same day.</p>
 
           {/* Schedule name */}
           <div className="flex flex-col gap-1.5">
@@ -169,12 +197,14 @@ export default function ScheduleFormModal({ schedule, onClose, onSaved }: Schedu
             </label>
             <input
               type="text"
-              value={name}
+              aria-label="Schedule name" value={name}
               onChange={(e) => setName(e.target.value)}
               className="w-full px-3.5 py-2 bg-app-surface-alt border border-app-border rounded-lg text-xs text-app-text focus:outline-none"
               required
             />
           </div>
+
+          <label className="flex flex-col gap-1.5 text-caption text-app-muted">Description (optional)<textarea value={description} onChange={event=>setDescription(event.target.value)} className="rounded-lg border border-app-border bg-app-surface-alt p-3 text-app-text" rows={2}/></label>
 
           <div className="grid grid-cols-2 gap-4">
             {/* Playlist Dropdown */}
@@ -183,7 +213,7 @@ export default function ScheduleFormModal({ schedule, onClose, onSaved }: Schedu
                 Signage Playlist
               </label>
               <select
-                value={playlistId}
+                aria-label="Signage playlist" value={playlistId}
                 onChange={(e) => setPlaylistId(e.target.value)}
                 className="w-full px-3 py-2 bg-app-surface-alt border border-app-border rounded-lg text-xs text-app-text font-semibold focus:outline-none cursor-pointer"
                 required
@@ -203,7 +233,7 @@ export default function ScheduleFormModal({ schedule, onClose, onSaved }: Schedu
                 Status
               </label>
               <select
-                value={status}
+                aria-label="Schedule status" value={status}
                 onChange={(e) => setStatus(e.target.value as "ACTIVE" | "INACTIVE")}
                 className="w-full px-3 py-2 bg-app-surface-alt border border-app-border rounded-lg text-xs text-app-text font-semibold focus:outline-none cursor-pointer"
               >
@@ -218,7 +248,7 @@ export default function ScheduleFormModal({ schedule, onClose, onSaved }: Schedu
               <label className="text-caption font-semibold uppercase tracking-headline text-app-muted">Start Date</label>
               <input
                 type="date"
-                value={startDate}
+                aria-label="Start date" value={startDate}
                 onChange={(e) => setStartDate(e.target.value)}
                 className="w-full px-3.5 py-1.5 bg-app-surface-alt border border-app-border rounded-lg text-xs text-app-text focus:outline-none"
                 required
@@ -228,7 +258,7 @@ export default function ScheduleFormModal({ schedule, onClose, onSaved }: Schedu
               <label className="text-caption font-semibold uppercase tracking-headline text-app-muted">End Date</label>
               <input
                 type="date"
-                value={endDate}
+                aria-label="End date" value={endDate}
                 onChange={(e) => setEndDate(e.target.value)}
                 className="w-full px-3.5 py-1.5 bg-app-surface-alt border border-app-border rounded-lg text-xs text-app-text focus:outline-none"
                 required
@@ -244,12 +274,13 @@ export default function ScheduleFormModal({ schedule, onClose, onSaved }: Schedu
           {/* Days of week checklist */}
           <div className="flex flex-col gap-1.5">
             <span className="block text-caption font-semibold uppercase tracking-headline text-app-muted">Days of Week</span>
-            <div className="flex justify-between gap-1 select-none">
+            <div className="schedule-weekdays flex justify-between gap-1 select-none">
               {DAY_COLUMNS.map((day) => {
                 const isActive = daysOfWeek.includes(day.value);
                 return (
                   <button
                     key={day.value}
+                    aria-pressed={isActive}
                     type="button"
                     onClick={() => toggleDay(day.value)}
                     className={`flex-1 py-2 rounded-lg text-caption font-semibold border transition-colors cursor-pointer text-center ${
@@ -274,7 +305,7 @@ export default function ScheduleFormModal({ schedule, onClose, onSaved }: Schedu
               type="number"
               min="0"
               max="100"
-              value={priority}
+              aria-label="Schedule priority" value={priority}
               onChange={(e) => setPriority(e.target.value)}
               className="w-full px-3.5 py-1.5 bg-app-surface-alt border border-app-border rounded-lg text-xs text-app-text focus:outline-none font-semibold font-mono"
             />
@@ -286,7 +317,7 @@ export default function ScheduleFormModal({ schedule, onClose, onSaved }: Schedu
               Assign From Screen Group
             </label>
             <select
-              value={groupQuickPick}
+              aria-label="Assign from screen group" disabled={isPickingGroup || isLoading} value={groupQuickPick}
               onChange={(e) => handleGroupQuickPick(e.target.value)}
               className="w-full px-3 py-2 bg-app-surface-alt border border-app-border rounded-lg text-xs text-app-text font-semibold focus:outline-none cursor-pointer"
             >
@@ -304,13 +335,16 @@ export default function ScheduleFormModal({ schedule, onClose, onSaved }: Schedu
             <label className="text-caption font-semibold uppercase tracking-headline text-app-muted">
               Target Screens ({deviceIds.length} assigned)
             </label>
+            <input type="search" aria-label="Search target screens" placeholder="Search screens…" value={screenQuery} onChange={event=>setScreenQuery(event.target.value)} className="rounded-lg border border-app-border bg-app-surface-alt p-3"/>
+            <div className="flex flex-wrap gap-2"><Button type="button" variant="secondary" onClick={()=>setDeviceIds(ids=>Array.from(new Set([...ids,...screens.filter(screen=>screen.name.toLowerCase().includes(screenQuery.toLowerCase())).map(screen=>screen.id)])))}>Select matching screens</Button><Button type="button" variant="ghost" onClick={()=>setDeviceIds([])}>Clear selection</Button></div>
+            {!isLoading && screens.length>0 && !screens.some(screen=>screen.name.toLowerCase().includes(screenQuery.toLowerCase())) && <p>No matching screens.</p>}
             <div className="border border-app-border rounded-lg max-h-40 overflow-y-auto divide-y divide-app-border bg-white dark:bg-app-surface p-1">
               {isLoading ? (
                 <p className="px-3 py-2 text-caption text-app-muted">Loading screens…</p>
               ) : screens.length === 0 ? (
                 <p className="px-3 py-2 text-caption text-app-muted">No screens available yet.</p>
               ) : (
-                screens.map((s) => {
+                screens.filter(screen=>screen.name.toLowerCase().includes(screenQuery.toLowerCase())).map((s) => {
                   const isAssigned = deviceIds.includes(s.id);
                   return (
                     <label
@@ -346,7 +380,7 @@ export default function ScheduleFormModal({ schedule, onClose, onSaved }: Schedu
             </p>
           </div>
 
-          {error && <p className="text-caption font-semibold text-app-danger-text">{error}</p>}
+
 
       </form>
     </Modal>
