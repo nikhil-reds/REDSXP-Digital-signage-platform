@@ -1,258 +1,64 @@
 "use client";
-
-import React, { useEffect, useState } from "react";
-import NextImage from "next/image";
+import { useEffect, useRef, useState } from "react";
+import Image from "next/image";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
+import { ChevronLeft, ChevronRight, X, UserRound, LogOut } from "lucide-react";
 import { useSession } from "@/components/providers/session-provider";
 import { getSidebarProfile } from "@/lib/sidebar-profile";
-import {
-  LayoutDashboard,
-  Monitor,
-  Layers,
-  Image,
-  PlaySquare,
-  Calendar,
-  Zap,
-  AlertTriangle,
-  LineChart,
-  FileText,
-  History,
-  LifeBuoy,
-  LogOut,
-  ChevronLeft,
-  ChevronRight,
-  X,
-  Settings,
-  UserRound,
-  ShieldCheck
-} from "lucide-react";
-
-interface NavItem {
-  name: string;
-  href: string;
-  icon: React.ComponentType<{ className?: string }>;
-  badge?: number;
-}
-
-const navItems: NavItem[] = [
-  { name: "Overview", href: "/agent", icon: LayoutDashboard },
-  { name: "Screens", href: "/agent/screens", icon: Monitor },
-  { name: "Screen Groups", href: "/agent/screen-groups", icon: Layers },
-  { name: "Media Library", href: "/agent/media", icon: Image },
-  { name: "Playlists", href: "/agent/playlists", icon: PlaySquare },
-  { name: "Schedules", href: "/agent/schedules", icon: Calendar },
-  { name: "Sensor Rules", href: "/agent/sensor-rules", icon: Zap },
-  { name: "Alerts", href: "/agent/alerts", icon: AlertTriangle, badge: 6 },
-  { name: "Analytics", href: "/agent/analytics", icon: LineChart },
-  { name: "Reports", href: "/agent/reports", icon: FileText },
-  { name: "Activity Log", href: "/agent/activity-log", icon: History },
-  { name: "Workspace Users", href: "/agent/users", icon: UserRound },
-  { name: "Roles & Permissions", href: "/agent/roles", icon: ShieldCheck },
-  { name: "Help & Support", href: "/agent/support", icon: LifeBuoy },
-];
-
-interface AgentSidebarProps {
-  isMobileOpen?: boolean;
-  onMobileClose?: () => void;
-}
-
-export default function AgentSidebar({
-  isMobileOpen = false,
-  onMobileClose,
-}: AgentSidebarProps) {
+import { navItems } from "./agent-navigation";
+export default function AgentSidebar({ isMobileOpen = false, onMobileClose, onExpand }: { isMobileOpen?: boolean; onMobileClose?: () => void; onExpand?: () => void }) {
   const pathname = usePathname();
   const router = useRouter();
   const { user, loading } = useSession();
-  const [isCollapsed, setIsCollapsed] = useState(false);
-  const isVisuallyCollapsed = isCollapsed && !isMobileOpen;
   const profile = user ? getSidebarProfile(user) : null;
-
+  const [collapsed, setCollapsed] = useState(false);
+  const [logoutError, setLogoutError] = useState("");
+  const [loggingOut, setLoggingOut] = useState(false);
+  const account = useRef<HTMLDialogElement>(null);
   useEffect(() => {
-    onMobileClose?.();
-  }, [pathname, onMobileClose]);
-
-  const handleLogout = async () => {
-    const response = await fetch("/api/auth/logout", { method: "POST" });
-    if (response.ok) {
-      router.replace("/login");
-      router.refresh();
-    }
+    // Read the preference after hydration, when browser storage is available.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    try { setCollapsed(localStorage.getItem("agent-sidebar-collapsed") === "true"); } catch { /* Storage may be disabled. */ }
+  }, []);
+  const toggle = () => {
+    if (window.matchMedia("(max-width: 1199px)").matches) { onExpand?.(); return; }
+    setCollapsed(value => { try { localStorage.setItem("agent-sidebar-collapsed", String(!value)); } catch { /* Storage may be disabled. */ } return !value; });
   };
-
-  return (
-    <>
-      {isMobileOpen && (
-        <button
-          type="button"
-          aria-label="Close navigation"
-          className="fixed inset-0 z-40 bg-reds-black/55 md:hidden"
-          onClick={onMobileClose}
-        />
-      )}
-      <aside
-        aria-label="Agent navigation"
-        className={`fixed inset-y-0 left-0 z-50 flex h-screen w-64 shrink-0 flex-col border-r border-app-border bg-app-surface font-sans transition-transform duration-200 md:relative md:z-auto md:visible md:translate-x-0 md:transition-[width] md:duration-300 ${
-          isMobileOpen ? "visible translate-x-0" : "invisible -translate-x-full"
-        } ${isCollapsed ? "md:w-20" : "md:w-64"}`}
-      >
-      {/* Brand Header */}
-      <div className={`flex items-center justify-between border-b border-app-border py-6 ${isVisuallyCollapsed ? "px-3" : "px-4"}`}>
-        <div className="flex items-center gap-3 overflow-hidden">
-          {isVisuallyCollapsed ? (
-            <div className="w-6 h-6 flex items-center justify-center shrink-0">
-              <NextImage
-                src="/logo-squueze.png"
-                alt="REDS"
-                width={28}
-                height={28}
-                className="h-7 w-7 object-contain"
-                priority
-              />
-            </div>
-          ) : (
-            <NextImage
-              src="/reds-xos-logo.png"
-              alt="REDS XOS Logo"
-              width={79}
-              height={17}
-              className="h-[17px] w-auto object-contain"
-              priority
-            />
-          )}
+  const logout = async () => {
+    setLoggingOut(true); setLogoutError("");
+    try {
+      const response = await fetch("/api/auth/logout", { method: "POST" });
+      if (!response.ok) throw new Error("Sign out failed");
+      router.replace("/login"); router.refresh();
+    } catch { setLogoutError("Unable to sign out. Please try again."); setLoggingOut(false); }
+  };
+  return <>
+    {isMobileOpen && <div className="agent-nav-backdrop" onClick={onMobileClose} aria-hidden="true"/>}
+    <div className="agent-sidebar-space" data-collapsed={collapsed}>
+      <aside id="agent-navigation" className="agent-sidebar border-r border-app-border bg-app-surface" data-collapsed={collapsed} data-open={isMobileOpen} aria-label="Agent navigation" role={isMobileOpen ? "dialog" : undefined} aria-modal={isMobileOpen || undefined}>
+        <div className="agent-brand-row">
+          <Image className="agent-full-brand" src="/reds-xos-logo.png" alt="REDS XOS" width={158} height={34} priority/>
+          <Image className="agent-small-brand" src="/logo-squueze.png" alt="REDS" width={28} height={28} priority/>
+          <button type="button" className="agent-nav-button agent-collapse-trigger" aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"} onClick={toggle}>{collapsed ? <ChevronRight size={18}/> : <ChevronLeft size={18}/>}</button>
+          <button type="button" className="agent-nav-button agent-drawer-close" aria-label="Close navigation" onClick={onMobileClose}><X size={20}/></button>
         </div>
-        <button
-          type="button"
-          onClick={() => setIsCollapsed(!isCollapsed)}
-          className="hidden rounded-md border border-app-border p-1 text-app-muted transition-all hover:bg-app-surface-alt hover:text-app-text md:inline-flex"
-          title={isCollapsed ? "Expand Sidebar" : "Collapse Sidebar"}
-          aria-label={isCollapsed ? "Expand sidebar" : "Collapse sidebar"}
-        >
-          {isCollapsed ? (
-            <ChevronRight className="w-3.5 h-3.5" />
-          ) : (
-            <ChevronLeft className="w-3.5 h-3.5" />
-          )}
-        </button>
-        <button
-          type="button"
-          onClick={onMobileClose}
-          className="inline-flex rounded-md border border-app-border p-1.5 text-app-muted transition-colors hover:bg-app-surface-alt hover:text-app-text focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-app-accent-text md:hidden"
-          aria-label="Close navigation"
-        >
-          <X className="h-4 w-4" />
-        </button>
-      </div>
-
-      {/* Navigation Links */}
-      <nav className="flex-1 overflow-y-auto px-3 py-4 space-y-1">
-        {navItems.map((item) => {
-          const Icon = item.icon;
-          // Simple route matching: exact check for root, or startsWith for subroutes (avoid false positives with /agent/something matching /agent)
-          const isActive =
-            item.href === "/agent"
-              ? pathname === "/agent"
-              : pathname?.startsWith(item.href);
-
-          return (
-            <Link
-              key={item.name}
-              href={item.href}
-              title={isVisuallyCollapsed ? item.name : undefined}
-              // Green is a surface and a bar here, never the label colour:
-              // #0BDA51 on off-white is 1.74:1. The active label stays
-              // --app-text (13.7:1 on Green 10 in light, 14.9:1 in dark).
-              className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-body transition-all duration-200 relative group ${
-                isActive
-                  ? "bg-app-accent-surface text-app-text font-semibold"
-                  : "text-app-muted hover:text-app-text hover:bg-app-surface-alt"
-              }`}
-            >
-              {/* Active Indicator Bar — accent-text, not accent: Green 60 on a
-                  Green 10 row is 1.78:1, so the bar would vanish in light mode.
-                  Green 80 gives 5.24:1 there and stays Green 60 in dark. */}
-              {isActive && (
-                <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-5 bg-app-accent-text rounded-r-md" />
-              )}
-
-              <Icon
-                className={`w-[18px] h-[18px] shrink-0 transition-transform duration-200 group-hover:scale-105 ${
-                  isActive
-                    ? "text-app-accent-text"
-                    : "text-app-muted group-hover:text-app-text"
-                }`}
-              />
-
-              {!isVisuallyCollapsed && (
-                <span className="truncate flex-1">{item.name}</span>
-              )}
-
-              {/* Alert Badge — functional red, reserved for system feedback */}
-              {!isVisuallyCollapsed && item.badge && (
-                <span className="text-caption font-semibold bg-app-danger text-app-danger-on px-1.5 py-0.5 rounded-full shrink-0 leading-none">
-                  {item.badge}
-                </span>
-              )}
-
-              {isVisuallyCollapsed && item.badge && (
-                <div className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-app-danger" />
-              )}
-            </Link>
-          );
-        })}
-      </nav>
-
-      {/* User Profile Footer */}
-      <div className="p-4 border-t border-app-border bg-app-surface-alt flex flex-col gap-3 mt-auto">
-        <div className={`flex items-center gap-3 min-w-0 ${isVisuallyCollapsed ? "justify-center" : "justify-between"}`}>
-          <div className="flex items-center gap-2.5 min-w-0">
-            <div className="w-9 h-9 rounded-full bg-app-accent text-app-accent-on text-caption font-semibold flex items-center justify-center ring-2 ring-app-surface shadow-sm shrink-0">
-              {profile?.initials ?? "…"}
-            </div>
-            {!isVisuallyCollapsed && (
-              <div className="flex flex-col min-w-0 gap-1">
-                <span className="text-body font-semibold text-app-text truncate leading-none">
-                  {profile?.displayName ?? (loading ? "Loading account" : "Account unavailable")}
-                </span>
-                <span className="text-caption text-app-muted truncate leading-none">
-                  {profile?.roleName ?? (loading ? "Loading profile" : "")}
-                </span>
-              </div>
-            )}
-          </div>
-
-          {!isVisuallyCollapsed && (
-            <div className="flex items-center gap-0.5 shrink-0">
-              <button
-                title="Profile Settings"
-                className="p-1 rounded-md text-app-muted hover:text-app-text hover:bg-app-surface-alt cursor-pointer transition-all duration-200"
-              >
-                <Settings className="w-3.5 h-3.5" />
-              </button>
-              <button
-                onClick={handleLogout}
-                title="Sign out"
-                className="p-1 rounded-md text-app-muted hover:text-app-danger-text hover:bg-app-danger-surface cursor-pointer transition-all duration-200"
-              >
-                <LogOut className="w-3.5 h-3.5" />
-              </button>
-            </div>
-          )}
-        </div>
-
-        {/* Region Information */}
-        {!isVisuallyCollapsed && profile?.tenantName && (
-          <div className="text-caption font-semibold text-app-muted border-t border-app-border pt-2 flex justify-between items-center gap-2">
-            <span className="truncate">{profile.tenantName}</span>
-            {profile.tenantSlug && (
-              <span className="bg-app-accent-surface text-app-accent-text px-1.5 py-0.5 rounded-sm font-semibold uppercase tracking-headline shrink-0 leading-none">
-                {profile.tenantSlug}
-              </span>
-            )}
-          </div>
-        )}
-      </div>
+        <nav className="agent-nav-links" aria-label="Main navigation">
+          {navItems.map(item => {
+            const active = item.href === "/agent" ? pathname === item.href : pathname === item.href || pathname.startsWith(`${item.href}/`);
+            return <Link href={item.href} key={item.href} aria-label={item.name} aria-current={active ? "page" : undefined} onClick={onMobileClose} className={active ? "is-active" : ""} title={item.name}><item.icon className="h-5 w-5 shrink-0"/><span className="agent-nav-label">{item.name}</span><span className="agent-rail-tooltip" aria-hidden="true">{item.name}</span></Link>;
+          })}
+        </nav>
+        <footer className="agent-account-footer border-t border-app-border bg-app-surface-alt">
+          <button className="agent-account-button" aria-label="Account details" title="Account details" onClick={() => account.current?.showModal()}><span className="agent-avatar">{profile?.initials ?? "…"}</span><span className="agent-account-copy"><strong>{profile?.displayName ?? (loading ? "Loading account" : "Account unavailable")}</strong><span>{profile?.roleName}</span></span><UserRound className="agent-account-icon h-4 w-4 shrink-0"/></button>
+          <button className="agent-signout" aria-label="Sign out" title="Sign out" disabled={loggingOut} onClick={logout}><LogOut size={18}/><span className="agent-nav-label">{loggingOut ? "Signing out…" : "Sign out"}</span></button>
+          {logoutError && <p role="alert" className="text-xs text-app-danger-text break-words">{logoutError}</p>}
+        </footer>
       </aside>
-    </>
-  );
+    </div>
+    <dialog ref={account} className="agent-nav-dialog" aria-labelledby="agent-account-title">
+      <div className="agent-dialog-heading"><h2 id="agent-account-title">Account details</h2><button className="agent-nav-button" aria-label="Close account details" onClick={() => account.current?.close()}><X size={20}/></button></div>
+      <dl className="agent-account-details"><dt>Name</dt><dd>{profile?.displayName ?? "Unavailable"}</dd><dt>Email</dt><dd>{user?.email ?? "Unavailable"}</dd><dt>Role</dt><dd>{profile?.roleName ?? "Unavailable"}</dd><dt>Workspace</dt><dd>{profile?.tenantName ?? "Unavailable"}</dd></dl>
+    </dialog>
+  </>;
 }
