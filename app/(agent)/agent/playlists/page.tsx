@@ -3,10 +3,12 @@
 import React, { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { AlertTriangle, Plus } from "lucide-react";
+import "@/components/agent/playlists/playlists-responsive.css";
+import PlaylistDetailsDrawer from "@/components/agent/playlists/playlist-details-drawer";
 import PlaylistsTable from "@/components/agent/playlists/playlists-table";
 import { PlaylistSummary } from "@/components/agent/playlists/types";
 import { deletePlaylist, fetchPlaylists } from "@/components/agent/playlists/api";
-import { Button, Card, CollectionPagination, CollectionToolbar, EmptyState, PageShell, SkeletonTable } from "@/components/ui";
+import { Button, Card, CollectionPagination, CollectionToolbar, EmptyState, SearchInput, SkeletonTable } from "@/components/ui";
 
 export default function AgentPlaylistsPage() {
   const router = useRouter();
@@ -17,6 +19,10 @@ export default function AgentPlaylistsPage() {
   const isFirstLoad = loading && playlists.length === 0;
 
 
+  const [selectedPlaylist, setSelectedPlaylist] = useState<PlaylistSummary | null>(null);
+  const [controlsOpen, setControlsOpen] = useState(false);
+  const [deleteError, setDeleteError] = useState<{ id: string; message: string } | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [search, setSearch] = useState("");
   const [sort, setSort] = useState("updated-desc");
@@ -67,20 +73,22 @@ export default function AgentPlaylistsPage() {
 
   const removePlaylist = async (playlist: PlaylistSummary) => {
     if (!window.confirm(`Delete “${playlist.name}”? This cannot be undone.`)) return;
-    const previous = playlists;
-    setPlaylists((prev) => prev.filter((p) => p.id !== playlist.id));
+    setDeletingId(playlist.id);
+    setDeleteError(null);
     try {
       await deletePlaylist(playlist.id);
+      setPlaylists((prev) => prev.filter((p) => p.id !== playlist.id));
+      setSelectedPlaylist((current) => current?.id === playlist.id ? null : current);
     } catch (err) {
-      setPlaylists(previous);
-      alert(err instanceof Error ? err.message : "Failed to delete playlist");
-    }
+      setDeleteError({ id: playlist.id, message: err instanceof Error ? err.message : "Failed to delete playlist" });
+    } finally { setDeletingId(null); }
   };
 
   return (
-    <PageShell>
+    <div className="playlists-page flex h-full min-h-0 overflow-hidden">
+      <div className="playlists-content min-w-0 min-h-0 flex-1 flex flex-col gap-4 overflow-y-auto px-3 py-4 sm:px-6 lg:px-8">
       {/* Header Section */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b border-app-border pb-5 shrink-0">
+      <div className="flex flex-wrap items-center justify-between gap-4 border-b border-app-border pb-5 shrink-0">
         <div>
           <h1 className="font-heading text-h5 font-semibold tracking-headline text-app-text">
             Playlists
@@ -102,9 +110,13 @@ export default function AgentPlaylistsPage() {
       </div>
 
       {/* Collection controls */}
-      <Card size="widget" padded>
+      <Card size="widget" padded className="shrink-0 space-y-3">
+        <div className="flex flex-wrap gap-3">
+          <SearchInput className="min-w-0 flex-[1_1_220px]" aria-label="Search playlists" placeholder="Search playlist name…" value={search} onChange={(event) => { setSearch(event.target.value); resetPage(); }} />
+          <Button variant="secondary" className="playlists-controls-toggle" aria-expanded={controlsOpen} aria-controls="playlist-controls" onClick={() => setControlsOpen(!controlsOpen)}>Sort & group{sort !== "updated-desc" || groupBy !== "none" ? " (" + (Number(sort !== "updated-desc") + Number(groupBy !== "none")) + ")" : ""}</Button>
+        </div>
+        <div id="playlist-controls" className={"playlists-controls " + (controlsOpen ? "is-open" : "")}>
         <CollectionToolbar
-          search={{ value: search, onChange: (value) => { setSearch(value); resetPage(); }, placeholder: "Search playlist name…" }}
           sort={{ value: sort, onChange: (value) => { setSort(value); resetPage(); }, options: [
             { value: "updated-desc", label: "Last updated: newest" }, { value: "updated-asc", label: "Last updated: oldest" }, { value: "name-asc", label: "Name: A–Z" }, { value: "name-desc", label: "Name: Z–A" },
           ] }}
@@ -114,10 +126,12 @@ export default function AgentPlaylistsPage() {
           hasActiveControls={Boolean(search) || sort !== "updated-desc" || groupBy !== "none"}
           onClear={() => { setSearch(""); setSort("updated-desc"); setGroupBy("none"); resetPage(); }}
         />
+        </div>
       </Card>
+      {deleteError && <p role="alert" className="rounded-lg border border-app-danger-border bg-app-danger-surface p-3 text-body text-app-danger-text">{deleteError.message}</p>}
 
       {/* Table / states */}
-      <div className="flex-1">
+      <div className="min-w-0 shrink-0">
         {isFirstLoad ? (
           <Card size="panel" className="overflow-hidden">
             <SkeletonTable rows={6} cols={5} label="Loading playlists…" />
@@ -135,9 +149,16 @@ export default function AgentPlaylistsPage() {
               }
             />
           </Card>
+        ) : playlists.length === 0 ? (
+          <Card size="panel" className="p-6"><EmptyState title="No playlists yet" description="Create your first content loop to get started." action={<Button variant="primary" onClick={() => router.push("/agent/playlists/create-playlist")}>Create Playlist</Button>} /></Card>
+        ) : visiblePlaylists.length === 0 ? (
+          <Card size="panel" className="p-6"><EmptyState title="No matching playlists" description="Try a different playlist name." action={<Button variant="secondary" onClick={() => { setSearch(""); resetPage(); }}>Clear search</Button>} /></Card>
         ) : (
           <PlaylistsTable
             playlists={visiblePlaylists}
+            onSelect={(playlist) => { setSelectedPlaylist(playlist); setDeleteError(null); }}
+            selectedId={selectedPlaylist?.id}
+            deletingId={deletingId}
             onEdit={editPlaylist}
             onDelete={removePlaylist}
           />
@@ -146,6 +167,8 @@ export default function AgentPlaylistsPage() {
       {!isFirstLoad && !error && (
         <CollectionPagination page={page} pageSize={pageSize} total={sortedPlaylists.length} onPageChange={setPage} onPageSizeChange={(value) => { setPageSize(value); resetPage(); }} />
       )}
-    </PageShell>
+      </div>
+      {selectedPlaylist && <PlaylistDetailsDrawer key={selectedPlaylist.id} playlist={selectedPlaylist} onClose={() => setSelectedPlaylist(null)} onEdit={() => editPlaylist(selectedPlaylist)} onDelete={() => removePlaylist(selectedPlaylist)} deleting={deletingId === selectedPlaylist.id} deleteError={deleteError?.id === selectedPlaylist.id ? deleteError.message : undefined} />}
+    </div>
   );
 }
