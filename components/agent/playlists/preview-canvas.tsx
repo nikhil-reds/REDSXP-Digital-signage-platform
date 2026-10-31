@@ -58,7 +58,7 @@ export default function PreviewCanvas({
   displayName,
   displayRes,
   aspect,
-  landscape,
+
   thumb,
   letterbox,
   assetAspect,
@@ -83,6 +83,17 @@ export default function PreviewCanvas({
   onToggleSafeAction,
   onToggleSafeBleed,
 }: PreviewCanvasProps) {
+  const stageRef = useRef<HTMLDivElement>(null);
+  const [stageSize, setStageSize] = useState({ width: 0, height: 0 });
+  useEffect(() => {
+    if (!stageRef.current) return;
+    const observer = new ResizeObserver(([entry]) => setStageSize({ width: entry.contentRect.width, height: entry.contentRect.height }));
+    observer.observe(stageRef.current);
+    return () => observer.disconnect();
+  }, []);
+  const ratioParts = aspect.split(/[/:]/).map(Number);
+  const ratio = ratioParts.length === 2 && ratioParts[1] > 0 ? ratioParts[0] / ratioParts[1] : Number(aspect) || 16 / 9;
+  const fittedWidth = Math.max(0, Math.min(stageSize.width, stageSize.height * ratio));
   const videoRefs = useRef(new Map<string, HTMLVideoElement>());
   const [muted, setMuted] = useState(true);
   const hasVideo = activeClips.some((clip) => clip.type === "Video");
@@ -102,15 +113,14 @@ export default function PreviewCanvas({
   }, [playing, currentClipKey, muted, activeClips]);
 
   return (
-    <main className="flex-1 flex flex-col items-center justify-center gap-3 min-h-0 min-w-0 px-6 py-4 bg-app-canvas">
+    <main className="editor-preview flex-1 flex flex-col gap-3 min-h-0 min-w-0 p-3 bg-app-canvas">
+      <div ref={stageRef} className="editor-preview-stage flex min-h-0 min-w-0 flex-1 items-center justify-center overflow-hidden">
       <div
-        className="relative bg-black rounded-xl overflow-hidden shadow-2xl ring-1 ring-black/10 dark:ring-white/5 transition-[aspect-ratio] duration-200"
+        className="editor-preview-frame shrink-0 relative bg-black rounded-xl overflow-hidden shadow-2xl ring-1 ring-black/10 dark:ring-white/5 transition-[aspect-ratio] duration-200"
         style={{
           aspectRatio: aspect,
-          maxHeight: "calc(100% - 60px)",
-          maxWidth: "100%",
-          width: landscape ? "min(100%, 900px)" : undefined,
-          height: !landscape ? "calc(100% - 60px)" : undefined,
+          width: fittedWidth,
+          height: fittedWidth / ratio,
         }}
       >
         {activeClips.length > 0 ? (
@@ -237,7 +247,8 @@ export default function PreviewCanvas({
         </div>
       </div>
 
-      <div className="flex items-center gap-2.5 h-10">
+      </div>
+      <div className="editor-preview-controls flex shrink-0 flex-wrap items-center justify-center gap-2">
         <button
           onClick={onRestart}
           title="Restart"
@@ -264,8 +275,8 @@ export default function PreviewCanvas({
         <span className="text-body text-app-muted min-w-[110px] text-center">
           <span className="text-app-text font-semibold">{timeLabel}</span> / {totalLabel}
         </span>
-        <div className="w-px h-5 bg-app-border" />
-        <div className="flex items-center gap-2">
+        <details className="editor-safe-controls"><summary className="cursor-pointer text-caption">Safe areas</summary>
+        <div className="flex flex-wrap items-center gap-2">
           <label className="inline-flex items-center gap-1 text-caption font-semibold text-app-muted cursor-pointer">
             <input type="checkbox" checked={safeTitleOn} onChange={onToggleSafeTitle} className="accent-[var(--reds-teal)] cursor-pointer" />
             Title Safe
@@ -284,6 +295,7 @@ export default function PreviewCanvas({
             Bleed
           </label>
         </div>
+        </details>
       </div>
     </main>
   );
