@@ -1,4 +1,5 @@
 import React from "react";
+import "./editor-responsive.css";
 import { Skeleton, SkeletonRegion } from "@/components/ui";
 
 /**
@@ -15,7 +16,7 @@ export default function PlaylistEditorSkeleton() {
   return (
     <SkeletonRegion
       label="Loading playlist editor…"
-      className="flex h-screen flex-col overflow-hidden bg-app-canvas"
+      className="editor-loading flex h-full min-h-0 flex-col overflow-hidden bg-app-canvas"
     >
       {/* Toolbar */}
       <div className="flex shrink-0 items-center justify-between gap-3 border-b border-app-border bg-app-surface px-4 py-3">
