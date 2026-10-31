@@ -3,6 +3,7 @@ import { PERMISSIONS } from "@/lib/rbac";
 import { requirePermission } from "@/lib/session";
 import { prisma } from "@/lib/prisma";
 import { getPresignedDownloadUrl } from "@/lib/s3";
+import { validateMediaFile } from "@/lib/media-upload";
 
 function isExternalUrl(sourceType?: string | null) {
   return sourceType === "external_url";
@@ -84,6 +85,10 @@ export async function POST(request: NextRequest) {
 
     // Resolve MediaType
     const sourceType = body.sourceType === "external_url" ? "external_url" : "upload";
+    if (sourceType === "upload") {
+      const error = validateMediaFile({ name: String(body.filename), size: Number(body.sizeBytes) });
+      if (error) return NextResponse.json({ error }, { status: 400 });
+    }
     const externalUrl = sourceType === "external_url" ? validateHttpUrl(body.url ?? body.externalUrl ?? body.cdnUrl) : null;
 
     if (sourceType === "external_url" && !externalUrl) {
@@ -98,7 +103,14 @@ export async function POST(request: NextRequest) {
       mediaType = await prisma.mediaType.create({ data: { name: typeName } });
     }
 
-    const media = await prisma.media.create({
+    const media = await prisma.$transaction(async (tx) => {
+      if (sourceType === "upload") {
+        // Serialize saves of the same uploaded object, including a retry after a lost response.
+        await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${auth.user.tenantId}), hashtext(${body.s3Key}))`;
+        const existing = await tx.media.findFirst({ where: { tenantId: auth.user.tenantId, s3Key: body.s3Key } });
+        if (existing) return existing;
+      }
+      return tx.media.create({
       data: {
         tenantId: auth.user.tenantId,
         name: body.name,
@@ -114,6 +126,7 @@ export async function POST(request: NextRequest) {
         status: body.status || "READY",
         mediaTypeId: mediaType.id,
       },
+      });
     });
 
     const cdnUrl = isExternalUrl(media.sourceType) ? (media.externalUrl ?? media.cdnUrl) : await getPresignedDownloadUrl(media.s3Key).catch(() => media.cdnUrl);
