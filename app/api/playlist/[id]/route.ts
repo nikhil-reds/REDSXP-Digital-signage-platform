@@ -124,7 +124,7 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
       return NextResponse.json({ error: "Playlist not found" }, { status: 404 });
     }
 
-    if (flow?.sensors.some(sensor => sensor.triggerKind === 'serial-message') &&
+    if (process.env.SENSOR_MANIFEST_V5_ENABLED !== 'true' && flow?.sensors.some(sensor => sensor.triggerKind === 'serial-message') &&
         await prisma.calendar.count({ where: { playlistId: id, tenantId: auth.user.tenantId } }) > 0) {
       return NextResponse.json({ error: "Controller-message rules cannot be added to a scheduled playlist until the worker and player support them." }, { status: 409 });
     }
