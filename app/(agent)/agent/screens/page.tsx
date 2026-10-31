@@ -63,6 +63,7 @@ export default function AgentScreensPage() {
   const [pendingDownload, setPendingDownload] = useState<PlayerDownload | null>(null);
 
   // Filters State
+  const [filtersOpen, setFiltersOpen] = useState(false);
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("All");
   const [groupFilter, setGroupFilter] = useState("All");
@@ -167,6 +168,7 @@ export default function AgentScreensPage() {
 
     return matchesSearch && matchesStatus && matchesGroup && matchesLocation && matchesModel && matchesAlerts;
   });
+  const activeFilterCount = [statusFilter, groupFilter, locationFilter, modelFilter, alertsFilter].filter((value) => value !== "All").length;
   const totalPages = Math.max(1, Math.ceil(filteredScreens.length / pageSize));
   const visibleScreens = filteredScreens.slice((Math.min(page, totalPages) - 1) * pageSize, Math.min(page, totalPages) * pageSize);
   const resetToFirstPage = () => setPage(1);
@@ -174,7 +176,7 @@ export default function AgentScreensPage() {
   if (!isSessionLoading && (!canReadScreens || loadError?.status === 403)) {
     return (
       <div className="flex h-full overflow-hidden">
-        <div className="flex min-w-0 flex-1 flex-col overflow-y-auto px-8 py-6 pb-24">
+        <div className="flex min-w-0 flex-1 flex-col overflow-y-auto px-3 py-4 sm:px-6 lg:px-8 pb-24">
           <AccessDeniedCard resource="Screens & Device Players" roleName={user?.role.name} />
         </div>
       </div>
@@ -184,7 +186,7 @@ export default function AgentScreensPage() {
   if (loadError) {
     return (
       <div className="flex h-full overflow-hidden">
-        <div className="flex min-w-0 flex-1 flex-col overflow-y-auto px-8 py-6 pb-24">
+        <div className="flex min-w-0 flex-1 flex-col overflow-y-auto px-3 py-4 sm:px-6 lg:px-8 pb-24">
           <Card size="panel" className="flex min-h-[400px] items-center justify-center p-6 text-center">
             <div className="max-w-md">
               <ShieldAlert className="mx-auto h-8 w-8 text-app-danger-text" aria-hidden="true" />
@@ -203,10 +205,10 @@ export default function AgentScreensPage() {
   }
 
   return (
-    <div className="flex h-full overflow-hidden relative">
-      <div className="flex-1 flex flex-col min-w-0 space-y-6 overflow-y-auto px-8 py-6 pb-24">
+    <div className="screens-page flex h-full min-h-0 overflow-hidden relative">
+      <div className="screens-content flex-1 flex flex-col min-w-0 min-h-0 gap-4 overflow-y-auto px-3 py-4 sm:px-6 lg:px-8">
         {/* Header Section */}
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b border-app-border pb-5 shrink-0">
+        <div className="flex flex-wrap items-center justify-between gap-4 border-b border-app-border pb-5 shrink-0">
           <div>
             <h1 className="font-heading text-h5 font-semibold tracking-headline text-app-text">
               Screens &amp; Device Players
@@ -216,7 +218,7 @@ export default function AgentScreensPage() {
             </p>
           </div>
 
-          <div className="flex items-center gap-2 self-start sm:self-auto">
+          <div className="flex flex-wrap items-center gap-2">
             <SegmentedControl
               value={viewMode}
               onChange={setViewMode}
@@ -254,13 +256,25 @@ export default function AgentScreensPage() {
 
         {/* Advanced Filters Panel */}
         <Card size="widget" padded className="space-y-3 shrink-0">
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+          <div className="screens-search-row">
             <SearchInput
+              aria-label="Search screens"
               placeholder="Search screen, location, model…"
               value={search}
               onChange={(e) => { setSearch(e.target.value); resetToFirstPage(); }}
             />
 
+            <Button variant="secondary" className="screens-filter-toggle" aria-expanded={filtersOpen} aria-controls="screen-filters" onClick={() => setFiltersOpen(!filtersOpen)}>
+              Filters{activeFilterCount > 0 ? ` (${activeFilterCount})` : ""}
+            </Button>
+            {activeFilterCount > 0 && (
+              <Button variant="ghost" onClick={() => {
+                setStatusFilter("All"); setGroupFilter("All"); setLocationFilter("All");
+                setModelFilter("All"); setAlertsFilter("All"); resetToFirstPage();
+              }}>Clear filters</Button>
+            )}
+          </div>
+          <div id="screen-filters" className={`screens-filters ${filtersOpen ? "is-open" : ""}`}>
             <Select
               icon={Activity}
               value={statusFilter}
@@ -300,9 +314,6 @@ export default function AgentScreensPage() {
                 </option>
               ))}
             </Select>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 max-w-lg">
             <Select
               icon={Cpu}
               value={modelFilter}
@@ -331,7 +342,7 @@ export default function AgentScreensPage() {
         </Card>
 
         {/* Main Render Area */}
-        <div className="flex-1 flex flex-col min-h-0">
+        <div className="screens-results flex flex-col shrink-0">
           {isFirstLoad ? (
             viewMode === "table" ? (
               <Card size="panel" className="overflow-hidden">
@@ -355,6 +366,8 @@ export default function AgentScreensPage() {
                 ) : undefined}
               />
             </Card>
+          ) : filteredScreens.length === 0 ? (
+            <Card size="panel" className="p-6"><EmptyState icon={Monitor} title="No matching screens" description="Try a different search or clear your filters." /></Card>
           ) : viewMode === "table" ? (
             <ScreensTable
               screens={visibleScreens}
