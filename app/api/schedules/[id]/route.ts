@@ -96,7 +96,7 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
       }
     }
 
-    if (await prisma.playlistFlowNode.count({ where: { playlistId: body.playlistId || existingCalendar.playlistId, kind: 'SENSOR', matchMode: 'exact' } }) > 0) {
+    if (process.env.SENSOR_MANIFEST_V5_ENABLED !== 'true' && await prisma.playlistFlowNode.count({ where: { playlistId: body.playlistId || existingCalendar.playlistId, kind: 'SENSOR', matchMode: 'exact' } }) > 0) {
       return NextResponse.json({ error: "This playlist has controller-message rules that cannot be scheduled until the worker and player support them." }, { status: 409 });
     }
 
