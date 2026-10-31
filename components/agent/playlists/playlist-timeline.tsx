@@ -99,8 +99,6 @@ export default function PlaylistTimeline({
   lockedTracks,
   overviewBlocks,
   selActionsVisible,
-  selActionsLeft,
-  selActionsTop,
   onSelLeft,
   onSelRight,
   onSelDuplicate,
@@ -114,7 +112,7 @@ export default function PlaylistTimeline({
   const trackContentHeight = rulerHeight + tracksHeight;
 
   return (
-    <div className="h-[300px] max-h-[42vh] min-h-[220px] flex flex-col bg-app-surface border-t border-app-border font-sans">
+    <div className="editor-timeline min-h-0 min-w-0 flex-1 flex flex-col bg-app-surface border-t border-app-border font-sans">
       <div className="flex flex-wrap items-center justify-between gap-2 px-3.5 py-2 border-b border-app-border shrink-0">
         <div className="flex items-center gap-3 min-w-0">
           <span className="text-body font-semibold text-app-text">Timeline</span>
@@ -122,11 +120,47 @@ export default function PlaylistTimeline({
             {itemCount} clips · {totalLabel} total loop
           </span>
         </div>
+              {selActionsVisible && (
+                <div
+                  className="editor-clip-actions flex gap-1 bg-app-surface border border-app-border rounded-md p-0.5 shadow-xs"
+                  role="group" aria-label="Selected clip actions"
+                >
+                  <button
+                    onClick={onSelLeft}
+                    title="Move earlier"
+                    className="w-8 h-8 rounded text-app-muted hover:bg-app-surface-alt hover:text-app-text flex items-center justify-center cursor-pointer"
+                  >
+                    <ArrowLeft className="w-2.5 h-2.5" />
+                  </button>
+                  <button
+                    onClick={onSelRight}
+                    title="Move later"
+                    className="w-8 h-8 rounded text-app-muted hover:bg-app-surface-alt hover:text-app-text flex items-center justify-center cursor-pointer"
+                  >
+                    <ArrowRight className="w-2.5 h-2.5" />
+                  </button>
+                  <button
+                    onClick={onSelDuplicate}
+                    title="Duplicate"
+                    className="w-8 h-8 rounded text-app-muted hover:bg-app-surface-alt hover:text-app-text flex items-center justify-center cursor-pointer"
+                  >
+                    <Copy className="w-2.5 h-2.5" />
+                  </button>
+                  <button
+                    onClick={onSelDelete}
+                    title="Delete (⌫)"
+                    className="w-8 h-8 rounded text-app-muted hover:bg-app-danger-surface hover:text-app-danger-text flex items-center justify-center cursor-pointer"
+                  >
+                    <Trash2 className="w-2.5 h-2.5" />
+                  </button>
+                </div>
+              )}
         <div className="flex items-center gap-2.5 shrink-0">
           <span className="inline-flex items-center gap-1 text-caption font-semibold text-app-muted">Snap on</span>
           <div className="flex items-center gap-1.5">
             <button
               onClick={onZoomOut}
+              aria-label="Zoom out timeline"
               className="w-[22px] h-[22px] rounded border border-app-border bg-app-surface text-app-muted text-body leading-none hover:bg-app-surface-alt hover:text-app-text cursor-pointer"
             >
               −
@@ -142,6 +176,7 @@ export default function PlaylistTimeline({
             />
             <button
               onClick={onZoomIn}
+              aria-label="Zoom in timeline"
               className="w-[22px] h-[22px] rounded border border-app-border bg-app-surface text-app-muted text-body leading-none hover:bg-app-surface-alt hover:text-app-text cursor-pointer"
             >
               +
@@ -151,7 +186,7 @@ export default function PlaylistTimeline({
       </div>
 
       <div className="flex-1 min-h-0 overflow-y-auto">
-        <div className="grid grid-cols-[96px_1fr] min-h-full">
+        <div className="grid grid-cols-[80px_minmax(0,1fr)] min-h-full">
           <div className="sticky left-0 z-20 border-r border-app-border bg-app-surface">
             <div style={{ height: `${rulerHeight}px` }} />
             {zoneLanes.map((zone) => (
@@ -178,7 +213,7 @@ export default function PlaylistTimeline({
             ))}
           </div>
 
-          <div className="overflow-x-auto overflow-y-hidden relative min-w-0">
+          <div className="editor-timeline-scroll overflow-x-auto overflow-y-hidden relative min-w-0" tabIndex={0} role="region" aria-label="Timeline tracks; scroll horizontally to view all clips">
             <div className="relative" style={{ width: `${timelineWidth}px`, minWidth: "100%", height: `${trackContentHeight}px` }}>
             <div
               onClick={onRulerClick}
@@ -274,41 +309,7 @@ export default function PlaylistTimeline({
                 </button>
               ))}
 
-              {selActionsVisible && (
-                <div
-                  className="absolute -top-0.5 z-[8] flex gap-0.5 bg-app-surface border border-app-border rounded-md p-0.5 shadow-xs"
-                  style={{ left: `${selActionsLeft}px`, top: `${selActionsTop}px` }}
-                >
-                  <button
-                    onClick={onSelLeft}
-                    title="Move earlier"
-                    className="w-5 h-[18px] rounded text-app-muted hover:bg-app-surface-alt hover:text-app-text flex items-center justify-center cursor-pointer"
-                  >
-                    <ArrowLeft className="w-2.5 h-2.5" />
-                  </button>
-                  <button
-                    onClick={onSelRight}
-                    title="Move later"
-                    className="w-5 h-[18px] rounded text-app-muted hover:bg-app-surface-alt hover:text-app-text flex items-center justify-center cursor-pointer"
-                  >
-                    <ArrowRight className="w-2.5 h-2.5" />
-                  </button>
-                  <button
-                    onClick={onSelDuplicate}
-                    title="Duplicate"
-                    className="w-5 h-[18px] rounded text-app-muted hover:bg-app-surface-alt hover:text-app-text flex items-center justify-center cursor-pointer"
-                  >
-                    <Copy className="w-2.5 h-2.5" />
-                  </button>
-                  <button
-                    onClick={onSelDelete}
-                    title="Delete (⌫)"
-                    className="w-5 h-[18px] rounded text-app-muted hover:bg-app-danger-surface hover:text-app-danger-text flex items-center justify-center cursor-pointer"
-                  >
-                    <Trash2 className="w-2.5 h-2.5" />
-                  </button>
-                </div>
-              )}
+
             </div>
 
             {lockedTracks.map((t) => (
