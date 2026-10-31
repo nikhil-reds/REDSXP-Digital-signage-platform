@@ -1,5 +1,6 @@
 "use client";
 
+import "@/components/agent/schedules/schedules-responsive.css";
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { Plus, Calendar, ListChecks, AlertTriangle, Monitor } from "lucide-react";
 import ScheduleCalendar from "@/components/agent/schedules/schedule-calendar";
@@ -51,6 +52,10 @@ export default function AgentSchedulesPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [groupFilter, setGroupFilter] = useState("All");
   const [statusFilter, setStatusFilter] = useState("All");
+  const [query, setQuery] = useState("");
+  const [loadError, setLoadError] = useState("");
+  const [filtersOpen, setFiltersOpen] = useState(false);
+  const [groupError, setGroupError] = useState("");
   const [sort, setSort] = useState("start-asc");
   const [screenGroups, setScreenGroups] = useState<ScreenGroup[]>([]);
   const [groupDeviceIds, setGroupDeviceIds] = useState<Record<string, string[]>>({});
@@ -64,13 +69,17 @@ export default function AgentSchedulesPage() {
   const [conflictModalData, setConflictModalData] = useState<{ c1: ScheduleSummary; c2: ScheduleSummary } | null>(null);
 
   const loadSchedules = useCallback(() => {
+    setIsLoading(true);
+    setLoadError("");
     return fetchSchedules()
       .then(setSchedules)
-      .catch((err) => console.error("Failed to load schedules:", err))
+      .catch(() => setLoadError("Unable to load schedules. Please try again."))
       .finally(() => setIsLoading(false));
   }, []);
 
   useEffect(() => {
+    // Start the initial request with the same loading state used by Retry.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     loadSchedules();
   }, [loadSchedules]);
 
@@ -84,13 +93,14 @@ export default function AgentSchedulesPage() {
         const details = await Promise.all(groups.map((g) => fetchScreenGroup(g.id).catch(() => null)));
         if (cancelled) return;
         const map: Record<string, string[]> = {};
+        if (details.some(detail => !detail)) setGroupError("Some screen group filters could not load. Reload to try again.");
         groups.forEach((g, idx) => {
           const detail = details[idx];
           if (detail) map[g.id] = detail.deviceIds;
         });
         setGroupDeviceIds(map);
       })
-      .catch((err) => console.error("Failed to load screen groups:", err));
+      .catch(() => setGroupError("Screen group filters are unavailable. Reload to try again."));
 
     return () => {
       cancelled = true;
@@ -101,6 +111,7 @@ export default function AgentSchedulesPage() {
 
   // Group filter application
   const filteredSchedules = schedules.filter((sch) => {
+    if (!`${sch.name} ${sch.playlistName}`.toLowerCase().includes(query.trim().toLowerCase())) return false;
     const matchesStatus = statusFilter === "All" || sch.status === statusFilter;
     if (groupFilter === "All") return matchesStatus;
     const groupDevices = groupDeviceIds[groupFilter] ?? [];
@@ -124,7 +135,7 @@ export default function AgentSchedulesPage() {
   };
 
   return (
-    <PageShell>
+    <PageShell className="schedules-page">
 
       {/* Header Section */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b border-app-border pb-5 shrink-0">
@@ -151,32 +162,39 @@ export default function AgentSchedulesPage() {
       {isFirstLoad ? (
         <SkeletonStatGrid columns={4} label="Loading schedule counts…" />
       ) : (
-      <StatGrid columns={4}>
+      <div className="schedule-stats"><p className="text-caption text-app-muted">Workspace totals · filters apply to the calendar</p><StatGrid columns={4}>
         <StatTile label="Total Schedules" value={`${schedules.length}`} icon={ListChecks} />
         <StatTile label="Active Schedules" value={`${schedules.filter((s) => s.status === "ACTIVE").length}`} icon={Calendar} />
         <StatTile label="Conflicts" value={`${conflicts.length}`} icon={AlertTriangle} tone={conflicts.length ? "warning" : undefined} />
         <StatTile label="Targeted Screens" value={`${new Set(schedules.flatMap((s) => s.deviceIds)).size}`} icon={Monitor} />
-      </StatGrid>
+      </StatGrid></div>
       )}
 
+      <p className="schedule-mobile-counts">Workspace: {schedules.length} schedules · {conflicts.length} conflicts · {new Set(schedules.flatMap(schedule=>schedule.deviceIds)).size} screens</p>
       {/* Calendar navigation provides chronological page movement; these controls refine its data. */}
-      <Card size="widget" padded>
+      <Card size="widget" padded className="schedule-filters-card">
+        <button type="button" className="schedule-filter-toggle" aria-expanded={filtersOpen} onClick={() => setFiltersOpen(!filtersOpen)}>Filters &amp; sort{query || groupFilter !== "All" || statusFilter !== "All" ? " · Active" : ""}</button>
+        <div className="schedule-filters" data-open={filtersOpen}>
         <CollectionToolbar
+          search={{ value: query, onChange: setQuery, placeholder: "Search schedules" }}
           filters={[
             { id: "screen-group", label: "screen group", value: groupFilter, onChange: setGroupFilter, options: [{ value: "All", label: "All screen groups" }, ...screenGroups.map((group) => ({ value: group.id, label: group.name }))] },
             { id: "status", label: "status", value: statusFilter, onChange: setStatusFilter, options: [{ value: "All", label: "All statuses" }, { value: "ACTIVE", label: "Active" }, { value: "INACTIVE", label: "Inactive" }] },
           ]}
           sort={{ value: sort, onChange: setSort, options: [{ value: "start-asc", label: "Start date: earliest" }, { value: "priority-desc", label: "Priority: highest" }, { value: "name-asc", label: "Name: A–Z" }] }}
-          hasActiveControls={groupFilter !== "All" || statusFilter !== "All" || sort !== "start-asc"}
-          onClear={() => { setGroupFilter("All"); setStatusFilter("All"); setSort("start-asc"); }}
+          hasActiveControls={!!query || groupFilter !== "All" || statusFilter !== "All" || sort !== "start-asc"}
+          onClear={() => { setQuery(""); setGroupFilter("All"); setStatusFilter("All"); setSort("start-asc"); }}
         />
+        </div>
+        {groupError && <p role="status" className="text-caption text-app-warning-text">{groupError}</p>}
       </Card>
 
       {/* Calendar Area */}
-      <div className="flex-1">
+      <div className="schedule-calendar-area">
+        {loadError && <div role="alert" className="schedule-load-error">{loadError}<Button onClick={loadSchedules}>Retry</Button></div>}
         {isFirstLoad ? (
           <ScheduleCalendarSkeleton />
-        ) : schedules.length === 0 ? (
+        ) : !loadError && schedules.length === 0 ? (
           <Card size="panel" className="min-h-[300px] flex items-center justify-center">
             <EmptyState
               icon={Calendar}
