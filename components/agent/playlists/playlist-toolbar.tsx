@@ -59,8 +59,8 @@ export default function PlaylistToolbar({
         : "text-app-accent-text";
 
   return (
-    <div className="h-14 border-b border-app-border bg-app-surface flex items-center justify-between px-4 shrink-0 z-10 font-sans gap-3">
-      <div className="flex items-center gap-3 min-w-0">
+    <div className="editor-main-toolbar min-h-14 border-b border-app-border bg-app-surface flex items-center justify-between px-4 shrink-0 z-10 font-sans gap-3">
+      <div className="editor-title-controls flex items-center gap-3 min-w-0">
         <span className="w-8 h-8 rounded-lg bg-app-accent text-app-accent-on font-heading font-semibold text-lead flex items-center justify-center shrink-0">
           R
         </span>
@@ -71,7 +71,7 @@ export default function PlaylistToolbar({
             value={playlistName}
             onChange={onNameChange}
             aria-label="Playlist name"
-            className="text-body font-semibold text-app-text bg-transparent border-b border-transparent hover:border-app-border-strong focus:border-app-accent-text focus:outline-none py-0.5 w-[240px]"
+            className="text-body font-semibold text-app-text bg-transparent border-b border-transparent hover:border-app-border-strong focus:border-app-accent-text focus:outline-none py-0.5 w-full min-w-0"
           />
           <span className="text-caption text-app-muted">
             {itemCount} clips · {totalLabel} loop ·{" "}
@@ -103,10 +103,12 @@ export default function PlaylistToolbar({
         />
       </div>
 
-      <div className="flex items-center gap-2">
+      <div className="editor-save-controls flex items-center gap-2">
         <button
           onClick={onOpenDisplayConfig}
           title="Configure display format"
+          aria-label="Configure display"
+          data-display-config
           className="h-[34px] flex items-center gap-2 px-3 rounded-lg border border-app-border bg-app-surface-alt text-app-text hover:border-app-accent-text cursor-pointer transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-app-accent-text"
         >
           <span className="inline-flex w-[22px] h-4 items-center justify-center">
