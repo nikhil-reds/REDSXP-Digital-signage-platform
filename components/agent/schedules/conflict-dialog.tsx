@@ -19,6 +19,8 @@ export default function ConflictDialog({
   campaign1,
   campaign2,
 }: ConflictDialogProps) {
+  const tied = campaign1.priority === campaign2.priority;
+  const sharedScreens = campaign1.deviceIds.filter(id=>campaign2.deviceIds.includes(id)).length;
   const winner = campaign2.priority > campaign1.priority ? campaign2 : campaign1;
   const loser = campaign2.priority > campaign1.priority ? campaign1 : campaign2;
   const sharedDays = campaign1.daysOfWeek.filter((d) => campaign2.daysOfWeek.includes(d));
@@ -33,8 +35,9 @@ export default function ConflictDialog({
       open
       onClose={onClose}
       title="Schedule Conflict Detected"
-      description="Two campaigns overlap on shared screens. The higher priority wins."
+      description={`Two schedules overlap on ${sharedScreens} shared screen(s). Compare their priorities below.`}
       size="md"
+      className="schedule-conflict-dialog"
       footer={
         <Button variant="secondary" onClick={onClose}>
           Close Dialog
@@ -54,7 +57,7 @@ export default function ConflictDialog({
             <span className="font-semibold">
               {campaign2.dailyStartTime}–{campaign2.dailyEndTime}
             </span>{" "}
-            on shared screens.
+            on {sharedScreens} shared screen(s).
           </p>
         </div>
 
@@ -78,7 +81,7 @@ export default function ConflictDialog({
                 </span>
               </div>
               <div className="flex items-center gap-2 shrink-0">
-                <Badge tone={data.id === winner.id ? "accent" : "neutral"}>
+                <Badge tone={!tied && data.id === winner.id ? "accent" : "neutral"}>
                   Priority {data.priority}
                 </Badge>
                 <IconButton
@@ -97,19 +100,10 @@ export default function ConflictDialog({
         <div className="p-3.5 border border-app-accent/30 bg-app-accent-surface rounded-lg space-y-2">
           <h4 className="text-caption font-semibold uppercase tracking-headline text-app-accent-text flex items-center gap-1.5">
             <ShieldCheck className="w-4 h-4 shrink-0" />
-            Conflict Resolution Winner
+            Priority comparison
           </h4>
-          <ul className="text-body text-app-muted space-y-1 list-disc pl-4">
-            <li>
-              <span className="font-semibold text-app-text">“{winner.name}”</span> overrides “
-              {loser.name}” because Priority {winner.priority} is higher than Priority{" "}
-              {loser.priority}.
-            </li>
-            <li>
-              Displays automatically select the winning manifest on the overlap timeline. Fallback
-              assets are ignored.
-            </li>
-          </ul>
+          <p className="text-body text-app-muted">{tied ? 'These schedules have equal priority. Set different priorities to make the intended playback order explicit.' : '“' + winner.name + '” has higher priority (' + winner.priority + ') than “' + loser.name + '” (' + loser.priority + ').'}</p>
+          <p className="text-caption text-app-muted">Overlapping date range: {campaign1.startDate > campaign2.startDate ? campaign1.startDate : campaign2.startDate} – {campaign1.endDate < campaign2.endDate ? campaign1.endDate : campaign2.endDate}</p>
         </div>
       </div>
     </Modal>
