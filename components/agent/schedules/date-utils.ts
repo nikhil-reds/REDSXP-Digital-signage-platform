@@ -20,7 +20,10 @@ export function addDays(d: Date, amount: number): Date {
 
 export function addMonths(d: Date, amount: number): Date {
   const copy = new Date(d);
+  const day = copy.getDate();
+  copy.setDate(1);
   copy.setMonth(copy.getMonth() + amount);
+  copy.setDate(Math.min(day, new Date(copy.getFullYear(), copy.getMonth() + 1, 0).getDate()));
   return copy;
 }
 
