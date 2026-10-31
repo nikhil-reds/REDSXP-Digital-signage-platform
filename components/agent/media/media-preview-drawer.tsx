@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import {
   X,
   Film,
@@ -25,6 +25,7 @@ interface MediaPreviewDrawerProps {
   asset: MediaAsset;
   onClose: () => void;
   onDeleteAsset: (id: string) => Promise<boolean>;
+  errorMessage?: string;
 }
 
 function statusTone(status: MediaAsset["status"]): Tone {
@@ -37,9 +38,31 @@ export default function MediaPreviewDrawer({
   asset,
   onClose,
   onDeleteAsset,
+  errorMessage,
 }: MediaPreviewDrawerProps) {
   const [confirmDelete, setConfirmDelete] = useState(false);
 
+  const panelRef = useRef<HTMLDialogElement>(null);
+  const [docked, setDocked] = useState(false);
+  useEffect(() => {
+    const panel = panelRef.current;
+    const host = panel?.parentElement;
+    if (!panel || !host) return;
+    const previousFocus = document.activeElement as HTMLElement | null;
+    const observer = new ResizeObserver(([entry]) => setDocked(entry.contentRect.width >= 1440));
+    observer.observe(host);
+    return () => { observer.disconnect(); panel.close(); previousFocus?.focus(); };
+  }, []);
+  useEffect(() => {
+    const panel = panelRef.current;
+    if (!panel) return;
+    panel.close();
+    if (docked) panel.show(); else panel.showModal();
+    const content = panel.parentElement?.querySelector<HTMLElement>(".media-content");
+    const previousOverflow = content?.style.overflow;
+    if (!docked && content) content.style.overflow = "hidden";
+    return () => { if (content) content.style.overflow = previousOverflow ?? ""; };
+  }, [docked]);
   const isVideo = asset.type === "Video";
   const isHtml = asset.type === "HTML5";
   const isUsed = asset.usedInPlaylists.length > 0;
@@ -53,15 +76,19 @@ export default function MediaPreviewDrawer({
   };
 
   return (
-    <div className="w-96 bg-app-surface border-l border-app-border flex flex-col h-full font-sans shadow-2xl shrink-0 overflow-y-auto relative">
+    <dialog ref={panelRef} aria-label={asset.name + " preview"}
+      onCancel={(event) => { event.preventDefault(); onClose(); }}
+      onKeyDown={(event) => { if (docked && event.key === "Escape") { event.preventDefault(); onClose(); } }}
+      onClick={(event) => { if (!docked && event.target === event.currentTarget) { const rect = event.currentTarget.getBoundingClientRect(); if (event.clientX < rect.left || event.clientX > rect.right) onClose(); } }}
+      className={"media-preview " + (docked ? "media-preview-docked" : "media-preview-overlay") + " bg-app-surface text-app-text border-l border-app-border font-sans shadow-2xl"}>
       {/* Header */}
-      <div className="p-5 border-b border-app-border flex justify-between items-start gap-3 shrink-0">
+      <div className="media-preview-header p-4 border-b border-app-border flex justify-between items-start gap-3 shrink-0">
         <div className="flex items-start gap-3 min-w-0">
           <span className="p-2 bg-app-accent-surface text-app-accent-text rounded-lg shrink-0 mt-0.5">
             <TypeIcon className="w-5 h-5" />
           </span>
           <div className="min-w-0">
-            <h2 className="font-heading text-h6 font-semibold tracking-headline text-app-text truncate">
+            <h2 className="font-heading text-h6 font-semibold tracking-headline text-app-text break-words">
               {asset.name}
             </h2>
             <div className="mt-1.5 flex items-center gap-2 flex-wrap">
@@ -75,8 +102,10 @@ export default function MediaPreviewDrawer({
         <IconButton icon={X} onClick={onClose} aria-label="Close preview" size="sm" />
       </div>
 
+      <div className="media-preview-body min-h-0 flex-1 overflow-y-auto">
+      {errorMessage && <p role="alert" className="m-4 rounded-lg border border-app-danger-border bg-app-danger-surface p-3 text-body text-app-danger-text">{errorMessage}</p>}
       {/* Asset Preview Slot */}
-      <div className="border-b border-app-border bg-app-surface-alt aspect-video flex items-center justify-center relative overflow-hidden select-none shrink-0">
+      <div className="media-preview-slot border-b border-app-border bg-app-surface-alt aspect-video flex items-center justify-center relative overflow-hidden select-none shrink-0">
         {asset.cdnUrl && !isVideo && !isHtml && (
           /* eslint-disable-next-line @next/next/no-img-element */
           <img
@@ -86,7 +115,7 @@ export default function MediaPreviewDrawer({
           />
         )}
         {asset.cdnUrl && isVideo && (
-          <video src={asset.cdnUrl} className="absolute inset-0 w-full h-full object-contain" controls />
+          <video src={asset.cdnUrl} className="absolute inset-0 w-full h-full object-contain" controls playsInline preload="metadata" />
         )}
         {asset.cdnUrl && isHtml && isExternalLink && (
           <iframe
@@ -125,7 +154,7 @@ export default function MediaPreviewDrawer({
       <div className="p-5 border-b border-app-border space-y-3 shrink-0">
         <h3 className="text-body font-semibold text-app-text">Asset Information</h3>
 
-        <div className="grid grid-cols-2 gap-y-3 gap-x-4">
+        <div className="grid grid-cols-1 min-[400px]:grid-cols-2 gap-y-3 gap-x-4">
           <DataField label={isExternalLink ? "Source" : "File size"} value={asset.size} />
           <DataField label="Dimensions" value={asset.dimensions} />
           {asset.duration && <DataField label="Duration" value={asset.duration} />}
@@ -178,7 +207,7 @@ export default function MediaPreviewDrawer({
                 Confirm Deletion?
               </span>
               <p className="text-caption text-app-muted">This action cannot be undone.</p>
-              <div className="flex gap-2">
+              <div className="flex flex-wrap gap-2">
                 <Button
                   variant="secondary"
                   size="sm"
@@ -214,6 +243,7 @@ export default function MediaPreviewDrawer({
           )}
         </div>
       </div>
-    </div>
+      </div>
+    </dialog>
   );
 }
