@@ -1,0 +1,88 @@
+.playlist-editor { container: editor / size; min-width: 0; }
+.editor-main-toolbar { flex-wrap: wrap; padding-block: .5rem; gap: .5rem; }
+.editor-title-controls { flex: 1 1 260px; }
+.editor-title-controls > div { flex: 1; }
+.editor-title-controls > span:first-child { display: none; }
+.editor-save-controls { flex-wrap: wrap; }
+.editor-main-toolbar [data-display-config] { min-width: 0; }
+.editor-workspace-toolbar button { min-height: 36px; padding: .25rem .65rem; border: 1px solid var(--app-border); border-radius: .5rem; }
+.editor-workspace-toolbar button[aria-pressed="true"], .editor-workspace-toolbar button[aria-expanded="true"] { background: var(--app-accent-soft); color: var(--app-accent-text); border-color: var(--app-accent-border); }
+.editor-panel-tabs { display: none; }
+.editor-library-panel, .editor-inspector-panel { min-width: 0; min-height: 0; flex-shrink: 0; overflow: hidden; }
+.editor-library-panel { width: clamp(230px, 22cqw, 300px); }
+.editor-inspector-panel { width: clamp(260px, 24cqw, 330px); }
+.editor-library-panel > aside, .editor-inspector-panel > aside { width: 100%; height: 100%; min-height: 0; min-width: 0; }
+.playlist-editor[data-library="closed"] .editor-library-panel, .playlist-editor[data-inspector="closed"] .editor-inspector-panel { display: none; }
+.editor-inspector-panel { overflow-wrap: anywhere; }
+.editor-inspector-panel .truncate, .editor-inspector-panel .text-ellipsis { white-space: normal; overflow-wrap: anywhere; }
+.editor-inspector-panel input, .editor-inspector-panel select { min-width: 0; max-width: 100%; }
+.editor-sensor-settings { height: 100%; }
+.editor-flow-nodes { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 224px), 1fr)); gap: 1rem; align-items: stretch; }
+.editor-flow-node { min-width: 0; width: 100%; min-height: 112px; overflow-wrap: anywhere; overflow: hidden; }
+.editor-flow-node[aria-pressed="true"] { border-color: var(--app-accent-text); box-shadow: inset 0 0 0 1px var(--app-accent-text); }
+.editor-timeline-panel { height: min(var(--timeline-height, 240px), 38cqh); flex-shrink: 0; }
+.playlist-editor[data-timeline="closed"] .editor-timeline-panel { display: none; }
+.editor-timeline-size { min-height: 24px; background: var(--app-surface); border-top: 1px solid var(--app-border); }
+.editor-timeline-size input { width: 100px; }
+.editor-timeline > :first-child { gap: .5rem; }
+.editor-timeline > :first-child > div { flex-wrap: wrap; }
+.editor-preview-controls { max-height: 42%; overflow-y: auto; }
+.editor-preview-controls button { flex-shrink: 0; }
+.editor-safe-controls { max-width: 100%; }
+.editor-inspector-panel :focus-visible, .editor-flow-node:focus-visible, .editor-workspace-toolbar button:focus-visible { outline: 2px solid var(--app-accent-text); outline-offset: -2px; }
+.playlist-editor [role="dialog"] { max-height: calc(100dvh - 2rem); }
+.playlist-editor [role="dialog"] > .overflow-y-auto { min-height: 0; }
+.playlist-editor [role="dialog"] > :last-child { flex-wrap: wrap; }
+.playlist-editor [role="dialog"] h2 { white-space: normal; }
+.playlist-editor [role="dialog"] input { min-width: 0; }
+.editor-display-modal { overflow-wrap: anywhere; }
+.editor-display-modal > :first-child, .editor-display-modal > :nth-child(2), .editor-display-modal > :last-child { flex-shrink: 0; gap: .5rem; }
+.editor-display-modal > :nth-child(2) { flex-wrap: wrap; }
+.editor-display-modal button { min-height: 40px; }
+.editor-display-modal button[aria-label="Close"] { flex-shrink: 0; min-width: 40px; }
+.agent-portal:has(.playlist-editor) .agent-assistant-layer { display: none; }
+.playlist-editor .overflow-y-auto, .playlist-editor .overflow-auto, .editor-timeline-scroll { scrollbar-width: thin; scrollbar-color: var(--app-border-strong) transparent; }
+.playlist-editor .overflow-y-auto::-webkit-scrollbar, .playlist-editor .overflow-auto::-webkit-scrollbar, .editor-timeline-scroll::-webkit-scrollbar { display: block; width: 8px; height: 8px; }
+.playlist-editor ::-webkit-scrollbar-thumb { background: var(--app-border-strong); border-radius: 8px; }
+@container editor (max-width: 1100px) {
+  .editor-desktop-toggles { display: none; }
+  .editor-panel-tabs { display: flex; flex-wrap: wrap; gap: .25rem; }
+  .editor-body .editor-library-panel, .editor-body .editor-inspector-panel, .editor-timeline-panel { display: none; }
+  .playlist-editor[data-panel="library"] .editor-library-panel, .playlist-editor[data-panel="inspector"] .editor-inspector-panel { display: flex; width: 100%; flex: 1; }
+  .playlist-editor[data-panel="library"] .editor-flow-canvas, .playlist-editor[data-panel="inspector"] .editor-flow-canvas,
+  .playlist-editor[data-panel="library"] .editor-preview, .playlist-editor[data-panel="inspector"] .editor-preview { display: none; }
+  .playlist-editor[data-panel="timeline"] .editor-body { display: none; }
+  .playlist-editor[data-panel="timeline"] .editor-timeline-panel { display: flex; height: auto; flex: 1; }
+  .editor-timeline-size { display: none; }
+  .editor-workspace-toolbar { gap: .35rem; }
+  .editor-flow-canvas { padding: .75rem; }
+  .editor-main-toolbar button, .editor-workspace-toolbar button, .editor-inspector-panel input, .editor-inspector-panel select, .editor-clip-actions button { min-height: 40px; }
+}
+@container editor (max-width: 560px) {
+  .editor-main-toolbar { padding-inline: .5rem; }
+  .editor-save-controls { width: 100%; justify-content: space-between; gap: .25rem; }
+  .editor-save-controls > span { display: none; }
+  .editor-save-controls [data-display-config] { padding-inline: .5rem; }
+  .editor-save-controls [data-display-config] > span:last-child { display: none; }
+  .editor-main-toolbar input { font-size: 16px; }
+  .editor-panel-tabs { width: 100%; }
+  .editor-panel-tabs button { flex: 1; padding-inline: .3rem; }
+  .editor-inspector-panel > aside { border: 0; }
+  .editor-timeline input[type="range"] { width: 80px; }
+}
+@container editor (max-height: 380px) {
+  .editor-title-controls { flex-basis: 180px; gap: .4rem; }
+  .editor-main-toolbar { padding-block: .25rem; }
+  .editor-save-controls [data-display-config] > span:last-child { display: none; }
+  .editor-save-controls > span { display: none; }
+}
+@media (max-width: 1100px) {
+  .editor-loading > :first-child { flex-wrap: wrap; }
+  .editor-loading > :nth-child(2) > :first-child, .editor-loading > :nth-child(2) > :last-child { display: none; }
+}
+@media (max-width: 639px) {
+  .editor-display-modal > * { padding-inline: .75rem; }
+  .editor-display-modal .editor-device-card { grid-template-columns: 40px minmax(0,1fr); }
+  .editor-device-card > :nth-child(n+3) { grid-column: 2; }
+  .editor-display-modal > :last-child { flex-wrap: wrap; }
+}
