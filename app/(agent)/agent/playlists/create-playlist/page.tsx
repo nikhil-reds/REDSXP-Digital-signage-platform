@@ -1,9 +1,10 @@
 "use client";
 
-import React, { Suspense, useEffect, useState } from "react";
+import React, { Suspense, useEffect, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
-import { AlertTriangle, X, Workflow, MonitorPlay } from "lucide-react";
+import { AlertTriangle, X } from "lucide-react";
+import "@/components/agent/playlists/editor-responsive.css";
 import PlaylistEditorSkeleton from "@/components/agent/playlists/playlist-editor-skeleton";
 import PlaylistToolbar from "@/components/agent/playlists/playlist-toolbar";
 import AssetLibraryPanel from "@/components/agent/playlists/asset-library-panel";
@@ -18,12 +19,24 @@ import { usePlaylistEditor } from "@/components/agent/playlists/use-playlist-edi
 function PlaylistEditor() {
   const searchParams = useSearchParams();
   const playlistId = searchParams.get("id") ?? undefined;
-  const { onKeyDown, loading, loadError, toolbar, library, preview, inspector, timeline, displayModal, publishModal, flowItems, flowState, setFlowState } =
+  const { onKeyDown, loading, loadError, toolbar, library, preview, inspector, timeline, displayModal, publishModal, flowItems, flowState, setFlowState, selectClip } =
     usePlaylistEditor({ playlistId });
   const [dismissedError, setDismissedError] = useState<string | null>(null);
-  const [flow, setFlow] = useState(false);
-  useEffect(() => { if (flowState.sensors.length) setFlow(true); }, [flowState.sensors.length]);
-  const [timelineCollapsed, setTimelineCollapsed] = useState(false);
+  const [flowChoice, setFlow] = useState<boolean | null>(null);
+  const flow = flowChoice ?? flowState.sensors.length > 0;
+  const [timelineOpen, setTimelineOpen] = useState<boolean | null>(null);
+  const [panel, setPanel] = useState("canvas");
+  const [inspectorCollapsed, setInspectorCollapsed] = useState(false);
+  const [timelineHeight, setTimelineHeight] = useState(240);
+  const editorRef = useRef<HTMLDivElement>(null);
+  const [hasTimelineSpace, setHasTimelineSpace] = useState(true);
+  const timelineVisible = timelineOpen ?? hasTimelineSpace;
+  useEffect(() => {
+    if (!editorRef.current) return;
+    const observer = new ResizeObserver(([entry]) => setHasTimelineSpace(entry.contentRect.height > 580));
+    observer.observe(editorRef.current);
+    return () => observer.disconnect();
+  }, [loading]);
   const [libraryCollapsed, setLibraryCollapsed] = useState(false);
 
   if (loading) {
@@ -32,7 +45,7 @@ function PlaylistEditor() {
 
   if (loadError) {
     return (
-      <div className="h-screen flex flex-col items-center justify-center gap-3 bg-app-canvas text-center px-6">
+      <div className="h-full min-h-0 flex flex-col items-center justify-center gap-3 bg-app-canvas text-center px-6">
         <AlertTriangle className="w-6 h-6 text-app-danger-text" />
         <p className="font-heading text-h6 font-semibold tracking-headline text-app-text">Couldn&apos;t load the playlist editor</p>
         <p className="text-body text-app-muted max-w-sm">{loadError}</p>
@@ -47,9 +60,15 @@ function PlaylistEditor() {
 
   return (
     <div
-      onKeyDown={onKeyDown}
+      ref={editorRef}
+      onKeyDown={(event) => {
+        if ((event.target as HTMLElement).closest("button, a, summary") && [" ", "Enter", "Delete", "Backspace"].includes(event.key)) return;
+        onKeyDown(event);
+      }}
       tabIndex={-1}
-      className="h-screen flex flex-col overflow-hidden bg-app-canvas text-app-text outline-none relative"
+      data-panel={panel} data-library={libraryCollapsed ? "closed" : "open"} data-inspector={inspectorCollapsed ? "closed" : "open"} data-timeline={timelineVisible ? "open" : "closed"}
+      style={{ "--timeline-height": `${timelineHeight}px` } as React.CSSProperties}
+      className="playlist-editor h-full min-h-0 flex flex-col overflow-hidden bg-app-canvas text-app-text outline-none relative"
     >
       <PlaylistToolbar {...toolbar} />
 
@@ -69,15 +88,41 @@ function PlaylistEditor() {
         </div>
       )}
 
-      <button className="flex items-center gap-2 text-sm px-4 py-2 text-app-accent-text text-left border-b border-app-border" onClick={() => setFlow(!flow)}>{flow ? <MonitorPlay size={18}/> : <Workflow size={18}/>}{flow ? 'Switch to playback preview' : 'Add sensor / open dynamic flow'}</button>
-      <div className="flex gap-4 border-b border-app-border px-4 py-2 text-sm"><button aria-expanded={!libraryCollapsed} onClick={() => setLibraryCollapsed(v => !v)}>{libraryCollapsed ? 'Show' : 'Collapse'} media library</button><button aria-expanded={!timelineCollapsed} onClick={() => setTimelineCollapsed(v => !v)}>{timelineCollapsed ? 'Show' : 'Collapse'} timeline</button></div>
-      <div className={flow ? 'flex flex-1 min-h-0' : 'hidden'}><FlowWorkspace items={flowItems} flow={flowState} setFlow={setFlowState} library={libraryCollapsed ? null : <AssetLibraryPanel {...library} />} inspector={<PlaylistInspector {...inspector} />} timelineCollapsed={timelineCollapsed} /></div>{!flow && <div className="flex-1 flex overflow-hidden min-h-0">
-        {!libraryCollapsed && <AssetLibraryPanel {...library} />}
-        <PreviewCanvas {...preview} />
-        <PlaylistInspector {...inspector} />
-      </div>}
-
-      {!timelineCollapsed && <PlaylistTimeline {...timeline} />}
+      <div className="editor-workspace-toolbar flex shrink-0 flex-wrap items-center gap-2 border-b border-app-border px-3 py-2 text-body">
+        <div className="flex gap-1" role="group" aria-label="Workspace mode">
+          <button aria-pressed={!flow} onClick={() => { setFlow(false); setPanel("canvas"); }}>Playback</button>
+          <button aria-pressed={flow} onClick={() => { setFlow(true); setPanel("canvas"); }}>Flow</button>
+        </div>
+        <div className="editor-desktop-toggles flex flex-wrap gap-1">
+          <button aria-expanded={!libraryCollapsed} onClick={() => setLibraryCollapsed(v => !v)}>Library</button>
+          <button aria-expanded={!inspectorCollapsed} onClick={() => setInspectorCollapsed(v => !v)}>Inspector</button>
+          <button aria-expanded={timelineVisible} onClick={() => setTimelineOpen(!timelineVisible)}>Timeline</button>
+        </div>
+        <div className="editor-panel-tabs" role="group" aria-label="Workspace panel">
+          {["canvas", "library", "inspector", "timeline"].map(name => <button key={name} aria-pressed={panel === name} onClick={() => setPanel(name)}>{name === "canvas" ? "Workspace" : name[0].toUpperCase() + name.slice(1)}</button>)}
+        </div>
+      </div>
+      <div className="editor-body flex min-h-0 min-w-0 flex-1 overflow-hidden">
+        <div className={flow ? "flex min-h-0 min-w-0 flex-1" : "hidden"}>
+          <FlowWorkspace items={flowItems} flow={flowState} setFlow={setFlowState}
+            library={<div className="editor-library-panel"><AssetLibraryPanel {...library} /></div>}
+            inspector={<PlaylistInspector {...inspector} />}
+            selectedClipId={timeline.clips.find(clip => clip.selected)?.clip.instanceId}
+            onSelectClip={(id) => { selectClip(id); setInspectorCollapsed(false); setPanel("inspector"); }}
+            onInspect={() => { setInspectorCollapsed(false); setPanel("inspector"); }} />
+        </div>
+        <div className={!flow ? "editor-playback-workspace flex min-h-0 min-w-0 flex-1 overflow-hidden" : "hidden"}>
+          <div className="editor-library-panel"><AssetLibraryPanel {...library} /></div>
+          <PreviewCanvas {...preview} playing={!flow && preview.playing} />
+          <div className="editor-inspector-panel"><PlaylistInspector {...inspector} /></div>
+        </div>
+      </div>
+      <div className="editor-timeline-panel min-w-0 min-h-0 flex flex-col">
+        <label className="editor-timeline-size flex items-center justify-end gap-2 px-3 text-caption text-app-muted">Timeline height
+          <input aria-label="Timeline height" type="range" min="140" max="360" step="20" value={timelineHeight} onChange={event => setTimelineHeight(Number(event.target.value))} />
+        </label>
+        <PlaylistTimeline {...timeline} />
+      </div>
 
       <DisplayConfigModal {...displayModal} />
 
