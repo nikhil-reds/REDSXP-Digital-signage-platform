@@ -1,7 +1,10 @@
 import amqp from "amqplib";
 
-export async function enqueueSensorPublishJob(playlist: { id: string; tenantId: string; updatedAt: Date }) {
-  if (process.env.SENSOR_MANIFEST_V4_ENABLED !== "true") throw new Error("Sensor publishing is disabled on the CMS.");
+export async function enqueueSensorPublishJob(playlist: { id: string; tenantId: string; updatedAt: Date; flowNodes?: Array<{ kind: string; matchMode?: string | null }> }) {
+  const messageRules = playlist.flowNodes?.some(node => node.kind === 'SENSOR' && node.matchMode === 'exact');
+  if (messageRules ? process.env.SENSOR_MANIFEST_V5_ENABLED !== 'true' : process.env.SENSOR_MANIFEST_V4_ENABLED !== 'true') {
+    throw new Error(messageRules ? 'Controller-message publishing is disabled on the CMS (SENSOR_MANIFEST_V5_ENABLED).' : 'Sensor publishing is disabled on the CMS.');
+  }
   if (process.env.RABBITMQ_ENABLED === "false") throw new Error("Sensor publishing requires the scheduler queue.");
   const job = {
     jobId: crypto.randomUUID(), type: "scheduler.evaluate.now", reason: "playlist.sensor.publish",
