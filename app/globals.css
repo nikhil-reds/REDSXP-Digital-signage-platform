@@ -1,5 +1,61 @@
 @import "tailwindcss";
 
+/* Screens adapts to the space left by navigation and the device inspector. */
+.screens-page { container: screens-page / inline-size; }
+.screens-content { container: screens-content / inline-size; padding-bottom: max(6rem, env(safe-area-inset-bottom)); }
+.screens-results { min-width: 0; }
+.screens-search-row { display: flex; flex-wrap: wrap; gap: .75rem; }
+.screens-search-row > :first-child { flex: 1 1 220px; min-width: 0; }
+.screens-filters { display: none; gap: .75rem; grid-template-columns: minmax(0, 1fr); }
+.screens-filters.is-open { display: grid; }
+.screens-filters > * { min-width: 0; }
+.screens-desktop-table { display: none; }
+.screens-device-cards { display: block; }
+.screens-page button, .screens-page select, .screens-page input { min-height: 44px; }
+.screens-page input[type="checkbox"] { min-height: 20px; }
+.screens-content > :last-child > div { flex-wrap: wrap; }
+.screens-device-cards dd { overflow-wrap: anywhere; }
+.screens-page [role="dialog"] { max-height: calc(100dvh - 2rem); }
+.screens-page [role="dialog"] > :first-child h2 { white-space: normal; }
+.screens-page [role="dialog"] > :last-child { flex-wrap: wrap; }
+.screens-page [role="dialog"] > .overflow-y-auto { min-height: 0; }
+.screens-page [role="dialog"] input { min-width: 0; }
+.agent-portal:has(.screens-page [role="dialog"], .screens-page dialog:modal) .agent-assistant-layer { visibility: hidden; }
+.screen-details[open] { display: flex; flex-direction: column; overflow: hidden; padding: 0; min-width: 0; }
+.screen-details-docked { position: relative; inset: auto; margin: 0; width: 432px; height: 100%; max-height: none; flex-shrink: 0; }
+.screen-details-overlay { position: fixed; inset: 0 0 0 auto; margin: 0; width: min(100%, 480px); max-width: 100%; height: 100dvh; max-height: 100dvh; }
+.screen-details::backdrop { background: rgb(0 0 0 / .55); }
+.screen-details button { min-height: 44px; }
+.screen-details > :first-child { padding: 1rem; }
+.screen-details .screen-detail-tabs { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: .25rem; }
+.screen-detail-tabs button { justify-content: center; padding-inline: .25rem; white-space: normal; }
+.screen-detail-tabs svg { flex-shrink: 0; }
+.screen-detail-content { padding-bottom: max(1.25rem, env(safe-area-inset-bottom)); overflow-wrap: anywhere; }
+.screen-details-docked .screen-detail-content { padding-bottom: 6rem; }
+@media (max-height: 500px) {
+  .screen-details[open] { overflow-y: auto; }
+  .screen-details .screen-detail-content { flex: none; overflow-y: visible; }
+}
+.screen-detail-content .truncate { white-space: normal; overflow: visible; text-overflow: clip; overflow-wrap: anywhere; }
+.screens-desktop-table, .screen-detail-content { scrollbar-width: thin; scrollbar-color: var(--app-border-strong) transparent; }
+.screens-desktop-table::-webkit-scrollbar, .screen-detail-content::-webkit-scrollbar { display: block; width: 8px; height: 8px; }
+.screens-desktop-table::-webkit-scrollbar-thumb, .screen-detail-content::-webkit-scrollbar-thumb { background: var(--app-border-strong); border-radius: 8px; }
+@container screens-content (min-width: 560px) {
+  .screens-filters { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .screens-filter-toggle { display: none; }
+}
+@container screens-content (min-width: 900px) {
+  .screens-device-cards { display: none; }
+  .screens-desktop-table { display: block; }
+  .screens-filters { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
+@container screens-content (min-width: 1200px) {
+  .screens-filters { grid-template-columns: repeat(5, minmax(0, 1fr)); }
+}
+@media (max-width: 639px) {
+  .screen-details-overlay { width: 100%; }
+}
+
 @custom-variant dark (&:where(.dark, .dark *));
 
 /* ==========================================================================
