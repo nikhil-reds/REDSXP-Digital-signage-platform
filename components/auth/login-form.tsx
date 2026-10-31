@@ -12,12 +12,26 @@ export default function LoginForm() {
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(false);
+  const [fieldErrors, setFieldErrors] = useState<Record<string,string>>({});
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
+    const form = e.currentTarget as HTMLFormElement;
+    const invalid: Record<string,string> = {};
+    for (const element of Array.from(form.elements)) {
+      if (!(element instanceof HTMLInputElement)) continue;
+      if (!element.checkValidity()) invalid[element.id] = element.validationMessage;
+      else if (element.required && element.type !== 'checkbox' && !element.value.trim()) invalid[element.id] = 'This field is required.';
+    }
+    
+    setFieldErrors(invalid);
+    if (Object.keys(invalid).length) {
+      (form.elements.namedItem(Object.keys(invalid)[0]) as HTMLElement)?.focus();
+      return;
+    }
 
     if (!email) {
       setError("Email address is required.");
@@ -55,7 +69,7 @@ export default function LoginForm() {
   };
 
   return (
-    <div className="flex flex-col gap-5 sm:gap-6">
+    <div className="auth-form login-form flex flex-col gap-5 sm:gap-6">
       {/* Header — Sora with positive tracking, never tracking-tight */}
       <div className="flex flex-col gap-1 text-center sm:text-left">
         <h1 className="font-heading text-h6 font-semibold tracking-headline text-app-text sm:text-h5">
@@ -66,12 +80,12 @@ export default function LoginForm() {
         </p>
       </div>
 
-      <form onSubmit={handleSubmit} className="flex flex-col gap-4 sm:gap-5">
+      <form noValidate aria-busy={isLoading} onSubmit={handleSubmit} className="flex flex-col gap-4 sm:gap-5">
         {/* Error — a real error state, so it uses the functional red */}
         {error && (
           <div
             role="alert"
-            className="rounded-lg border border-app-danger/30 bg-app-danger-surface p-3 text-body font-semibold text-app-danger-text flex gap-2 items-center animate-shake"
+            className="rounded-lg border border-app-danger/30 bg-app-danger-surface p-3 text-body font-semibold text-app-danger-text flex gap-2 items-center"
           >
             <AlertTriangle className="h-4 w-4 shrink-0" aria-hidden />
             <span>{error}</span>
@@ -80,15 +94,16 @@ export default function LoginForm() {
 
         <div>
           <FieldLabel htmlFor="email">Email address</FieldLabel>
-          <TextInput
+          <TextInput required aria-invalid={Boolean(fieldErrors.email)} aria-describedby={fieldErrors.email ? "email-error" : undefined}
             id="email"
             type="email"
             autoComplete="email"
             placeholder="name@example.com"
             value={email}
-            onChange={(e) => setEmail(e.target.value)}
+            onChange={(e) => { setEmail(e.target.value); setFieldErrors(previous => { const next = {...previous}; delete next.email; return next; }); }}
             disabled={isLoading}
           />
+            {fieldErrors.email && <p id="email-error" className="auth-field-error" role="alert">{fieldErrors.email}</p>}
         </div>
 
         <div>
@@ -102,26 +117,27 @@ export default function LoginForm() {
             </Link>
           </div>
           <div className="relative">
-            <TextInput
+            <TextInput required aria-invalid={Boolean(fieldErrors.password)} aria-describedby={fieldErrors.password ? "password-error" : undefined}
               id="password"
               type={showPassword ? "text" : "password"}
               autoComplete="current-password"
               placeholder="••••••••"
               value={password}
-              onChange={(e) => setPassword(e.target.value)}
+              onChange={(e) => { setPassword(e.target.value); setFieldErrors(previous => { const next = {...previous}; delete next.password; return next; }); }}
               disabled={isLoading}
-              className="pr-10"
+              className="pr-12"
             />
             <button
               type="button"
               onClick={() => setShowPassword(!showPassword)}
               disabled={isLoading}
-              className="absolute right-3 top-1/2 z-10 -translate-y-1/2 cursor-pointer rounded text-black transition-colors hover:text-black focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-app-accent-text"
+              className="auth-password-toggle"
               aria-label={showPassword ? "Hide password" : "Show password"}
             >
               {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
             </button>
           </div>
+            {fieldErrors.password && <p id="password-error" className="auth-field-error" role="alert">{fieldErrors.password}</p>}
         </div>
 
         <div className="flex items-center gap-2 py-1">

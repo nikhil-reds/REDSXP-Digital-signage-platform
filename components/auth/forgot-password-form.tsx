@@ -7,6 +7,7 @@ import { Button, FieldLabel, TextInput } from "@/components/ui";
 
 export default function ForgotPasswordForm() {
   const [email, setEmail] = useState("");
+  const [fieldErrors, setFieldErrors] = useState<Record<string,string>>({});
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -14,6 +15,19 @@ export default function ForgotPasswordForm() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
+    const form = e.currentTarget as HTMLFormElement;
+    const invalid: Record<string,string> = {};
+    for (const element of Array.from(form.elements)) {
+      if (!(element instanceof HTMLInputElement)) continue;
+      if (!element.checkValidity()) invalid[element.id] = element.validationMessage;
+      else if (element.required && element.type !== 'checkbox' && !element.value.trim()) invalid[element.id] = 'This field is required.';
+    }
+    
+    setFieldErrors(invalid);
+    if (Object.keys(invalid).length) {
+      (form.elements.namedItem(Object.keys(invalid)[0]) as HTMLElement)?.focus();
+      return;
+    }
     setSuccess(false);
 
     if (!email) {
@@ -43,7 +57,7 @@ export default function ForgotPasswordForm() {
   };
 
   return (
-    <div className="flex flex-col gap-6">
+    <div className="auth-form forgot-password-form flex flex-col gap-6">
       {/* Header — Sora with positive tracking */}
       <div className="flex flex-col gap-1 text-center sm:text-left">
         <h1 className="font-heading text-h5 font-semibold tracking-headline text-app-text">
@@ -63,12 +77,11 @@ export default function ForgotPasswordForm() {
           >
             <span className="flex gap-2 items-center text-body font-semibold text-app-accent-text">
               <CheckCircle2 className="h-5 w-5 shrink-0" aria-hidden />
-              Reset Link Sent
+              Check your email
             </span>
             <p className="text-body text-app-muted">
               If an account exists for{" "}
-              <span className="font-semibold text-app-text">{email}</span>, you will receive an
-              email shortly with instructions on how to reset your password.
+              <span className="font-semibold text-app-text">{email}</span>, reset instructions will be sent if email delivery is available. Check your inbox and spam folder.
             </p>
           </div>
 
@@ -77,12 +90,12 @@ export default function ForgotPasswordForm() {
           </Button>
         </div>
       ) : (
-        <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+        <form noValidate aria-busy={isLoading} onSubmit={handleSubmit} className="flex flex-col gap-4">
           {/* Error — functional red, announced to assistive tech */}
           {error && (
             <div
               role="alert"
-              className="rounded-lg border border-app-danger/30 bg-app-danger-surface p-3 text-body font-semibold text-app-danger-text flex gap-2 items-center animate-shake"
+              className="rounded-lg border border-app-danger/30 bg-app-danger-surface p-3 text-body font-semibold text-app-danger-text flex gap-2 items-center"
             >
               <AlertTriangle className="h-4 w-4 shrink-0" aria-hidden />
               <span>{error}</span>
@@ -91,15 +104,16 @@ export default function ForgotPasswordForm() {
 
           <div>
             <FieldLabel htmlFor="email">Email address</FieldLabel>
-            <TextInput
+            <TextInput required aria-invalid={Boolean(fieldErrors.email)} aria-describedby={fieldErrors.email ? "email-error" : undefined}
               id="email"
               type="email"
               autoComplete="email"
               placeholder="name@example.com"
               value={email}
-              onChange={(e) => setEmail(e.target.value)}
+              onChange={(e) => { setEmail(e.target.value); setFieldErrors(previous => { const next = {...previous}; delete next.email; return next; }); }}
               disabled={isLoading}
             />
+            {fieldErrors.email && <p id="email-error" className="auth-field-error" role="alert">{fieldErrors.email}</p>}
           </div>
 
           <Button type="submit" variant="primary" disabled={isLoading} className="mt-2 w-full">
