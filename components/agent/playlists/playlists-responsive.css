@@ -1,0 +1,35 @@
+.playlists-content { container: playlists-content / inline-size; padding-bottom: max(6rem, env(safe-area-inset-bottom)); }
+.playlists-content > :last-child > div { flex-wrap: wrap; }
+.playlists-page button, .playlists-page input, .playlists-page select { min-height: 44px; }
+.playlists-controls { display: none; }
+.playlists-controls.is-open { display: block; }
+.playlists-controls > div { display: grid; grid-template-columns: minmax(0, 1fr); gap: .75rem; }
+.playlists-controls > div > * { min-width: 0; }
+.playlists-desktop-table { display: none; }
+.playlist-details[open] { display: flex; flex-direction: column; padding: 0; min-width: 0; overflow: hidden; }
+.playlist-details-overlay { position: fixed; inset: 0 0 0 auto; margin: 0; width: min(100%, 480px); max-width: 100%; height: 100dvh; max-height: 100dvh; }
+.playlist-details-docked { position: relative; inset: auto; margin: 0; width: 432px; height: 100%; max-height: none; flex-shrink: 0; }
+.playlist-details::backdrop { background: rgb(0 0 0 / .55); }
+.playlist-details-header { max-height: 35dvh; overflow-y: auto; }
+.playlist-details-body { overflow-wrap: anywhere; overscroll-behavior: contain; padding-bottom: max(1rem, env(safe-area-inset-bottom)); }
+.playlist-details-docked .playlist-details-body { padding-bottom: 6rem; }
+.playlist-details-body .truncate { white-space: normal; overflow: visible; text-overflow: clip; }
+.playlists-desktop-table, .playlist-details-body { scrollbar-width: thin; scrollbar-color: var(--app-border-strong) transparent; }
+.playlists-desktop-table::-webkit-scrollbar, .playlist-details-body::-webkit-scrollbar { display: block; width: 8px; height: 8px; }
+.playlists-desktop-table::-webkit-scrollbar-thumb, .playlist-details-body::-webkit-scrollbar-thumb { background: var(--app-border-strong); border-radius: 8px; }
+.agent-portal:has(.playlists-page dialog:modal) .agent-assistant-layer { visibility: hidden; }
+@container playlists-content (min-width: 560px) {
+  .playlists-controls-toggle { display: none; }
+  .playlists-controls { display: block; }
+  .playlists-controls > div { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@container playlists-content (min-width: 760px) {
+  .playlists-cards { display: none; }
+  .playlists-desktop-table { display: block; }
+}
+@media (max-width: 639px) { .playlist-details-overlay { width: 100%; } }
+@media (max-height: 500px) {
+  .playlist-details[open] { overflow-y: auto; }
+  .playlist-details-header { position: sticky; top: 0; z-index: 1; background: var(--app-surface); }
+  .playlist-details-body { flex: none; overflow-y: visible; }
+}
