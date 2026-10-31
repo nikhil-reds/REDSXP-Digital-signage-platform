@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { useEffect, useRef } from "react";
 import { Monitor, X } from "lucide-react";
 import { DisplayConfigTab } from "./types";
 
@@ -75,6 +75,24 @@ export default function DisplayConfigModal({
   displayAspect,
   deviceName,
 }: DisplayConfigModalProps) {
+  const panelRef = useRef<HTMLDivElement>(null);
+  const closeRef = useRef(onClose);
+  useEffect(() => { closeRef.current = onClose; }, [onClose]);
+  useEffect(() => {
+    if (!open) return;
+    const previousFocus = document.activeElement as HTMLElement | null;
+    panelRef.current?.querySelector<HTMLButtonElement>('button[aria-label="Close"]')?.focus();
+    const handleKey = (event: KeyboardEvent) => {
+      if (event.key === "Escape") { event.preventDefault(); event.stopPropagation(); closeRef.current(); }
+      if (event.key !== "Tab") return;
+      const nodes = Array.from(panelRef.current?.querySelectorAll<HTMLElement>('button:not([disabled]), input:not([disabled]), select:not([disabled]), [tabindex="0"]') ?? []).filter(node => node.getClientRects().length > 0);
+      const first = nodes[0], last = nodes[nodes.length - 1];
+      if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last?.focus(); }
+      else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first?.focus(); }
+    };
+    document.addEventListener("keydown", handleKey, true);
+    return () => { document.removeEventListener("keydown", handleKey, true); previousFocus?.focus(); };
+  }, [open]);
   if (!open) return null;
 
   return (
@@ -83,8 +101,9 @@ export default function DisplayConfigModal({
       className="fixed inset-0 bg-black/55 dark:bg-black/75 backdrop-blur-[2px] flex items-center justify-center z-50 animate-fadeIn font-sans"
     >
       <div
+        ref={panelRef} role="dialog" aria-modal="true" aria-label="Display Configuration" tabIndex={-1}
         onClick={(e) => e.stopPropagation()}
-        className="w-[860px] max-w-[92vw] max-h-[86vh] flex flex-col bg-app-surface border border-app-border rounded-2xl shadow-2xl overflow-hidden"
+        className="editor-display-modal w-[860px] max-w-[92vw] max-h-[86vh] flex flex-col bg-app-surface border border-app-border rounded-2xl shadow-2xl overflow-hidden"
       >
         <div className="flex items-center justify-between px-5 pt-4 pb-3">
           <div>
@@ -122,7 +141,7 @@ export default function DisplayConfigModal({
 
         <div className="flex-1 overflow-y-auto px-5 pt-4 pb-5">
           {configTab === "presets" && (
-            <div className="grid grid-cols-4 gap-2.5">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
               {presetCards.map((p) => (
                 <button
                   key={p.key}
@@ -163,7 +182,7 @@ export default function DisplayConfigModal({
                 <button
                   key={d.key}
                   onClick={d.onClick}
-                  className={`grid grid-cols-[40px_1.4fr_1fr_1fr_1.2fr_auto] items-center gap-3 px-3.5 py-2.5 rounded-xl border-[1.5px] cursor-pointer text-left transition-colors hover:border-app-accent-text ${
+                  className={`editor-device-card grid grid-cols-[40px_1.4fr_1fr_1fr_1.2fr_auto] items-center gap-3 px-3.5 py-2.5 rounded-xl border-[1.5px] cursor-pointer text-left transition-colors hover:border-app-accent-text ${
                     d.active
                       ? "border-app-accent-text bg-app-accent-surface"
                       : "border-app-border bg-app-surface"
@@ -188,8 +207,8 @@ export default function DisplayConfigModal({
           )}
 
           {configTab === "custom" && (
-            <div className="flex gap-6 items-start">
-              <div className="flex flex-col gap-3 w-[260px]">
+            <div className="flex flex-col sm:flex-row gap-6 items-stretch">
+              <div className="flex flex-col gap-3 w-full sm:w-[260px] min-w-0">
                 <label className="flex flex-col gap-1 text-caption font-semibold text-app-muted">
                   Width
                   <span className="relative block">
