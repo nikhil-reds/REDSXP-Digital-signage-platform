@@ -104,11 +104,11 @@ export default function ScreensTable({
     <Card size="panel" className="flex-1 flex flex-col min-w-0 overflow-hidden relative">
       {/* Bulk Action Controls */}
       {selectedIds.length > 0 && (
-        <div className="p-3 bg-app-accent-surface border-b border-app-border flex items-center justify-between gap-3 animate-fadeIn">
+        <div className="p-3 bg-app-accent-surface border-b border-app-border flex flex-wrap items-center justify-between gap-3 animate-fadeIn">
           <span className="text-body font-semibold text-app-accent-text">
             {selectedIds.length} screens selected
           </span>
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <Button
               size="sm"
               variant="secondary"
@@ -137,9 +137,33 @@ export default function ScreensTable({
         </div>
       )}
 
+      <div className="screens-device-cards divide-y divide-app-border">
+        <label className="flex min-h-11 items-center gap-3 p-4 text-body">
+          <Checkbox checked={screens.length > 0 && screens.every((screen) => selectedIds.includes(screen.id))} onChange={handleSelectAll} aria-label="Select all screens" /> Select all screens
+        </label>
+        {screens.map((screen) => (
+          <article key={screen.id} className={"min-w-0 space-y-3 p-4 " + (selectedScreenId === screen.id ? "bg-app-accent-surface" : "")}>
+            <div className="flex items-center gap-3">
+              <Checkbox checked={selectedIds.includes(screen.id)} onChange={(event) => handleSelectOne(screen.id, event.target.checked)} aria-label={"Select " + screen.name} />
+              <button className="min-h-11 min-w-0 flex-1 break-words text-left text-body font-semibold text-app-text" onClick={() => onSelectScreen(screen)}>{screen.name}</button>
+              <StatusDot status={DEVICE_STATUS[screen.status]} label={screen.status} />
+            </div>
+            <dl className="grid grid-cols-2 gap-3 text-body">
+              {[["Location", screen.location || "Unassigned"], ["Group", screen.group], ["Current content", screen.content], ["Last heartbeat", screen.heartbeat], ["Model", screen.model], ["Alerts", String(screen.alertsCount)]].map(([label, value]) => (
+                <div key={label} className="min-w-0"><dt className="text-caption text-app-muted">{label}</dt><dd className="break-words text-app-text">{value}</dd></div>
+              ))}
+            </dl>
+            <div className="flex flex-wrap gap-2">
+              <Button variant="secondary" size="sm" onClick={() => onSelectScreen(screen)}>Details</Button>
+              <Button variant="secondary" size="sm" icon={RefreshCw} onClick={() => setConfirmModal({ show: true, type: "sync", screenName: screen.name })}>Sync</Button>
+              <Button variant="secondary" size="sm" icon={Power} onClick={() => setConfirmModal({ show: true, type: "restart", screenName: screen.name })}>Restart</Button>
+            </div>
+          </article>
+        ))}
+      </div>
       {/* Main Table area */}
-      <div className="overflow-x-auto flex-1 min-h-[400px]">
-        <table className="w-full text-left border-collapse">
+      <div className="screens-desktop-table overflow-x-auto flex-1 min-h-[320px]" tabIndex={0} role="region" aria-label="Screen devices table; scroll horizontally for more columns">
+        <table className="w-full min-w-[1120px] text-left border-collapse">
           <thead>
             <tr className="bg-app-surface-alt select-none">
               <Th className="w-10 text-center">
@@ -178,7 +202,7 @@ export default function ScreensTable({
                     />
                   </Td>
                   <Td className="font-semibold" onClick={() => onSelectScreen(screen)}>
-                    {screen.name}
+                    <button className="min-h-11 text-left hover:underline" onClick={() => onSelectScreen(screen)}>{screen.name}</button>
                   </Td>
                   <Td className="text-app-muted" onClick={() => onSelectScreen(screen)}>
                     {screen.location}
