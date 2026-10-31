@@ -148,6 +148,7 @@ export function ProgressBar({
       <div
         className="w-full h-1.5 bg-app-surface-alt rounded-full overflow-hidden"
         role="progressbar"
+        aria-label={typeof label === "string" ? label : undefined}
         aria-valuenow={value}
         aria-valuemin={0}
         aria-valuemax={safeMax}
