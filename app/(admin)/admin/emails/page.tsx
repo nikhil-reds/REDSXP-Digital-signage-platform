@@ -153,11 +153,9 @@ export default function EmailTemplatesPage() {
   };
 
   return (
-    <div className="flex h-[calc(100vh-4rem)] overflow-hidden bg-app-canvas font-sans text-app-text">
-      {/* Left side templates catalogue */}
-      <div className="w-80 flex flex-col p-6 overflow-hidden shrink-0 pr-3">
-        {/* Header */}
-        <div className="flex flex-col gap-0.5 mb-5 select-none shrink-0">
+    <div className="admin-full-height-page flex min-h-full flex-col gap-5 bg-app-canvas p-6 font-sans text-app-text lg:h-full">
+      <header className="flex shrink-0 flex-wrap items-start justify-between gap-4">
+        <div>
           <h1 className="text-page-title font-bold tracking-tight text-app-text">
             Email Templates
           </h1>
@@ -165,31 +163,21 @@ export default function EmailTemplatesPage() {
             Manage transactional and marketing email templates sent via AWS SES
           </p>
         </div>
+        <Button onClick={handleAddNewTemplate}>
+          <Plus className="w-3.5 h-3.5" />
+          <span>New Template</span>
+        </Button>
+      </header>
 
-        {/* Templates catalogue list */}
-        <div className="flex-1 flex overflow-hidden min-h-0">
+      <div className="grid min-h-0 flex-1 gap-6 lg:grid-cols-[minmax(0,20rem)_minmax(0,1fr)] lg:grid-rows-[minmax(0,1fr)]">
+        <div className="flex min-h-0 min-w-0 max-lg:max-h-64">
           <TemplatesList
             templates={templates}
             selectedId={selectedId}
             onSelect={(id) => setSelectedId(id)}
           />
         </div>
-      </div>
-
-      {/* Main editor and preview canvas */}
-      <div className="flex-1 flex flex-col p-6 overflow-hidden pl-3">
-        {/* New Template button row */}
-        <div className="flex justify-end mb-5 select-none shrink-0">
-          <Button
-            onClick={handleAddNewTemplate}
-          >
-            <Plus className="w-3.5 h-3.5" />
-            <span>New Template</span>
-          </Button>
-        </div>
-
-        {/* Live editor component */}
-        <div className="flex-1 flex overflow-hidden min-h-0">
+        <div className="flex min-h-0 min-w-0">
           <TemplatePreview
             key={activeTemplate.id}
             template={activeTemplate}
