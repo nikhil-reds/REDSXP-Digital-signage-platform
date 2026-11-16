@@ -1,11 +1,14 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useLayoutEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import {
   MoreVertical,
   RefreshCw,
   Power,
   Info,
+  Pencil,
+  Trash2,
   FileSpreadsheet,
   AlertTriangle,
   PlaySquare,
@@ -53,16 +56,63 @@ const DEVICE_STATUS: Record<ScreenDevice["status"], Status> = {
 interface ScreensTableProps {
   screens: ScreenDevice[];
   onSelectScreen: (screen: ScreenDevice) => void;
+  onRenameScreen?: (screen: ScreenDevice) => void;
+  onDeleteScreen?: (screen: ScreenDevice) => void;
   selectedScreenId: string | null;
 }
 
 export default function ScreensTable({
   screens,
   onSelectScreen,
+  onRenameScreen,
+  onDeleteScreen,
   selectedScreenId,
 }: ScreensTableProps) {
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [activeMenuId, setActiveMenuId] = useState<string | null>(null);
+  const actionTriggerRef = useRef<HTMLButtonElement>(null);
+  const actionMenuRef = useRef<HTMLDivElement>(null);
+  const desktopTableRef = useRef<HTMLDivElement>(null);
+
+  useLayoutEffect(() => {
+    const trigger = actionTriggerRef.current;
+    const menu = actionMenuRef.current;
+    if (!activeMenuId || !trigger || !menu) return;
+
+    const gap = 8;
+    const anchor = trigger.getBoundingClientRect();
+    const tableBottom = desktopTableRef.current?.getBoundingClientRect().bottom ?? window.innerHeight;
+    const lowerBoundary = Math.min(tableBottom, window.innerHeight);
+    const below = Math.max(0, lowerBoundary - anchor.bottom - gap * 2);
+    const above = Math.max(0, anchor.top - gap * 2);
+    const opensAbove = menu.offsetHeight > below && above > below;
+    menu.style.maxHeight = `${opensAbove ? above : below}px`;
+    menu.style.left = `${Math.max(gap, Math.min(anchor.right - menu.offsetWidth, window.innerWidth - menu.offsetWidth - gap))}px`;
+    menu.style.top = `${opensAbove ? anchor.top - menu.offsetHeight - gap : anchor.bottom + gap}px`;
+
+    const close = () => setActiveMenuId(null);
+    const dismissOutside = (event: PointerEvent) => {
+      if (event.target instanceof Node && !menu.contains(event.target) && !trigger.contains(event.target)) close();
+    };
+    const dismissOnScroll = (event: Event) => {
+      if (event.target !== menu) close();
+    };
+    const dismissOnEscape = (event: KeyboardEvent) => {
+      if (event.key !== "Escape") return;
+      close();
+      trigger.focus();
+    };
+    document.addEventListener("pointerdown", dismissOutside);
+    document.addEventListener("keydown", dismissOnEscape);
+    window.addEventListener("scroll", dismissOnScroll, true);
+    window.addEventListener("resize", close);
+    return () => {
+      document.removeEventListener("pointerdown", dismissOutside);
+      document.removeEventListener("keydown", dismissOnEscape);
+      window.removeEventListener("scroll", dismissOnScroll, true);
+      window.removeEventListener("resize", close);
+    };
+  }, [activeMenuId]);
 
   const [confirmModal, setConfirmModal] = useState<{
     show: boolean;
@@ -155,14 +205,20 @@ export default function ScreensTable({
             </dl>
             <div className="flex flex-wrap gap-2">
               <Button variant="secondary" size="sm" onClick={() => onSelectScreen(screen)}>Details</Button>
+              {onRenameScreen && (
+                <Button variant="secondary" size="sm" onClick={() => onRenameScreen(screen)}>Rename screen</Button>
+              )}
               <Button variant="secondary" size="sm" icon={RefreshCw} onClick={() => setConfirmModal({ show: true, type: "sync", screenName: screen.name })}>Sync</Button>
               <Button variant="secondary" size="sm" icon={Power} onClick={() => setConfirmModal({ show: true, type: "restart", screenName: screen.name })}>Restart</Button>
+              {onDeleteScreen && (
+                <Button variant="danger" size="sm" onClick={() => onDeleteScreen(screen)}>Delete screen</Button>
+              )}
             </div>
           </article>
         ))}
       </div>
       {/* Main Table area */}
-      <div className="screens-desktop-table overflow-x-auto flex-1 min-h-[320px]" tabIndex={0} role="region" aria-label="Screen devices table; scroll horizontally for more columns">
+      <div ref={desktopTableRef} className="screens-desktop-table overflow-x-auto flex-1 min-h-[320px]" tabIndex={0} role="region" aria-label="Screen devices table; scroll horizontally for more columns">
         <table className="w-full min-w-[1120px] text-left border-collapse">
           <thead>
             <tr className="bg-app-surface-alt select-none">
@@ -259,6 +315,7 @@ export default function ScreensTable({
                   {/* Row Actions Menu */}
                   <Td className="text-center relative" onClick={(e) => e.stopPropagation()}>
                     <button
+                      ref={activeMenuId === screen.id ? actionTriggerRef : undefined}
                       onClick={() => setActiveMenuId(activeMenuId === screen.id ? null : screen.id)}
                       aria-label={`Actions for ${screen.name}`}
                       aria-expanded={activeMenuId === screen.id}
@@ -267,8 +324,8 @@ export default function ScreensTable({
                       <MoreVertical className="w-3.5 h-3.5" />
                     </button>
 
-                    {activeMenuId === screen.id && (
-                      <div className="absolute right-8 top-2 w-44 bg-app-surface border border-app-border rounded-lg shadow-xs py-1.5 z-10 text-left animate-fadeIn">
+                    {activeMenuId === screen.id && createPortal(
+                      <div ref={actionMenuRef} className="fixed z-50 w-44 overflow-y-auto overscroll-contain rounded-lg border border-app-border bg-app-surface py-1.5 text-left shadow-lg">
                         <button
                           onClick={() => {
                             onSelectScreen(screen);
@@ -279,6 +336,19 @@ export default function ScreensTable({
                           <Info className="w-3.5 h-3.5 text-app-muted" />
                           Open Details
                         </button>
+                        {onRenameScreen && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setActiveMenuId(null);
+                              onRenameScreen(screen);
+                            }}
+                            className="w-full px-3 py-1.5 text-body font-semibold text-app-text hover:bg-app-surface-alt flex items-center gap-2 cursor-pointer"
+                          >
+                            <Pencil aria-hidden="true" className="w-3.5 h-3.5 text-app-muted" />
+                            Rename screen
+                          </button>
+                        )}
                         <button
                           onClick={() => {
                             setConfirmModal({ show: true, type: "sync", screenName: screen.name });
@@ -299,7 +369,21 @@ export default function ScreensTable({
                           <Power className="w-3.5 h-3.5" />
                           Remote Restart
                         </button>
-                      </div>
+                        {onDeleteScreen && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setActiveMenuId(null);
+                              onDeleteScreen(screen);
+                            }}
+                            className="w-full px-3 py-1.5 text-body font-semibold text-app-danger-text hover:bg-app-surface-alt flex items-center gap-2 cursor-pointer"
+                          >
+                            <Trash2 aria-hidden="true" className="w-3.5 h-3.5" />
+                            Delete screen
+                          </button>
+                        )}
+                      </div>,
+                      document.body,
                     )}
                   </Td>
                 </Tr>
