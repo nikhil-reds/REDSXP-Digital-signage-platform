@@ -47,6 +47,8 @@ export default function ScheduleFormModal({ schedule, onClose, onSaved }: Schedu
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
   const [screenQuery, setScreenQuery] = useState("");
   const [confirmDiscard, setConfirmDiscard] = useState(false);
   const feedbackRef = useRef<HTMLDivElement>(null);
@@ -141,21 +143,48 @@ export default function ScheduleFormModal({ schedule, onClose, onSaved }: Schedu
   };
 
   const handleDelete = async () => {
-    if (!schedule) return;
-    if (!confirm(`Delete schedule "${schedule.name}"? This cannot be undone.`)) return;
+    if (!schedule || isDeleting) return;
     setIsDeleting(true);
-    setError(null);
+    setDeleteError(null);
     try {
       await deleteSchedule(schedule.id);
       onSaved();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to delete schedule");
+      setDeleteError(err instanceof Error ? err.message : "Failed to delete schedule");
       setIsDeleting(false);
     }
   };
 
+  if (schedule && confirmDelete) {
+    const cancelDelete = () => {
+      if (!isDeleting) setConfirmDelete(false);
+    };
+
+    return (
+      <Modal
+        key="confirm-delete"
+        open
+        onClose={cancelDelete}
+        title="Delete schedule?"
+        className="schedule-form-dialog"
+        footer={
+          <>
+            <Button type="button" variant="secondary" onClick={cancelDelete} disabled={isDeleting}>Cancel</Button>
+            <Button type="button" variant="danger" onClick={handleDelete} disabled={isDeleting}>
+              {isDeleting ? "Deleting…" : "Delete schedule"}
+            </Button>
+          </>
+        }
+      >
+        <p>Delete <strong>{schedule.name}</strong>? This action cannot be undone.</p>
+        {deleteError && <p role="alert" className="mt-3 text-app-danger-text">{deleteError}</p>}
+      </Modal>
+    );
+  }
+
   return (
     <Modal
+      key="schedule-editor"
       open
       onClose={requestClose}
       title={isCreateMode ? "Create Content Schedule" : "Edit Content Schedule"}
@@ -169,7 +198,10 @@ export default function ScheduleFormModal({ schedule, onClose, onSaved }: Schedu
               type="button"
               variant="secondary"
               icon={Trash2}
-              onClick={handleDelete}
+              onClick={() => {
+                setDeleteError(null);
+                setConfirmDelete(true);
+              }}
               disabled={isDeleting || isSubmitting || confirmDiscard || isPickingGroup}
               className="mr-auto text-app-danger-text border-app-danger/30 hover:bg-app-danger-surface"
             >
