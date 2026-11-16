@@ -49,6 +49,7 @@ export function serializeDevice(device: {
   timezone?: string | null;
   macAddress?: string | null;
   appInstallPath?: string | null;
+  sensorSerialPort?: string | null;
   lastHeartbeatAt?: Date | null;
   group: { name: string } | null;
   playlist: { name: string } | null;
@@ -74,6 +75,7 @@ export function serializeDevice(device: {
     timezone: device.timezone ?? null,
     macAddress: device.macAddress ?? null,
     appInstallPath: device.appInstallPath ?? null,
+    sensorSerialPort: device.sensorSerialPort ?? null,
     lastHeartbeatAt: device.lastHeartbeatAt?.toISOString() ?? null,
   };
 }

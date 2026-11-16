@@ -115,3 +115,20 @@ export async function enqueueScheduleEvaluateNowJob({
     throw new Error(`RabbitMQ did not accept job for queue ${queueName}`);
   }
 }
+
+export async function enqueueDeviceSensorConfigJob(input: { deviceId: string; tenantId: string; updatedAt: Date }): Promise<void> {
+  const channel = await getChannel();
+  if (!channel) return;
+  const requestedAt = new Date().toISOString();
+  const job = {
+    jobId: crypto.randomUUID(), type: "scheduler.evaluate.now", reason: "device.sensor.config",
+    requestedAt, tenantId: input.tenantId, deviceId: input.deviceId,
+    idempotencyKey: `device.sensor.config:${input.deviceId}:${input.updatedAt.getTime()}`,
+  };
+  const accepted = channel.sendToQueue(queueName, Buffer.from(JSON.stringify(job)), {
+    persistent: true, contentType: "application/json", messageId: job.jobId, type: job.type,
+    timestamp: Math.floor(Date.now() / 1000),
+    headers: { reason: job.reason, tenantId: input.tenantId, deviceId: input.deviceId, idempotencyKey: job.idempotencyKey },
+  });
+  if (!accepted) throw new Error(`RabbitMQ did not accept job for queue ${queueName}`);
+}

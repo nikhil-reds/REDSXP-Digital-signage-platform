@@ -17,6 +17,7 @@ import {
   Ticket,
 } from "lucide-react";
 import { ScreenDevice } from "./screens-table";
+import { updateScreen } from "./api";
 import {
   Badge,
   Button,
@@ -122,6 +123,9 @@ const DOT_TONE: Record<Status, string> = {
 export default function ScreensDetailDrawer({ screen, onClose }: ScreensDetailDrawerProps) {
   const [activeTab, setActiveTab] = useState<TabId>("Overview");
   const [copyStatus, setCopyStatus] = useState("");
+  const [sensorSerialPort, setSensorSerialPort] = useState(screen.sensorSerialPort ?? "");
+  const [sensorConfigStatus, setSensorConfigStatus] = useState("");
+  const [savingSensorConfig, setSavingSensorConfig] = useState(false);
   const panelRef = useRef<HTMLDialogElement>(null);
   const [docked, setDocked] = useState(false);
   useEffect(() => {
@@ -149,6 +153,17 @@ export default function ScreensDetailDrawer({ screen, onClose }: ScreensDetailDr
     return () => { if (content) content.style.overflow = previousOverflow ?? ""; };
   }, [docked]);
   const storagePct = parseInt(screen.storage, 10) || 0;
+  useEffect(() => { setSensorSerialPort(screen.sensorSerialPort ?? ""); }, [screen.id, screen.sensorSerialPort]);
+
+  const saveSensorConfig = async () => {
+    setSavingSensorConfig(true); setSensorConfigStatus("");
+    try {
+      await updateScreen(screen.id, { sensorSerialPort: sensorSerialPort.trim() || null });
+      setSensorConfigStatus("Controller port saved for this screen. The next manifest evaluation will apply it.");
+    } catch (error) {
+      setSensorConfigStatus(error instanceof Error ? error.message : "Unable to save controller port.");
+    } finally { setSavingSensorConfig(false); }
+  };
 
   return (
     <dialog ref={panelRef} aria-label={screen.name + " details"}
@@ -317,6 +332,22 @@ export default function ScreensDetailDrawer({ screen, onClose }: ScreensDetailDr
 
         {activeTab === "Sensors" && (
           <>
+            <Card size="row" padded className="space-y-3">
+              <div>
+                <label htmlFor={`sensor-port-${screen.id}`} className="block text-caption font-semibold uppercase tracking-headline text-app-muted">
+                  Controller serial port for this screen
+                </label>
+                <input id={`sensor-port-${screen.id}`} value={sensorSerialPort}
+                  onChange={(event) => setSensorSerialPort(event.target.value)}
+                  placeholder={screen.platform === "LINUX" ? "/dev/serial/by-id/..." : "COM3"}
+                  className="w-full rounded border border-app-border bg-app-canvas p-2 mt-1 font-mono" />
+              </div>
+              <p className="text-xs text-app-muted">Windows uses COM ports. Linux should use a stable /dev/serial/by-id path. Leave empty only for legacy playlist fallback.</p>
+              <Button size="sm" onClick={saveSensorConfig} disabled={savingSensorConfig}>
+                {savingSensorConfig ? "Saving…" : "Save controller port"}
+              </Button>
+              <p role="status" className="text-xs text-app-muted">{sensorConfigStatus}</p>
+            </Card>
             <div className="flex items-center justify-between gap-2 border-b border-app-border pb-2">
               <span className="text-caption font-semibold uppercase tracking-headline text-app-muted">
                 Connected Edge Sensors

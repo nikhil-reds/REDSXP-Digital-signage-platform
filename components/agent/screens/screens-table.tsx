@@ -44,6 +44,7 @@ export interface ScreenDevice {
   installId?: string | null;
   platform?: "LINUX" | "WINDOWS" | null;
   playerRegistrationId?: string | null;
+  sensorSerialPort?: string | null;
 }
 
 /** Device status → the portal-wide status vocabulary. */

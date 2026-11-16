@@ -24,7 +24,6 @@ export function parseFlow(value: unknown, items: Array<{ id?: string; clientId?:
     if (s.triggerKind != null && s.triggerKind !== 'serial-message' && s.triggerKind !== 'legacy-button') errors[`${key}.triggerKind`] = 'Unsupported trigger format.';
     if (rawMessage) {
       if (!validMessage(s.message)) errors[`${key}.message`] = 'Enter one complete printable controller message (1–128 characters) with no leading or trailing spaces.';
-      if (!s.serialPort) errors[`${key}.serialPort`] = 'Controller serial port is required for message rules.';
     } else if (typeof s.port !== 'string' || !/^(?:[2-9]|1\d|2[0-7])$/.test(s.port)) errors[`${key}.port`] = 'GPIO port must be 2–27.';
     if (s.serialPort != null && s.serialPort !== '' && (typeof s.serialPort !== 'string' || !/^(?:COM[1-9]\d*|\/dev\/[A-Za-z0-9_./:-]+)$/i.test(s.serialPort) || s.serialPort.includes('..'))) errors[`${key}.serialPort`] = 'Use COM3, COM4, or a Linux /dev/ serial path.';
     if (s.operator !== 'equals') errors[`${key}.operator`] = 'Only equals is supported.';
@@ -45,8 +44,7 @@ export function parseFlow(value: unknown, items: Array<{ id?: string; clientId?:
     return { id: c.id as string | undefined, clientId: c.clientId as string, sourceSensorClientId: c.sourceSensorClientId as string, targetItemClientId: c.targetItemClientId as string, cooldownMs: c.cooldownMs as number, debounceMs: c.debounceMs as number, enabled: c.enabled !== false };
   });
   if (!unique(sensors.map(s => s.clientId)) || !unique(connections.map(c => c.clientId))) errors.flow = 'Client IDs must be unique.';
-  if (new Set(sensors.filter(s => s.enabled && s.serialPort).map(s => s.serialPort)).size > 1) errors['flow.sensors'] = 'Use one controller serial port per playlist.';
-  if (!unique(sensors.map(s => s.triggerKind === 'serial-message' ? `message:${s.serialPort}:${s.message}` : `button:${s.port}`))) errors['flow.sensors'] = 'Sensor triggers must be unique.';
+  if (!unique(sensors.map(s => s.triggerKind === 'serial-message' ? `message:${s.message}` : `button:${s.port}`))) errors['flow.sensors'] = 'Sensor triggers must be unique.';
   if (!unique(connections.map(c => c.sourceSensorClientId))) errors['flow.connections'] = 'Only one target per sensor is supported.';
   if (publish && sensors.some(s => !connections.some(c => c.sourceSensorClientId === s.clientId))) errors['flow.connections'] = 'Every sensor needs a target video.';
   if (Object.keys(errors).length) throw new PlaylistPayloadError(errors);

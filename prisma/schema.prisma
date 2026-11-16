@@ -341,6 +341,7 @@ model Device {
   timezone         String?
   macAddress       String?         @map("mac_address")
   appInstallPath   String?         @map("app_install_path")
+  sensorSerialPort String?         @map("sensor_serial_port")
   lastHeartbeatAt  DateTime?       @map("last_heartbeat_at")
   createdAt        DateTime        @default(now()) @map("created_at")
   updatedAt        DateTime        @updatedAt @map("updated_at")

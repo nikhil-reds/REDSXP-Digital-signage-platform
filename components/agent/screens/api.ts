@@ -65,6 +65,7 @@ export interface UpdateScreenPayload {
   storagePercent?: number;
   alertsCount?: number;
   alertsSeverity?: "critical" | "high" | "medium" | "none";
+  sensorSerialPort?: string | null;
 }
 
 export async function fetchScreens(): Promise<ScreenDevice[]> {
