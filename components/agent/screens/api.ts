@@ -4,6 +4,7 @@ export class ApiRequestError extends Error {
   constructor(
     message: string,
     public readonly status: number,
+    public readonly code?: string,
   ) {
     super(message);
     this.name = "ApiRequestError";
@@ -18,7 +19,7 @@ async function request<T>(url: string, init?: RequestInit): Promise<T> {
   const data = await res.json().catch(() => null);
   if (!res.ok) {
     const message = (data && (data.error || data.message)) || `Request failed (${res.status})`;
-    throw new ApiRequestError(message, res.status);
+    throw new ApiRequestError(message, res.status, data?.code);
   }
   return data as T;
 }
@@ -126,4 +127,8 @@ export async function updateScreen(id: string, payload: UpdateScreenPayload): Pr
 
 export async function deleteScreen(id: string): Promise<void> {
   await request(`/api/screens/${id}`, { method: "DELETE" });
+}
+
+export async function releasePlayer(id: string): Promise<void> {
+  await request(`/api/screens/${id}/release`, { method: "POST" });
 }

@@ -8,6 +8,10 @@ export function apiError(message: string, status = 400, errors?: string[]) {
   );
 }
 
+export function apiErrorCode(message: string, code: string, status = 400) {
+  return NextResponse.json({ success: false, code, message }, { status });
+}
+
 export function isEmail(value: string) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
 }
