@@ -28,7 +28,7 @@ export default function TemplatesList({
   );
 
   return (
-    <div className="flex h-full w-80 shrink-0 flex-col overflow-hidden rounded-xl border border-app-border bg-app-surface shadow-xs">
+    <div className="flex min-h-0 w-full min-w-0 flex-col overflow-hidden rounded-xl border border-app-border bg-app-surface shadow-xs">
       {/* Search Input */}
       <div className="border-b border-app-border bg-app-surface-alt p-4">
         <div className="relative w-full">
@@ -44,7 +44,7 @@ export default function TemplatesList({
       </div>
 
       {/* Templates List */}
-      <div className="flex-1 divide-y divide-app-border overflow-y-auto">
+      <div className="min-h-0 flex-1 divide-y divide-app-border overflow-y-auto [scrollbar-width:thin] [scrollbar-color:var(--app-border-strong)_transparent]">
         {filtered.map((t) => {
           const isSelected = t.id === selectedId;
           const isMarketing = t.category === "Marketing";
