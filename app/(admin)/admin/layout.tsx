@@ -18,7 +18,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
           <AdminNavbar />
           {/* Reserve a persistent safe area for the floating assistant so table
               pagination and bottom actions can always scroll above it. */}
-          <main className="flex-1 overflow-y-auto pb-24">
+          <main className="min-h-0 flex-1 overflow-y-auto pb-24 has-[>.admin-full-height-page]:pb-0">
             {children}
           </main>
         </div>
