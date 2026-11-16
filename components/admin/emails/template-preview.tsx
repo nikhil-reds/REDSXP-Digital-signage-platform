@@ -30,7 +30,7 @@ export default function TemplatePreview({ template, onSave }: TemplatePreviewPro
   };
 
   return (
-    <div className="flex h-full flex-1 flex-col overflow-hidden rounded-xl border border-app-border bg-app-surface shadow-xs">
+    <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden rounded-xl border border-app-border bg-app-surface shadow-xs">
       {/* Editor Header */}
       <div className="flex flex-col gap-3 border-b border-app-border p-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
@@ -65,7 +65,7 @@ export default function TemplatePreview({ template, onSave }: TemplatePreviewPro
       </div>
 
       {/* Editor Configs scrollable area */}
-      <div className="p-4 space-y-4 flex-1 overflow-y-auto text-xs">
+      <div className="min-h-0 flex-1 space-y-4 overflow-y-auto p-4 text-xs [scrollbar-width:thin] [scrollbar-color:var(--app-border-strong)_transparent]">
         {/* Subject & From Name Row */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="flex flex-col gap-1.5">
