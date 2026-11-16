@@ -58,6 +58,7 @@ interface ScreensTableProps {
   onSelectScreen: (screen: ScreenDevice) => void;
   onRenameScreen?: (screen: ScreenDevice) => void;
   onDeleteScreen?: (screen: ScreenDevice) => void;
+  onReleasePlayer?: (screen: ScreenDevice) => void;
   selectedScreenId: string | null;
 }
 
@@ -66,6 +67,7 @@ export default function ScreensTable({
   onSelectScreen,
   onRenameScreen,
   onDeleteScreen,
+  onReleasePlayer,
   selectedScreenId,
 }: ScreensTableProps) {
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
@@ -212,6 +214,9 @@ export default function ScreensTable({
               <Button variant="secondary" size="sm" icon={Power} onClick={() => setConfirmModal({ show: true, type: "restart", screenName: screen.name })}>Restart</Button>
               {onDeleteScreen && (
                 <Button variant="danger" size="sm" onClick={() => onDeleteScreen(screen)}>Delete screen</Button>
+              )}
+              {onReleasePlayer && screen.playerRegistrationId && (
+                <Button variant="danger" size="sm" onClick={() => onReleasePlayer(screen)}>Release player</Button>
               )}
             </div>
           </article>
@@ -380,6 +385,19 @@ export default function ScreensTable({
                           >
                             <Trash2 aria-hidden="true" className="w-3.5 h-3.5" />
                             Delete screen
+                          </button>
+                        )}
+                        {onReleasePlayer && screen.playerRegistrationId && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setActiveMenuId(null);
+                              onReleasePlayer(screen);
+                            }}
+                            className="w-full px-3 py-1.5 text-body font-semibold text-app-danger-text hover:bg-app-surface-alt flex items-center gap-2 cursor-pointer"
+                          >
+                            <Power aria-hidden="true" className="w-3.5 h-3.5" />
+                            Release player
                           </button>
                         )}
                       </div>,

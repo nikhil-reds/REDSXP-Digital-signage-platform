@@ -26,6 +26,7 @@ import {
   fetchScreens,
   updateScreen,
   deleteScreen,
+  releasePlayer,
   ApiRequestError,
   PlayerDownload,
 } from "@/components/agent/screens/api";
@@ -48,6 +49,32 @@ function uniqueSorted(values: (string | undefined)[]): string[] {
   return Array.from(new Set(values.filter((v): v is string => Boolean(v)))).sort();
 }
 
+const PLAYER_OPTIONS = [
+  {
+    key: "linux-x64",
+    platform: "LINUX" as const,
+    arch: "x64" as const,
+    name: "Linux Player",
+    desc: "For Intel/AMD 64-bit Linux devices.",
+  },
+  {
+    key: "linux-arm64",
+    platform: "LINUX" as const,
+    arch: "arm64" as const,
+    name: "Linux Player (ARM64)",
+    desc: "For aarch64 / ARM64 Linux devices, including Raspberry Pi 64-bit.",
+  },
+  {
+    key: "windows-x64",
+    platform: "WINDOWS" as const,
+    arch: "x64" as const,
+    name: "Windows Player",
+    desc: "For 64-bit Windows devices.",
+  },
+] as const;
+
+type PlayerOptionKey = (typeof PLAYER_OPTIONS)[number]["key"];
+
 export default function AgentScreensPage() {
   const { user, permissions, loading: isSessionLoading } = useSession();
   const [screens, setScreens] = useState<ScreenDevice[]>([]);
@@ -62,6 +89,9 @@ export default function AgentScreensPage() {
   const [screenToDelete, setScreenToDelete] = useState<ScreenDevice | null>(null);
   const [deleteError, setDeleteError] = useState("");
   const [isDeletingScreen, setIsDeletingScreen] = useState(false);
+  const [screenToRelease, setScreenToRelease] = useState<ScreenDevice | null>(null);
+  const [releaseError, setReleaseError] = useState("");
+  const [isReleasingPlayer, setIsReleasingPlayer] = useState(false);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   // Plan §2: skeleton on first load only — a refetch keeps the current content
   // on screen rather than replacing it with grey bars.
@@ -69,7 +99,8 @@ export default function AgentScreensPage() {
 
   const [isDownloadModalOpen, setIsDownloadModalOpen] = useState(false);
   const [downloadError, setDownloadError] = useState<string | null>(null);
-  const [pendingDownload, setPendingDownload] = useState<PlayerDownload | null>(null);
+  const [preparedDownloads, setPreparedDownloads] = useState<Partial<Record<PlayerOptionKey, PlayerDownload>>>({});
+  const [isPreparingDownloads, setIsPreparingDownloads] = useState(false);
 
   // Filters State
   const [filtersOpen, setFiltersOpen] = useState(false);
@@ -100,6 +131,27 @@ export default function AgentScreensPage() {
       setDeleteError(error instanceof Error ? error.message : "Unable to delete screen.");
     } finally {
       setIsDeletingScreen(false);
+    }
+  }
+
+  async function confirmReleasePlayer() {
+    if (!canDeleteScreens || !screenToRelease || isReleasingPlayer) return;
+    const { id } = screenToRelease;
+    setIsReleasingPlayer(true);
+    setReleaseError("");
+    try {
+      await releasePlayer(id);
+      setScreens((current) => current.map((screen) =>
+        screen.id === id
+          ? { ...screen, status: "Offline", installId: null, playerRegistrationId: null }
+          : screen,
+      ));
+      setSelectedScreen((current) => current?.id === id ? null : current);
+      setScreenToRelease(null);
+    } catch (error) {
+      setReleaseError(error instanceof Error ? error.message : "Unable to release player.");
+    } finally {
+      setIsReleasingPlayer(false);
     }
   }
 
@@ -187,24 +239,47 @@ export default function AgentScreensPage() {
     setIsCreateModalOpen(false);
   };
 
-  const handleDownloadPlayer = async (
-    platform: "LINUX" | "WINDOWS",
-    arch: "x64" | "arm64" = "x64",
-  ) => {
+  const openDownloadModal = async () => {
     setDownloadError(null);
+    setPreparedDownloads({});
+    setIsPreparingDownloads(true);
+    setIsDownloadModalOpen(true);
+
     try {
-      const download = await createPlayerDownload(platform, arch);
-      setPendingDownload(download);
-      window.location.assign(download.downloadUrl);
+      const results = await Promise.allSettled(
+        PLAYER_OPTIONS.map((option) => createPlayerDownload(option.platform, option.arch)),
+      );
+      const prepared: Partial<Record<PlayerOptionKey, PlayerDownload>> = {};
+      const failures: string[] = [];
+
+      results.forEach((result, index) => {
+        const option = PLAYER_OPTIONS[index];
+        if (result.status === "fulfilled") prepared[option.key] = result.value;
+        else failures.push(option.name);
+      });
+
+      setPreparedDownloads(prepared);
+      if (failures.length) {
+        setDownloadError(`Could not prepare: ${failures.join(", ")}. Close this window and try again.`);
+      }
     } catch (err) {
-      setDownloadError(err instanceof Error ? err.message : "Failed to prepare player download");
+      setDownloadError(err instanceof Error ? err.message : "Failed to prepare player downloads");
+    } finally {
+      setIsPreparingDownloads(false);
     }
+  };
+
+  const handleDownloadPlayer = (key: PlayerOptionKey) => {
+    const download = preparedDownloads[key];
+    if (!download) return;
+    window.location.assign(download.downloadUrl);
   };
 
   const closeDownloadModal = () => {
     setIsDownloadModalOpen(false);
     setDownloadError(null);
-    setPendingDownload(null);
+    setPreparedDownloads({});
+    setIsPreparingDownloads(false);
   };
 
   // Filter application
@@ -290,10 +365,7 @@ export default function AgentScreensPage() {
               variant="secondary"
               size="sm"
               icon={Download}
-              onClick={() => {
-                setDownloadError(null);
-                setIsDownloadModalOpen(true);
-              }}
+              onClick={openDownloadModal}
             >
               Player
             </Button>
@@ -434,6 +506,10 @@ export default function AgentScreensPage() {
                 setDeleteError("");
                 setScreenToDelete(screen);
               } : undefined}
+              onReleasePlayer={canDeleteScreens ? (screen) => {
+                setReleaseError("");
+                setScreenToRelease(screen);
+              } : undefined}
               onSelectScreen={(screen) => setSelectedScreen(screen)}
               selectedScreenId={selectedScreen?.id || null}
             />
@@ -505,6 +581,26 @@ export default function AgentScreensPage() {
         {deleteError && <p role="alert" className="mt-2 text-body">{deleteError}</p>}
       </Modal>
 
+      <Modal
+        open={screenToRelease !== null}
+        onClose={() => { if (!isReleasingPlayer) setScreenToRelease(null); }}
+        title="Release player"
+        footer={
+          <>
+            <Button variant="secondary" disabled={isReleasingPlayer} onClick={() => setScreenToRelease(null)}>Cancel</Button>
+            <Button variant="danger" disabled={isReleasingPlayer} onClick={confirmReleasePlayer}>
+              {isReleasingPlayer ? "Releasing…" : "Release player"}
+            </Button>
+          </>
+        }
+      >
+        <p>
+          Release the player from <strong>{screenToRelease?.name}</strong>? Its current credentials will stop working,
+          and the physical player can then be paired with another account.
+        </p>
+        {releaseError && <p role="alert" className="mt-2 text-body">{releaseError}</p>}
+      </Modal>
+
       {isCreateModalOpen && (
         <ScreenCreateModal
           onClose={() => setIsCreateModalOpen(false)}
@@ -521,57 +617,42 @@ export default function AgentScreensPage() {
         size="md"
       >
         <div className="space-y-3">
-          {(
-            [
-              {
-                platform: "LINUX" as const,
-                arch: "x64" as const,
-                name: "Linux Player",
-                desc: "For Intel/AMD 64-bit Linux devices.",
-              },
-              {
-                platform: "LINUX" as const,
-                arch: "arm64" as const,
-                name: "Linux Player (ARM64)",
-                desc: "For aarch64 / ARM64 Linux devices, including Raspberry Pi 64-bit.",
-              },
-              {
-                platform: "WINDOWS" as const,
-                arch: "x64" as const,
-                name: "Windows Player",
-                desc: "For 64-bit Windows devices.",
-              },
-            ]
-          ).map((opt) => (
+          {PLAYER_OPTIONS.map((opt) => {
+            const download = preparedDownloads[opt.key];
+            return (
             <Card
-              key={`${opt.platform}-${opt.arch}`}
+              key={opt.key}
               as="button"
               size="row"
               padded
               interactive
-              onClick={() => handleDownloadPlayer(opt.platform, opt.arch)}
+              disabled={!download}
+              onClick={() => handleDownloadPlayer(opt.key)}
               className="w-full flex items-center justify-between gap-3 text-left"
             >
-              <span>
+              <span className="min-w-0">
                 <span className="block text-body font-semibold text-app-text">{opt.name}</span>
                 <span className="block text-caption text-app-muted">{opt.desc}</span>
+                <span className="mt-2 block text-caption text-app-muted">Pairing code</span>
+                <span className="block font-mono text-lg font-bold tracking-widest text-app-accent-text">
+                  {download?.pairingCode || (isPreparingDownloads ? "Generating…" : "Unavailable")}
+                </span>
               </span>
-              <Download className="w-4 h-4 text-app-accent-text shrink-0" />
+              <span className="flex shrink-0 items-center gap-2 text-caption font-semibold text-app-accent-text">
+                {download ? "Download" : "Preparing"}
+                <Download className="w-4 h-4" />
+              </span>
             </Card>
-          ))}
+            );
+          })}
 
           {downloadError && (
             <p className="text-body font-semibold text-app-danger-text">{downloadError}</p>
           )}
 
-          {pendingDownload && (
-            <div className="rounded-lg border border-app-accent-border bg-app-accent-soft p-4 text-body text-app-text">
-              <p className="font-semibold">Installer download started.</p>
-              <p className="mt-1">After installation, enter this pairing code in the Player:</p>
-              <p className="mt-2 font-mono text-lg font-bold tracking-widest">{pendingDownload.pairingCode}</p>
-              <p className="mt-1 text-caption text-app-muted">Use this CMS address: {window.location.origin}</p>
-            </div>
-          )}
+          <p className="text-caption text-app-muted">
+            Click the dedicated player above to download it. Use this CMS address in the player: {typeof window !== "undefined" ? window.location.origin : ""}
+          </p>
         </div>
       </Modal>
     </div>
