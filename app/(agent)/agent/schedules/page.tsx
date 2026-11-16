@@ -18,9 +18,6 @@ import {
   PageShell,
   Skeleton,
   SkeletonRegion,
-  SkeletonStatGrid,
-  StatGrid,
-  StatTile,
 } from "@/components/ui";
 
 /**
@@ -108,6 +105,12 @@ export default function AgentSchedulesPage() {
   }, []);
 
   const conflicts: ScheduleConflict[] = useMemo(() => findConflicts(schedules), [schedules]);
+  const scheduleStats = [
+    { label: "Total Schedules", value: schedules.length, icon: ListChecks },
+    { label: "Active Schedules", value: schedules.filter((schedule) => schedule.status === "ACTIVE").length, icon: Calendar },
+    { label: "Conflicting Schedules", value: new Set(conflicts.flatMap(({ a, b }) => [a.id, b.id])).size, icon: AlertTriangle },
+    { label: "Targeted Schedules", value: schedules.filter((schedule) => schedule.deviceIds.length > 0).length, icon: Monitor },
+  ];
 
   // Group filter application
   const filteredSchedules = schedules.filter((sch) => {
@@ -159,18 +162,17 @@ export default function AgentSchedulesPage() {
         </Button>
       </div>
 
-      {isFirstLoad ? (
-        <SkeletonStatGrid columns={4} label="Loading schedule counts…" />
-      ) : (
-      <div className="schedule-stats"><p className="text-caption text-app-muted">Workspace totals · filters apply to the calendar</p><StatGrid columns={4}>
-        <StatTile label="Total Schedules" value={`${schedules.length}`} icon={ListChecks} />
-        <StatTile label="Active Schedules" value={`${schedules.filter((s) => s.status === "ACTIVE").length}`} icon={Calendar} />
-        <StatTile label="Conflicts" value={`${conflicts.length}`} icon={AlertTriangle} tone={conflicts.length ? "warning" : undefined} />
-        <StatTile label="Targeted Screens" value={`${new Set(schedules.flatMap((s) => s.deviceIds)).size}`} icon={Monitor} />
-      </StatGrid></div>
-      )}
-
-      <p className="schedule-mobile-counts">Workspace: {schedules.length} schedules · {conflicts.length} conflicts · {new Set(schedules.flatMap(schedule=>schedule.deviceIds)).size} screens</p>
+      <dl aria-label="Workspace schedule counts" aria-busy={isFirstLoad} className="grid grid-cols-2 gap-px overflow-hidden rounded-xl border border-app-border bg-app-border md:grid-cols-4">
+        {scheduleStats.map(({ label, value, icon: Icon }) => (
+          <div key={label} className="flex min-w-0 items-center gap-2 bg-app-surface px-3 py-2 sm:px-4">
+            <Icon aria-hidden="true" className="size-4 shrink-0 text-app-muted" />
+            <dt className="min-w-0 flex-1 text-caption font-semibold text-app-muted">{label}</dt>
+            <dd className="text-body font-semibold tabular-nums text-app-text">
+              {isFirstLoad || (loadError && schedules.length === 0) ? "—" : value}
+            </dd>
+          </div>
+        ))}
+      </dl>
       {/* Calendar navigation provides chronological page movement; these controls refine its data. */}
       <Card size="widget" padded className="schedule-filters-card">
         <button type="button" className="schedule-filter-toggle" aria-expanded={filtersOpen} onClick={() => setFiltersOpen(!filtersOpen)}>Filters &amp; sort{query || groupFilter !== "All" || statusFilter !== "All" ? " · Active" : ""}</button>
