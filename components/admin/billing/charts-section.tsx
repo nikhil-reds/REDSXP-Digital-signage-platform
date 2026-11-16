@@ -62,12 +62,12 @@ export default function BillingChartsSection() {
           <ResponsiveContainer width="100%" height="100%">
             <LineChart data={trendData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
               <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--app-border)" />
-              <XAxis dataKey="name" tickLine={false} axisLine={false} stroke="var(--app-muted)" />
+              <XAxis dataKey="name" tickLine={false} axisLine={false} tick={{ fill: "var(--app-text)" }} />
               <YAxis
                 tickFormatter={formatCurrency}
                 tickLine={false}
                 axisLine={false}
-                stroke="var(--app-muted)"
+                tick={{ fill: "var(--app-text)" }}
                 domain={[0, 2000000]}
                 ticks={[0, 500000, 1000000, 1500000, 2000000]}
               />
@@ -114,12 +114,12 @@ export default function BillingChartsSection() {
           <ResponsiveContainer width="100%" height="100%">
             <AreaChart data={planContributionData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
               <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--app-border)" />
-              <XAxis dataKey="name" tickLine={false} axisLine={false} stroke="var(--app-muted)" />
+              <XAxis dataKey="name" tickLine={false} axisLine={false} tick={{ fill: "var(--app-text)" }} />
               <YAxis
                 tickFormatter={formatCurrency}
                 tickLine={false}
                 axisLine={false}
-                stroke="var(--app-muted)"
+                tick={{ fill: "var(--app-text)" }}
                 domain={[0, 2000000]}
                 ticks={[0, 500000, 1000000, 1500000, 2000000]}
               />
