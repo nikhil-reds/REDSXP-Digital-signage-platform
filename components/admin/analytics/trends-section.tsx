@@ -43,11 +43,11 @@ export default function AnalyticsTrendsSection() {
           <ResponsiveContainer width="100%" height="100%">
             <LineChart data={dailyActiveData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
               <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--app-border)" />
-              <XAxis dataKey="name" tickLine={false} axisLine={false} stroke="var(--app-muted)" />
+              <XAxis dataKey="name" tickLine={false} axisLine={false} tick={{ fill: "var(--app-text)" }} />
               <YAxis
                 tickLine={false}
                 axisLine={false}
-                stroke="var(--app-muted)"
+                tick={{ fill: "var(--app-text)" }}
                 domain={[3800, 4600]}
                 ticks={[3800, 4000, 4200, 4400, 4600]}
               />
@@ -89,11 +89,11 @@ export default function AnalyticsTrendsSection() {
           <ResponsiveContainer width="100%" height="100%">
             <BarChart data={tenantsData} margin={{ top: 10, right: 10, left: -25, bottom: 0 }} barGap={5}>
               <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--app-border)" />
-              <XAxis dataKey="name" tickLine={false} axisLine={false} stroke="var(--app-muted)" />
+              <XAxis dataKey="name" tickLine={false} axisLine={false} tick={{ fill: "var(--app-text)" }} />
               <YAxis
                 tickLine={false}
                 axisLine={false}
-                stroke="var(--app-muted)"
+                tick={{ fill: "var(--app-text)" }}
                 domain={[0, 8]}
                 ticks={[0, 2, 4, 6, 8]}
               />
