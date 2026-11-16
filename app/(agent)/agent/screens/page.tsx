@@ -24,6 +24,8 @@ import {
   createPlayerDownload,
   createScreen,
   fetchScreens,
+  updateScreen,
+  deleteScreen,
   ApiRequestError,
   PlayerDownload,
 } from "@/components/agent/screens/api";
@@ -53,6 +55,13 @@ export default function AgentScreensPage() {
   const [loadError, setLoadError] = useState<ApiRequestError | null>(null);
   const [viewMode, setViewMode] = useState<"table" | "map">("table");
   const [selectedScreen, setSelectedScreen] = useState<ScreenDevice | null>(null);
+  const [renameScreen, setRenameScreen] = useState<ScreenDevice | null>(null);
+  const [screenName, setScreenName] = useState("");
+  const [renameError, setRenameError] = useState("");
+  const [isSavingName, setIsSavingName] = useState(false);
+  const [screenToDelete, setScreenToDelete] = useState<ScreenDevice | null>(null);
+  const [deleteError, setDeleteError] = useState("");
+  const [isDeletingScreen, setIsDeletingScreen] = useState(false);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   // Plan §2: skeleton on first load only — a refetch keeps the current content
   // on screen rather than replacing it with grey bars.
@@ -74,6 +83,55 @@ export default function AgentScreensPage() {
   const [pageSize, setPageSize] = useState(10);
   const canReadScreens = hasPermission(permissions, PERMISSIONS.DEVICE_READ);
   const canCreateScreens = hasPermission(permissions, PERMISSIONS.DEVICE_CREATE);
+  const canDeleteScreens = hasPermission(permissions, PERMISSIONS.DEVICE_DELETE);
+
+  async function confirmDeleteScreen() {
+    if (!canDeleteScreens || !screenToDelete || isDeletingScreen) return;
+
+    const { id } = screenToDelete;
+    setIsDeletingScreen(true);
+    setDeleteError("");
+    try {
+      await deleteScreen(id);
+      setScreens((current) => current.filter((screen) => screen.id !== id));
+      setSelectedScreen((current) => current?.id === id ? null : current);
+      setScreenToDelete(null);
+    } catch (error) {
+      setDeleteError(error instanceof Error ? error.message : "Unable to delete screen.");
+    } finally {
+      setIsDeletingScreen(false);
+    }
+  }
+
+  function openRenameScreen(screen: ScreenDevice) {
+    setScreenName(screen.name);
+    setRenameError("");
+    setRenameScreen(screen);
+  }
+
+  async function saveScreenName(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const name = screenName.trim();
+    if (!renameScreen || !name || name === renameScreen.name || isSavingName) return;
+
+    const { id } = renameScreen;
+    setIsSavingName(true);
+    setRenameError("");
+    try {
+      const updated = await updateScreen(id, { name });
+      setScreens((current) => current.map((screen) =>
+        screen.id === id ? { ...screen, name: updated.name } : screen,
+      ));
+      setSelectedScreen((current) =>
+        current?.id === id ? { ...current, name: updated.name } : current,
+      );
+      setRenameScreen(null);
+    } catch (error) {
+      setRenameError(error instanceof Error ? error.message : "Unable to rename screen.");
+    } finally {
+      setIsSavingName(false);
+    }
+  }
 
   const loadScreens = useCallback(async () => {
     setLoadError(null);
@@ -371,6 +429,11 @@ export default function AgentScreensPage() {
           ) : viewMode === "table" ? (
             <ScreensTable
               screens={visibleScreens}
+              onRenameScreen={openRenameScreen}
+              onDeleteScreen={canDeleteScreens ? (screen) => {
+                setDeleteError("");
+                setScreenToDelete(screen);
+              } : undefined}
               onSelectScreen={(screen) => setSelectedScreen(screen)}
               selectedScreenId={selectedScreen?.id || null}
             />
@@ -397,6 +460,50 @@ export default function AgentScreensPage() {
       {selectedScreen && (
         <ScreensDetailDrawer screen={selectedScreen} onClose={() => setSelectedScreen(null)} />
       )}
+
+      <Modal
+        open={renameScreen !== null}
+        onClose={() => { if (!isSavingName) setRenameScreen(null); }}
+        title="Rename screen"
+      >
+        <form onSubmit={saveScreenName} className="space-y-4">
+          <label className="block text-body font-semibold">
+            Screen name
+            <input
+              autoFocus
+              required
+              value={screenName}
+              onChange={(event) => setScreenName(event.target.value)}
+              disabled={isSavingName}
+              className="mt-2 block w-full rounded-lg border border-app-border bg-app-surface-alt px-3 py-2"
+            />
+          </label>
+          {renameError && <p role="alert" className="text-body">{renameError}</p>}
+          <div className="flex justify-end gap-2">
+            <Button type="button" variant="secondary" disabled={isSavingName} onClick={() => setRenameScreen(null)}>Cancel</Button>
+            <Button type="submit" variant="primary" disabled={isSavingName || !screenName.trim() || screenName.trim() === renameScreen?.name}>
+              {isSavingName ? "Saving…" : "Save"}
+            </Button>
+          </div>
+        </form>
+      </Modal>
+
+      <Modal
+        open={screenToDelete !== null}
+        onClose={() => { if (!isDeletingScreen) setScreenToDelete(null); }}
+        title="Delete screen"
+        footer={
+          <>
+            <Button variant="secondary" disabled={isDeletingScreen} onClick={() => setScreenToDelete(null)}>Cancel</Button>
+            <Button variant="danger" disabled={isDeletingScreen} onClick={confirmDeleteScreen}>
+              {isDeletingScreen ? "Deleting…" : "Delete screen"}
+            </Button>
+          </>
+        }
+      >
+        <p>Delete <strong>{screenToDelete?.name}</strong>? This action cannot be undone.</p>
+        {deleteError && <p role="alert" className="mt-2 text-body">{deleteError}</p>}
+      </Modal>
 
       {isCreateModalOpen && (
         <ScreenCreateModal
