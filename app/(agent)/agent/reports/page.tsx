@@ -80,7 +80,7 @@ export default function AgentReportsPage() {
   };
 
   return (
-    <PageShell className="h-full flex flex-col min-h-0 overflow-hidden">
+    <PageShell className="flex flex-col">
       
       {/* Header Section */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b border-app-border pb-5 shrink-0">
@@ -95,7 +95,7 @@ export default function AgentReportsPage() {
       </div>
 
       {/* Main split dashboard panel */}
-      <div className="flex-1 grid grid-cols-1 lg:grid-cols-3 gap-6 pt-6 min-h-0">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 pt-6">
         
         {/* Left Side: Report Generator Configurations */}
         <div className="lg:col-span-1 flex flex-col justify-start">
