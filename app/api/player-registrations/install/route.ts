@@ -1,6 +1,7 @@
 import { randomBytes } from "crypto";
 import { NextRequest, NextResponse } from "next/server";
-import { apiError, databaseError, readJson } from "@/lib/api";
+import { Prisma } from "@/app/generated/prisma/client";
+import { apiError, apiErrorCode, databaseError, readJson } from "@/lib/api";
 import { hashToken } from "@/lib/auth";
 import { enqueuePlayerInstalledJob } from "@/lib/player-registration-queue";
 import { readPlayerTelemetry, readText } from "@/lib/player-telemetry";
@@ -46,21 +47,45 @@ export async function POST(request: NextRequest) {
     const ipAddress = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || null;
     const model = registration.platform === "LINUX" ? "Linux Player" : "Windows Player";
 
-    const existingDevice =
-      registration.device ?? (await prisma.device.findUnique({ where: { installId } }));
+    const [deviceWithInstallId, registrationWithInstallId] = await Promise.all([
+      prisma.device.findUnique({ where: { installId } }),
+      prisma.playerRegistration.findUnique({
+        where: { installId },
+        select: { id: true, tenantId: true, deviceId: true },
+      }),
+    ]);
+
+    const existingDevice = registration.device ?? deviceWithInstallId;
 
     // An install id is globally unique, so refuse to move a screen between
     // workspaces even if the caller holds a valid token for their own tenant.
-    if (existingDevice && existingDevice.tenantId !== registration.tenantId) {
-      return apiError("This device is already registered to another workspace.", 409);
+    if (
+      (existingDevice && existingDevice.tenantId !== registration.tenantId) ||
+      (registrationWithInstallId && registrationWithInstallId.tenantId !== registration.tenantId)
+    ) {
+      return apiErrorCode(
+        "This player is registered to another account. Reset it for another account or release it from the previous account.",
+        "INSTALL_OWNED_BY_ANOTHER_WORKSPACE",
+        409,
+      );
     }
 
     const result = await prisma.$transaction(async (tx) => {
+      // A registration can retain the unique install id after its Device link
+      // has been removed. Clear that orphan as well as the device-owned link.
+      if (registrationWithInstallId && registrationWithInstallId.id !== registration.id) {
+        await tx.playerRegistration.update({
+          where: { id: registrationWithInstallId.id },
+          data: { status: "EXPIRED", deviceId: null, installId: null },
+        });
+      }
+
       // Same tenant reinstalling with a fresh download: retire the registration
       // that previously owned this device so the unique link can move over.
       if (
         existingDevice?.playerRegistrationId &&
-        existingDevice.playerRegistrationId !== registration.id
+        existingDevice.playerRegistrationId !== registration.id &&
+        existingDevice.playerRegistrationId !== registrationWithInstallId?.id
       ) {
         await tx.playerRegistration.update({
           where: { id: existingDevice.playerRegistrationId },
@@ -155,6 +180,13 @@ export async function POST(request: NextRequest) {
       },
     });
   } catch (error) {
+    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") {
+      return apiErrorCode(
+        "This player installation is already registered. Reset it for another account or release the previous registration.",
+        "INSTALL_ID_CONFLICT",
+        409,
+      );
+    }
     return databaseError(error);
   }
 }
