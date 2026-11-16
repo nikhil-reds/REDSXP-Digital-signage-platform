@@ -128,7 +128,7 @@ export default function AnnouncementsBroadcastPage() {
   };
 
   return (
-    <div className="flex h-[calc(100vh-4rem)] overflow-hidden bg-app-canvas font-sans text-app-text">
+    <div className="admin-full-height-page flex h-full overflow-hidden bg-app-canvas font-sans text-app-text">
       {/* Main Table section */}
       <div className="flex-1 flex flex-col p-6 overflow-hidden min-w-0">
         {/* Header */}
