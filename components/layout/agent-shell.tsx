@@ -55,7 +55,7 @@ export default function AgentShell({ children }: AgentShellProps) {
   }, [isMobileNavigationOpen]);
 
   return (
-    <div className="agent-portal relative flex h-dvh overflow-hidden bg-app-canvas font-sans text-app-text">
+    <div className="agent-portal relative flex overflow-hidden bg-app-canvas font-sans text-app-text">
       <AgentSidebar
         isMobileOpen={isMobileNavigationOpen}
         onMobileClose={closeMobileNavigation}
