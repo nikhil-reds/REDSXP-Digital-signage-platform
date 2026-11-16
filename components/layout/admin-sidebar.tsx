@@ -66,7 +66,7 @@ export default function AdminSidebar() {
 
   return (
     <aside
-      className={`flex h-screen shrink-0 flex-col border-r border-app-border bg-app-surface font-sans transition-[width] duration-300 ${
+      className={`flex h-full shrink-0 flex-col border-r border-app-border bg-app-surface font-sans transition-[width] duration-300 ${
         isCollapsed ? "w-20" : "w-64"
       }`}
     >
