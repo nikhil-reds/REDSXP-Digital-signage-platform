@@ -42,7 +42,7 @@ export default function AnnouncementForm({ onClose, onSave }: AnnouncementFormPr
   };
 
   return (
-    <div className="flex h-full w-96 shrink-0 flex-col overflow-y-auto border-l border-app-border bg-app-surface font-sans text-app-text shadow-xl">
+    <div className="flex h-full w-96 shrink-0 flex-col overflow-y-auto border-l border-app-border bg-app-surface font-sans text-app-text shadow-xl [&>*]:shrink-0">
       {/* Header */}
       <div className="flex items-start justify-between border-b border-app-border p-4">
         <div>
