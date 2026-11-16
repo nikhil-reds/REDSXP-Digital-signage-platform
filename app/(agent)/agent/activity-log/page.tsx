@@ -158,7 +158,7 @@ export default function AgentActivityLogPage() {
   };
 
   return (
-    <PageShell className="h-full flex flex-col min-h-0 overflow-hidden">
+    <PageShell className="flex flex-col">
       
       {/* Header Section */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b border-app-border pb-5 shrink-0">
@@ -216,7 +216,7 @@ export default function AgentActivityLogPage() {
       </Toolbar>
 
       {/* Timeline logs feed */}
-      <div className="flex-1 min-h-0 overflow-y-auto pb-24">
+      <div>
         <ActivityFeed logs={filteredLogs} />
       </div>
 
