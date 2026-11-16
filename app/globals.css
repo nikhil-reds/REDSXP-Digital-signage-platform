@@ -243,6 +243,12 @@
   --app-font-sans: var(--font-source-sans);
 }
 
+.admin-portal {
+  --admin-panel-scale: 0.75;
+  zoom: var(--admin-panel-scale);
+  height: calc(100dvh / var(--admin-panel-scale));
+}
+
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
